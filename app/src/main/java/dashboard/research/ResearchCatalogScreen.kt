@@ -70,6 +70,14 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
         items(rows, key = { it.id }) { item ->
             ResearchListItem(item, onClick = { onResearchClick(item.id) })
         }
+        if (rows.isEmpty()) {
+            item {
+                Text(
+                    "No research items available yet.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+        }
     }
 }
 

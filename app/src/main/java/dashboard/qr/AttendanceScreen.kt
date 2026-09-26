@@ -2,6 +2,7 @@ package com.example.stismartlib.ui.dashboard.qr
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,96 +26,141 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.SectionCard
+import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.components.StatCard
-import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.theme.PrimaryBlue
-
-private val qrPattern = listOf(
-    0, 1, 2, 4, 5, 6, 9, 10, 11, 13, 15, 17, 19, 20, 22, 24, 26, 27, 29, 30,
-    34, 36, 37, 39, 41, 43, 45, 47, 50, 51, 54, 56, 58, 60, 61, 64, 67, 69,
-    72, 74, 76, 78, 82, 84, 86, 88, 91, 93, 95, 96, 99, 100, 104, 106, 108,
-    110, 112, 114, 116, 117, 118, 120
-)
+import com.example.stismartlib.ui.theme.PrimaryBlue5
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun AttendanceScreen() {
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val repository = rememberLibraryRepository()
+
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
         item {
             PageHeader(
                 eyebrow = "QR attendance",
                 title = "Library visit pass",
-                description = "Present this code at the entrance kiosk to record your visit."
+                description = "Download this permanent QR code once and keep it on your phone. It works even when your device has no internet connection."
             )
         }
         item {
-            SectionCard(modifier = Modifier) {
+            SectionCard(contentPadding = 0.dp) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
                         .background(PrimaryBlue)
-                        .padding(16.dp),
+                        .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Lucide.QrCode, contentDescription = null, tint = Color.White)
+                    Box(
+                        modifier = Modifier
+                            .clip(ShapeXl)
+                            .background(Color.White.copy(alpha = 0.10f))
+                            .padding(8.dp)
+                    ) {
+                        Icon(Lucide.QrCode, contentDescription = null, tint = Color.White, modifier = Modifier.size(21.dp))
+                    }
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text("STI Library Pass", color = Color.White, fontWeight = FontWeight.Bold)
-                        Text("Demo QR attendance", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text("Permanent offline attendance QR", color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp)
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .aspectRatio(1f)
-                        .align(Alignment.CenterHorizontally)
-                        .background(Color.White)
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        repeat(11) { row ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
-                                repeat(11) { column ->
-                                    val filled = qrPattern.contains(row * 11 + column)
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .background(if (filled) PrimaryBlue else Color.White)
-                                    )
-                                }
-                            }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .aspectRatio(1f)
+                            .clip(ShapeXl)
+                            .background(PrimaryBlue5)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, ShapeXl),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Lucide.QrCode,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "QR code unavailable",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                fontSize = 13.sp
+                            )
                         }
                     }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        repository.session.userName,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    Text(
+                        "Sign in to load your library pass",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        fontSize = 12.sp
+                    )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("John Bazty Cantay", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                Text("02000241372 · BSIT-3A", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                Spacer(modifier = Modifier.height(8.dp))
-                StatusBadge("Valid for this demo session")
             }
         }
-        item { StatCard("Visits this month", "12", "18.4 hours total", Lucide.LibraryBig) }
-        item { StatCard("Today's check-in", "8:12 AM", "Currently in library", Lucide.Clock3) }
-        item { StatCard("Most common purpose", "Research", "6 of 12 visits", Lucide.BookOpen) }
         item {
-            SectionCard {
-                Text("Attendance history", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                VisitRow("Aug 15, 2026", "8:12 AM", "—", "Research", true)
-                VisitRow("Aug 14, 2026", "9:04 AM", "11:20 AM", "Printing", false)
-                VisitRow("Aug 12, 2026", "1:15 PM", "3:02 PM", "Borrowing", false)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard("Visits this month", "0", null, Lucide.LibraryBig, modifier = Modifier.weight(1f))
+                StatCard("Today's check-in", "—", null, Lucide.Clock3, modifier = Modifier.weight(1f))
             }
         }
-    }
-}
-
-@Composable
-private fun VisitRow(date: String, timeIn: String, timeOut: String, purpose: String, active: Boolean) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(date, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-        Text("$timeIn – $timeOut · $purpose", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
-        StatusBadge(if (active) "Active" else "Returned", warning = active)
+        item {
+            StatCard("Most common purpose", "—", "No visit history", Lucide.BookOpen)
+        }
+        item {
+            SectionCard(contentPadding = 0.dp) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Text(
+                        "Attendance history",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Your recent library visits",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        fontSize = 12.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.outline)
+                )
+                    Text(
+                    "No attendance records yet.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(40.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }

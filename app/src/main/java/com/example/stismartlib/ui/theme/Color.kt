@@ -2,43 +2,58 @@ package com.example.stismartlib.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * STI Ormoc Smart Library design tokens — synced from
+ * apps/web/src/index.css (:root / html.dark) and apps/web/src/components/ui.tsx
+ */
 val PrimaryBlue = Color(0xFF003399)
-val PrimaryBlueLight = Color(0xFF4C9AFF)
 val AccentYellow = Color(0xFFFFF200)
 
+val BrandMutedBg = Color(0x0D003399) // rgba(0, 51, 153, 0.05)
+val BrandBorder = Color(0x26003399) // rgba(0, 51, 153, 0.15)
+val BrandBorderSoft = Color(0x1A003399) // rgba(0, 51, 153, 0.10)
+val BrandBorderStrong = Color(0x33003399) // rgba(0, 51, 153, 0.20)
+val BrandTextMuted = Color(0xA6003399) // rgba(0, 51, 153, 0.65)
+val BrandTextSubtle = Color(0x73003399) // rgba(0, 51, 153, 0.45)
+val BrandPlaceholder = Color(0x66003399) // rgba(0, 51, 153, 0.40)
+
 val SuccessGreen = Color(0xFF2B8A3E)
-val WarningYellow = Color(0xFFFFF200)
+val WarningYellow = AccentYellow
 val WarningOrange = Color(0xFFF76707)
 val ErrorRed = Color(0xFFE03131)
-val InfoBlue = Color(0xFF003399)
+val InfoBlue = PrimaryBlue
 
 val LightBackground = Color(0xFFFFFFFF)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFF0F4FA)
-val LightOnSurface = Color(0xFF003399)
-val LightOnSurfaceVariant = Color(0xFF003399)
+val LightSurfaceVariant = BrandMutedBg
+val LightOnSurface = PrimaryBlue
+val LightOnSurfaceVariant = BrandTextMuted
 
-val DarkBackground = Color(0xFF0D1117)
-val DarkSurface = Color(0xFF161B22)
-val DarkSurfaceVariant = Color(0xFF21262D)
-val DarkOnSurface = Color(0xFFE6EDF3)
-val DarkOnSurfaceVariant = Color(0xFF8B949E)
+/** Dark mode — STI palette only (deep navy / white / yellow) */
+val DarkBackground = Color(0xFF000D2B)
+val DarkSurface = Color(0xFF001A4D)
+val DarkSurfaceVariant = Color(0x14FFFFFF) // rgba(255,255,255,0.08)
+val DarkOnSurface = Color(0xFFF7F9FF)
+val DarkOnSurfaceMuted = Color(0xE0F7F9FF) // ~0.88
+val DarkOnSurfaceSubtle = Color(0xB8F7F9FF) // ~0.72
+val DarkBorder = Color(0x2EFFFFFF) // rgba(255,255,255,0.18)
+val DarkInput = Color(0xFF001433)
+val DarkFocusFill = Color(0xFF002266)
 
-val StatPurple = Color(0xFF7048E8)
-val StatTeal = Color(0xFF1098AD)
-val StatViolet = Color(0xFF5F3DC4)
+val PrimaryBlue5 = Color(0x0D003399)
+val PrimaryBlue10 = Color(0x1A003399)
+val PrimaryBlue15 = Color(0x26003399)
+val PrimaryBlue20 = Color(0x33003399)
+val PrimaryBlue45 = Color(0x73003399)
+val PrimaryBlue50 = Color(0x80003399)
+val PrimaryBlue60 = Color(0x99003399)
+val PrimaryBlue65 = Color(0xA6003399)
+val PrimaryBlue70 = Color(0xB3003399)
+val PrimaryBlue90 = Color(0xE6003399)
 
-val PrimaryBlue5 = PrimaryBlue.copy(alpha = 0.05f)
-val PrimaryBlue10 = PrimaryBlue.copy(alpha = 0.10f)
-val PrimaryBlue15 = PrimaryBlue.copy(alpha = 0.15f)
-val PrimaryBlue20 = PrimaryBlue.copy(alpha = 0.20f)
-val PrimaryBlue45 = PrimaryBlue.copy(alpha = 0.45f)
-val PrimaryBlue50 = PrimaryBlue.copy(alpha = 0.50f)
-val PrimaryBlue60 = PrimaryBlue.copy(alpha = 0.60f)
-val PrimaryBlue65 = PrimaryBlue.copy(alpha = 0.65f)
-val PrimaryBlue70 = PrimaryBlue.copy(alpha = 0.70f)
-val PrimaryBlue90 = PrimaryBlue.copy(alpha = 0.90f)
+val AccentYellow10 = Color(0x1AFFF200)
+val AccentYellow35 = Color(0x59FFF200)
+val AccentYellow40 = Color(0x66FFF200)
 
-val AccentYellow10 = AccentYellow.copy(alpha = 0.10f)
-val AccentYellow35 = AccentYellow.copy(alpha = 0.35f)
-val AccentYellow40 = AccentYellow.copy(alpha = 0.40f)
+/** Soft card elevation matching shadow-[0_1px_3px_rgba(0,51,153,0.08)] */
+val CardShadow = Color(0x14003399)

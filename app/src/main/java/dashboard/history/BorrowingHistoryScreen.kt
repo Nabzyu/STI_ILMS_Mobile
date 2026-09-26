@@ -48,6 +48,14 @@ fun BorrowingHistoryScreen() {
         item { StatCard("Currently borrowed", "$active / 2", "Student borrowing limit", Lucide.BookOpen) }
         item { StatCard("Next return", nextDue, "Due date", Lucide.Clock3, highlight = active > 0) }
         item { StatCard("Unpaid fines", "₱${"%.2f".format(unpaid)}", "No outstanding charges".takeIf { unpaid == 0.0 } ?: "Pay at the counter", Lucide.CircleDollarSign, highlight = unpaid > 0) }
+        if (records.isEmpty()) {
+            item {
+                Text(
+                    "No borrowing history yet.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+        }
         items(records, key = { it.id }) { record ->
             SectionCard {
                 Text(record.book.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)

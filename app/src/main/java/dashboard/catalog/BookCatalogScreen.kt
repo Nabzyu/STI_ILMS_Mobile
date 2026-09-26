@@ -91,6 +91,14 @@ fun BookCatalogScreen(
         item {
             Text("${visible.size} resources found", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
         }
+        if (visible.isEmpty()) {
+            item {
+                Text(
+                    "No books available yet.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+        }
         items(visible, key = { it.id }) { book ->
             BookListItem(book, onClick = { onBookClick(book.id) }, onCart = onCartClick)
         }

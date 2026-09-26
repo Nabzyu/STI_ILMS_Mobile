@@ -22,16 +22,14 @@ class LibraryRepository(
         private set
 
     val cart = mutableStateListOf<CartItem>()
-    val reservations = mutableStateListOf<Reservation>().apply {
-        addAll(SampleData.reservations)
-    }
+    val reservations = mutableStateListOf<Reservation>()
 
-    val books: List<Book> = SampleData.books
-    val research: List<Research> = SampleData.researchItems
-    val borrowingHistory: List<BorrowingRecord> = SampleData.borrowingHistory
-    val fines: List<FineRecord> = SampleData.fines
-    val notifications: List<NotificationItem> = SampleData.notifications
-    val printHistory: List<PrintRequest> = SampleData.printHistory
+    val books: List<Book> = emptyList()
+    val research: List<Research> = emptyList()
+    val borrowingHistory: List<BorrowingRecord> = emptyList()
+    val fines: List<FineRecord> = emptyList()
+    val notifications: List<NotificationItem> = emptyList()
+    val printHistory: List<PrintRequest> = emptyList()
 
     fun setUserType(userType: UserType) {
         session = session.copy(userType = userType)

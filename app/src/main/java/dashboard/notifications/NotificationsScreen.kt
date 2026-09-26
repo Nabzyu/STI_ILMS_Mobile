@@ -48,19 +48,32 @@ fun NotificationsScreen(onBack: () -> Unit) {
                 title = "Notifications",
                 description = "Due-date reminders, reservation alerts, printing updates, and library announcements.",
                 action = {
-                    PortalButton(
-                        text = "Mark all as read",
-                        onClick = { items = items.map { it.copy(isRead = true) } },
-                        variant = PortalButtonVariant.Secondary,
-                        leadingIcon = Lucide.CircleCheck
-                    )
+                    if (items.isNotEmpty()) {
+                        PortalButton(
+                            text = "Mark all as read",
+                            onClick = { items = items.map { it.copy(isRead = true) } },
+                            variant = PortalButtonVariant.Secondary,
+                            leadingIcon = Lucide.CircleCheck
+                        )
+                    }
                 }
             )
         }
-        item {
-            SectionCard {
-                items.forEach { item ->
-                    NotificationRow(item)
+        if (items.isEmpty()) {
+            item {
+                SectionCard {
+                    Text(
+                        "No notifications yet.",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                    )
+                }
+            }
+        } else {
+            item {
+                SectionCard {
+                    items.forEach { item ->
+                        NotificationRow(item)
+                    }
                 }
             }
         }

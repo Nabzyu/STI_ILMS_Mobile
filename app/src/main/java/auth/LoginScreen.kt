@@ -2,6 +2,7 @@ package com.example.stismartlib.ui.auth
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -30,7 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +46,9 @@ import com.example.stismartlib.navigation.Screen
 import com.example.stismartlib.ui.components.LibraryMark
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalField
+import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.theme.AccentYellow
+import com.example.stismartlib.ui.theme.EyebrowStyle
 import com.example.stismartlib.ui.theme.PrimaryBlue
 
 private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
@@ -66,39 +70,38 @@ fun LoginScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = 20.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.Center
     ) {
         LibraryMark()
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = "WELCOME BACK",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.6.sp
+            style = EyebrowStyle,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Login",
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Black
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.onSurface
         )
         if (banner != null) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = banner.orEmpty(),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = PrimaryBlue,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(ShapeXl)
+                    .border(1.dp, PrimaryBlue, ShapeXl)
                     .background(AccentYellow)
-                    .padding(14.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
         Text("Login as", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(8.dp))
         ExposedDropdownMenuBox(
@@ -129,16 +132,16 @@ fun LoginScreen(navController: NavHostController) {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         PortalField(
             label = "School ID",
             value = schoolId,
             onValueChange = { schoolId = it.uppercase() },
-            placeholder = "Enter your Student or Faculty ID",
+            placeholder = "Enter your Student, Faculty, or Staff ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         PortalField(
             label = "Password",
             value = password,
@@ -148,7 +151,10 @@ fun LoginScreen(navController: NavHostController) {
             visualTransformation = if (showPassword) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
             error = passwordError,
             trailing = {
-                IconButton(onClick = { showPassword = !showPassword }) {
+                IconButton(
+                    onClick = { showPassword = !showPassword },
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                ) {
                     Icon(
                         imageVector = if (showPassword) Lucide.EyeOff else Lucide.Eye,
                         contentDescription = if (showPassword) "Hide password" else "Show password",
@@ -157,16 +163,26 @@ fun LoginScreen(navController: NavHostController) {
                 }
             }
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .sizeIn(minHeight = 48.dp)
+                .clickable { showPassword = !showPassword }
+        ) {
             Checkbox(
                 checked = showPassword,
                 onCheckedChange = { showPassword = it },
                 colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue, uncheckedColor = PrimaryBlue)
             )
-            Text("Show password", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(
+                "Show password",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         PortalButton(
             text = "Login",
             onClick = {
@@ -186,9 +202,11 @@ fun LoginScreen(navController: NavHostController) {
                     banner = null
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .sizeIn(minHeight = 52.dp)
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
                 text = buildAnnotatedString {
@@ -197,7 +215,7 @@ fun LoginScreen(navController: NavHostController) {
                         SpanStyle(
                             fontWeight = FontWeight.Black,
                             textDecoration = TextDecoration.Underline,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = PrimaryBlue
                         )
                     ) {
                         append("Register as Student")
@@ -205,7 +223,10 @@ fun LoginScreen(navController: NavHostController) {
                 },
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 14.sp,
-                modifier = Modifier.clickable { navController.navigate(Screen.Register.route) }
+                modifier = Modifier
+                    .sizeIn(minHeight = 48.dp)
+                    .clickable { navController.navigate(Screen.Register.route) }
+                    .padding(vertical = 12.dp)
             )
         }
     }

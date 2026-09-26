@@ -33,8 +33,10 @@ import androidx.navigation.NavHostController
 import com.example.stismartlib.navigation.Screen
 import com.example.stismartlib.ui.components.LibraryMark
 import com.example.stismartlib.ui.components.PortalButton
+import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
 import com.example.stismartlib.ui.theme.PrimaryBlue
+import androidx.compose.foundation.layout.sizeIn
 
 private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
 private val ContactPattern = Regex("^\\+?[0-9 ()-]{7,30}$")
@@ -69,16 +71,18 @@ fun RegisterScreen(
             .padding(24.dp)
     ) {
         LibraryMark()
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = "CREATE ACCOUNT",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.6.sp
+            style = com.example.stismartlib.ui.theme.EyebrowStyle,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Student registration", color = MaterialTheme.colorScheme.onSurface, fontSize = 32.sp, fontWeight = FontWeight.Black)
+        Text(
+            text = if (isFaculty) "Faculty registration" else "Student registration",
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         if (message.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(message, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
@@ -201,8 +205,11 @@ fun RegisterScreen(
         )
         Spacer(modifier = Modifier.height(20.dp))
         PortalButton(
-            text = "Create account",
-            modifier = Modifier.fillMaxWidth(),
+            text = "CREATE ACCOUNT",
+            variant = PortalButtonVariant.Yellow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .sizeIn(minHeight = 52.dp),
             onClick = {
                 val next = mutableMapOf<String, String>()
                 val normalized = schoolId.trim().uppercase()

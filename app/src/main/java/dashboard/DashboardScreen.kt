@@ -2,6 +2,7 @@ package com.example.stismartlib.ui.dashboard
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -48,6 +49,7 @@ import androidx.navigation.navArgument
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.LibraryMark
+import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.dashboard.account.ClearanceScreen
 import com.example.stismartlib.ui.dashboard.account.FinesScreen
 import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
@@ -138,11 +140,12 @@ fun DashboardScreen(
                                 )
                             }
                             val selected = current?.route == item.route
+                            val selectedBg = if (darkTheme) AccentYellow else Color.White
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selected) Color.White else Color.Transparent)
+                                    .background(if (selected) selectedBg else Color.Transparent)
                                     .clickable {
                                         dashboardNavController.navigate(item.route) {
                                             popUpTo(dashboardNavController.graph.findStartDestination().id) {
@@ -232,25 +235,38 @@ fun DashboardScreen(
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
+            floatingActionButton = {
+                if (userType == UserType.STUDENT || userType == UserType.FACULTY) {
+                    AttendanceQrFab(
+                        onClick = {
+                            dashboardNavController.navigate(DashboardRoute.QrLogin.route)
+                        }
+                    )
+                }
+            },
             topBar = {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(72.dp)
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(horizontal = 12.dp),
+                        .height(80.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Icon(Lucide.Menu, contentDescription = "Open navigation", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+                    HeaderIconButton(
+                        onClick = { scope.launch { drawerState.open() } },
+                        contentDescription = "Open navigation"
+                    ) {
+                        Icon(Lucide.Menu, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(19.dp))
                     }
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (userType == UserType.FACULTY) "FACULTY PORTAL" else "STUDENT PORTAL",
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp
+                            letterSpacing = 1.5.sp
                         )
                         Text(
                             text = current?.label ?: "Smart Library",
@@ -259,11 +275,14 @@ fun DashboardScreen(
                             fontSize = 14.sp
                         )
                     }
-                    IconButton(onClick = {
-                        dashboardNavController.navigate(DashboardRoute.Notifications.route)
-                    }) {
+                    HeaderIconButton(
+                        onClick = {
+                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                        },
+                        contentDescription = "Notifications"
+                    ) {
                         Box {
-                            Icon(Lucide.Bell, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+                            Icon(Lucide.Bell, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(18.dp))
                             if (unread) {
                                 Box(
                                     modifier = Modifier
@@ -275,8 +294,9 @@ fun DashboardScreen(
                             }
                         }
                     }
-                    IconButton(onClick = onLogout) {
-                        Icon(Lucide.LogOut, contentDescription = "Sign out", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    HeaderIconButton(onClick = onLogout, contentDescription = "Sign out") {
+                        Icon(Lucide.LogOut, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -397,4 +417,52 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
     items += DrawerItem(DashboardRoute.Fines.route, "Fines", Lucide.CircleDollarSign)
     items += DrawerItem(DashboardRoute.Clearance.route, "Clearance status", Lucide.BadgeCheck)
     return items
+}
+
+/** Web AttendanceFab: yellow pill, navy icon circle, 56dp height */
+@Composable
+private fun AttendanceQrFab(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .sizeIn(minWidth = 56.dp, minHeight = 56.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(AccentYellow)
+            .border(2.dp, Color.White, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(PrimaryBlue),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Lucide.QrCode, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("My QR", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    }
+}
+
+/** Web portal header control: rounded-xl bordered 48dp touch target */
+@Composable
+private fun HeaderIconButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .clip(ShapeXl)
+            .border(1.dp, MaterialTheme.colorScheme.outline, ShapeXl)
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
+    }
 }

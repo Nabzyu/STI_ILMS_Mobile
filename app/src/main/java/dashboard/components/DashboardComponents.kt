@@ -217,7 +217,7 @@ fun BookCoverPlaceholder(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(color),
         contentAlignment = Alignment.Center
     ) {
