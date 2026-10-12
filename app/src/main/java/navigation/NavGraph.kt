@@ -6,11 +6,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.dashboard.DashboardScreen
-import com.example.stismartlib.ui.dashboard.qr.QrLoginScreen
+import com.example.stismartlib.ui.dashboard.staff.StaffHomeScreen
 import com.example.stismartlib.ui.splash.SplashScreen
 
 @Composable
@@ -31,13 +32,13 @@ fun AppNavGraph() {
             LoginScreen(navController)
         }
 
-        composable(Screen.QrLogin.route) {
-            QrLoginScreen(
-                onBack = { navController.popBackStack() },
-                isAuthFlow = true,
-                onAuthSuccess = {
-                    navController.navigate(Screen.Dashboard.create(UserType.STUDENT)) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+        composable(Screen.StaffHome.route) {
+            val repository = rememberLibraryRepository()
+            StaffHomeScreen(
+                onLogout = {
+                    repository.logout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -45,10 +46,6 @@ fun AppNavGraph() {
 
         composable(Screen.Register.route) {
             RegisterScreen(navController)
-        }
-
-        composable(Screen.FacultyRegister.route) {
-            RegisterScreen(navController, isFaculty = true)
         }
 
         composable(
@@ -62,11 +59,13 @@ fun AppNavGraph() {
         ) { backStackEntry ->
             val userTypeName = backStackEntry.arguments?.getString("userType") ?: UserType.STUDENT.name
             val userType = UserType.entries.find { it.name == userTypeName } ?: UserType.STUDENT
+            val repository = rememberLibraryRepository()
             DashboardScreen(
                 userType = userType,
                 onLogout = {
+                    repository.logout()
                     navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

@@ -3,57 +3,73 @@ package com.example.stismartlib.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * STI Ormoc Smart Library design tokens — synced from
- * apps/web/src/index.css (:root / html.dark) and apps/web/src/components/ui.tsx
+ * STI eLMS–inspired design tokens (light + dark).
+ * Accent cyan for interactive states; yellow STI mark; charcoal/white surfaces.
  */
-val PrimaryBlue = Color(0xFF003399)
-val AccentYellow = Color(0xFFFFF200)
 
-val BrandMutedBg = Color(0x0D003399) // rgba(0, 51, 153, 0.05)
-val BrandBorder = Color(0x26003399) // rgba(0, 51, 153, 0.15)
-val BrandBorderSoft = Color(0x1A003399) // rgba(0, 51, 153, 0.10)
-val BrandBorderStrong = Color(0x33003399) // rgba(0, 51, 153, 0.20)
-val BrandTextMuted = Color(0xA6003399) // rgba(0, 51, 153, 0.65)
-val BrandTextSubtle = Color(0x73003399) // rgba(0, 51, 153, 0.45)
-val BrandPlaceholder = Color(0x66003399) // rgba(0, 51, 153, 0.40)
+/** Interactive accent — eLMS sky/cyan */
+val ElmsCyan = Color(0xFF00A0D2)
+val ElmsCyanSoft = Color(0x1A00A0D2)
+val ElmsCyanMedium = Color(0x3300A0D2)
+val ElmsCyanStrong = Color(0x6600A0D2)
+
+/** STI brand yellow (logo tile) */
+val StiYellow = Color(0xFFFFF200)
+val AccentYellow = StiYellow
+val AccentYellow10 = Color(0x1AFFF200)
+val AccentYellow35 = Color(0x59FFF200)
+val AccentYellow40 = Color(0x66FFF200)
+
+/** Deep blue for STI mark lettering on yellow */
+val StiMarkBlue = Color(0xFF003399)
+
+/** @deprecated Prefer ElmsCyan; kept as alias for gradual migration */
+val PrimaryBlue = ElmsCyan
+val PrimaryBlue5 = ElmsCyanSoft
+val PrimaryBlue10 = Color(0x1A00A0D2)
+val PrimaryBlue15 = Color(0x2600A0D2)
+val PrimaryBlue20 = Color(0x3300A0D2)
+val PrimaryBlue45 = Color(0x7300A0D2)
+val PrimaryBlue50 = Color(0x8000A0D2)
+val PrimaryBlue60 = Color(0x9900A0D2)
+val PrimaryBlue65 = Color(0xA600A0D2)
+val PrimaryBlue70 = Color(0xB300A0D2)
+val PrimaryBlue90 = Color(0xE600A0D2)
 
 val SuccessGreen = Color(0xFF2B8A3E)
 val WarningYellow = AccentYellow
 val WarningOrange = Color(0xFFF76707)
 val ErrorRed = Color(0xFFE03131)
-val InfoBlue = PrimaryBlue
+val InfoBlue = ElmsCyan
 
-val LightBackground = Color(0xFFFFFFFF)
+/* —— Light surfaces —— */
+val LightBackground = Color(0xFFF5F6F8)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = BrandMutedBg
-val LightOnSurface = PrimaryBlue
-val LightOnSurfaceVariant = BrandTextMuted
+val LightSurfaceVariant = Color(0xFFEBEDF0)
+val LightOnSurface = Color(0xFF1A1B1F)
+val LightOnSurfaceVariant = Color(0xFF5C5F66)
+val LightOutline = Color(0x1F1A1B1F)
+val LightOutlineStrong = Color(0x331A1B1F)
+val LightPlaceholder = Color(0x991A1B1F)
+val LightInput = Color(0xFFFFFFFF)
+val CardShadow = Color(0x14000000)
 
-/** Dark mode — STI palette only (deep navy / white / yellow) */
-val DarkBackground = Color(0xFF000D2B)
-val DarkSurface = Color(0xFF001A4D)
-val DarkSurfaceVariant = Color(0x14FFFFFF) // rgba(255,255,255,0.08)
-val DarkOnSurface = Color(0xFFF7F9FF)
-val DarkOnSurfaceMuted = Color(0xE0F7F9FF) // ~0.88
-val DarkOnSurfaceSubtle = Color(0xB8F7F9FF) // ~0.72
-val DarkBorder = Color(0x2EFFFFFF) // rgba(255,255,255,0.18)
-val DarkInput = Color(0xFF001433)
-val DarkFocusFill = Color(0xFF002266)
+/* —— Dark surfaces (eLMS charcoal) —— */
+val DarkBackground = Color(0xFF121218)
+val DarkSurface = Color(0xFF1E1E26)
+val DarkSurfaceVariant = Color(0xFF2A2A34)
+val DarkOnSurface = Color(0xFFF5F6F8)
+val DarkOnSurfaceMuted = Color(0xFFB8BAC0)
+val DarkOnSurfaceSubtle = Color(0xFF8A8D96)
+val DarkBorder = Color(0x33FFFFFF)
+val DarkInput = Color(0xFF18181F)
+val DarkFocusFill = Color(0xFF243040)
 
-val PrimaryBlue5 = Color(0x0D003399)
-val PrimaryBlue10 = Color(0x1A003399)
-val PrimaryBlue15 = Color(0x26003399)
-val PrimaryBlue20 = Color(0x33003399)
-val PrimaryBlue45 = Color(0x73003399)
-val PrimaryBlue50 = Color(0x80003399)
-val PrimaryBlue60 = Color(0x99003399)
-val PrimaryBlue65 = Color(0xA6003399)
-val PrimaryBlue70 = Color(0xB3003399)
-val PrimaryBlue90 = Color(0xE6003399)
-
-val AccentYellow10 = Color(0x1AFFF200)
-val AccentYellow35 = Color(0x59FFF200)
-val AccentYellow40 = Color(0x66FFF200)
-
-/** Soft card elevation matching shadow-[0_1px_3px_rgba(0,51,153,0.08)] */
-val CardShadow = Color(0x14003399)
+/* Legacy brand aliases → map to ELMS light semantics */
+val BrandMutedBg = ElmsCyanSoft
+val BrandBorder = LightOutline
+val BrandBorderSoft = LightOutline
+val BrandBorderStrong = LightOutlineStrong
+val BrandTextMuted = LightOnSurfaceVariant
+val BrandTextSubtle = Color(0x991A1B1F)
+val BrandPlaceholder = LightPlaceholder

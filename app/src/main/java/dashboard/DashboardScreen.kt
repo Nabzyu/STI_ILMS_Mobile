@@ -1,4 +1,5 @@
 package com.example.stismartlib.ui.dashboard
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
@@ -18,24 +19,34 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,10 +57,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.stismartlib.R
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.UserType
-import com.example.stismartlib.ui.components.LibraryMark
+import com.example.stismartlib.ui.components.ElmsCountBadge
 import com.example.stismartlib.ui.components.ShapeXl
+import com.example.stismartlib.ui.components.StiMarkTile
 import com.example.stismartlib.ui.dashboard.account.ClearanceScreen
 import com.example.stismartlib.ui.dashboard.account.FinesScreen
 import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
@@ -66,11 +79,11 @@ import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
 import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
-import androidx.compose.material3.MaterialTheme
-import com.example.stismartlib.ui.theme.AccentYellow
-import com.example.stismartlib.ui.theme.ThemeMode
+import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.LocalThemeController
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import com.example.stismartlib.ui.theme.StiMarkBlue
+import com.example.stismartlib.ui.theme.StiYellow
+import com.example.stismartlib.ui.theme.ThemeMode
 import com.example.stismartlib.ui.theme.isAppDarkTheme
 import kotlinx.coroutines.launch
 
@@ -81,6 +94,13 @@ private data class DrawerItem(
     val section: String? = null
 )
 
+private data class BottomDest(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+    val opensDrawer: Boolean = false
+)
+
 @Composable
 fun DashboardScreen(
     userType: UserType,
@@ -88,6 +108,11 @@ fun DashboardScreen(
 ) {
     val repository = rememberLibraryRepository()
     repository.setUserType(userType)
+    LaunchedEffect(repository.session.accountId) {
+        if (repository.session.isAuthenticated) {
+            runCatching { repository.refreshStudentData() }
+        }
+    }
     val dashboardNavController = rememberNavController()
     val navBackStackEntry by dashboardNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -100,52 +125,117 @@ fun DashboardScreen(
             (item.route == DashboardRoute.ResearchCatalog.route && currentRoute?.startsWith("research_detail") == true) ||
             (item.route == DashboardRoute.PrintingService.route && currentRoute == DashboardRoute.PrintingHistory.route)
     }
-    val unread = repository.notifications.any { !it.isRead }
+    val unreadCount = repository.notifications.count { !it.isRead }
     val themeController = LocalThemeController.current
     val darkTheme = isAppDarkTheme()
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+
+    val bottomItems = listOf(
+        BottomDest(DashboardRoute.Overview.route, "Home", Lucide.LayoutDashboard),
+        BottomDest(DashboardRoute.BookCatalog.route, "Books", Lucide.BookOpen),
+        BottomDest(DashboardRoute.ResearchCatalog.route, "Research", Lucide.FileText),
+        BottomDest(DashboardRoute.BorrowingHistory.route, "Activity", Lucide.CalendarClock),
+        BottomDest("__more__", "More", Lucide.Menu, opensDrawer = true)
+    )
+
+    val selectedBottom = when {
+        currentRoute == DashboardRoute.Overview.route -> DashboardRoute.Overview.route
+        currentRoute == DashboardRoute.BookCatalog.route ||
+            currentRoute?.startsWith("book_detail") == true ||
+            currentRoute == DashboardRoute.BookCart.route -> DashboardRoute.BookCatalog.route
+        currentRoute == DashboardRoute.ResearchCatalog.route ||
+            currentRoute?.startsWith("research_detail") == true -> DashboardRoute.ResearchCatalog.route
+        currentRoute == DashboardRoute.BorrowingHistory.route ||
+            currentRoute == DashboardRoute.ReserveBook.route ||
+            currentRoute == DashboardRoute.BorrowProcess.route ||
+            currentRoute == DashboardRoute.ReturnBook.route -> DashboardRoute.BorrowingHistory.route
+        else -> null
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            title = { Text("Sign out?") },
+            text = { Text("You will need to sign in again to access your library account.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutConfirm = false
+                        onLogout()
+                    }
+                ) { Text("Sign out", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = PrimaryBlue,
-                modifier = Modifier.width(280.dp)
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.width(300.dp)
             ) {
                 Column(modifier = Modifier.fillMaxHeight()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp)
-                            .padding(horizontal = 20.dp),
+                            .height(64.dp)
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        LibraryMark(onDark = true)
+                        HeaderIconButton(
+                            onClick = { /* search reserved for future */ },
+                            contentDescription = "Search"
+                        ) {
+                            Icon(
+                                Lucide.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        HeaderIconButton(
+                            onClick = { scope.launch { drawerState.close() } },
+                            contentDescription = "Close navigation"
+                        ) {
+                            Icon(
+                                Lucide.X,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 12.dp, vertical = 16.dp)
+                            .padding(horizontal = 8.dp, vertical = 12.dp)
                     ) {
                         items.forEach { item ->
                             if (item.section != null) {
                                 Text(
                                     text = item.section.uppercase(),
-                                    color = Color.White.copy(alpha = 0.4f),
-                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.6.sp,
-                                    modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 8.dp)
+                                    letterSpacing = 1.4.sp,
+                                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
                                 )
                             }
                             val selected = current?.route == item.route
-                            val selectedBg = if (darkTheme) AccentYellow else Color.White
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selected) selectedBg else Color.Transparent)
+                                    .clip(ShapeXl)
+                                    .background(
+                                        if (selected) ElmsCyan.copy(alpha = 0.15f) else Color.Transparent
+                                    )
                                     .clickable {
                                         dashboardNavController.navigate(item.route) {
                                             popUpTo(dashboardNavController.graph.findStartDestination().id) {
@@ -156,55 +246,96 @@ fun DashboardScreen(
                                         }
                                         scope.launch { drawerState.close() }
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     item.icon,
-                                    contentDescription = null,
-                                    tint = if (selected) PrimaryBlue else Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(17.dp)
+                                    contentDescription = item.label,
+                                    tint = if (selected) ElmsCyan else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
                                 Text(
                                     item.label,
-                                    color = if (selected) PrimaryBlue else Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    color = if (selected) ElmsCyan else MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 15.sp,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                                 )
                             }
                         }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(ShapeXl)
+                                .clickable {
+                                    dashboardNavController.navigate(DashboardRoute.QrLogin.route) {
+                                        launchSingleTop = true
+                                    }
+                                    scope.launch { drawerState.close() }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Lucide.QrCode,
+                                contentDescription = "My QR",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("My QR attendance", fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(ShapeXl)
                                 .clickable {
-                                    themeController.themeMode = if (darkTheme) ThemeMode.LIGHT else ThemeMode.DARK
+                                    themeController.themeMode =
+                                        if (darkTheme) ThemeMode.LIGHT else ThemeMode.DARK
                                 }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 if (darkTheme) Lucide.Sun else Lucide.Moon,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(17.dp)
+                                contentDescription = if (darkTheme) "Switch to light mode" else "Switch to dark mode",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Text(
                                 if (darkTheme) "Light mode" else "Dark mode",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 14.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 15.sp
                             )
                         }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .clip(ShapeXl)
+                                .clickable { showLogoutConfirm = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Lucide.LogOut,
+                                contentDescription = "Sign out",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Log out", color = MaterialTheme.colorScheme.error, fontSize = 15.sp)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(ShapeXl)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -212,20 +343,29 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(AccentYellow),
+                                    .background(StiYellow),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     userType.displayName.take(2).uppercase(),
-                                    color = PrimaryBlue,
+                                    color = StiMarkBlue,
                                     fontWeight = FontWeight.Black,
                                     fontSize = 12.sp
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("STI account", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                Text(userType.displayName, color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp)
+                                Text(
+                                    repository.session.userName.ifBlank { "STI account" },
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    userType.displayName,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
                             }
                         }
                     }
@@ -235,46 +375,49 @@ fun DashboardScreen(
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
-            floatingActionButton = {
-                if (userType == UserType.STUDENT || userType == UserType.FACULTY) {
-                    AttendanceQrFab(
-                        onClick = {
-                            dashboardNavController.navigate(DashboardRoute.QrLogin.route)
-                        }
-                    )
-                }
-            },
             topBar = {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-                        .padding(horizontal = 16.dp),
+                        .height(56.dp)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     HeaderIconButton(
                         onClick = { scope.launch { drawerState.open() } },
                         contentDescription = "Open navigation"
                     ) {
-                        Icon(Lucide.Menu, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(19.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (userType == UserType.FACULTY) "FACULTY PORTAL" else "STUDENT PORTAL",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp
-                        )
-                        Text(
-                            text = current?.label ?: "Smart Library",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                        Icon(
+                            Lucide.Menu,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.weight(1f))
+                    StiMarkTile(size = 36.dp, contentDescription = stringResource(R.string.system_full_name))
+                    Spacer(modifier = Modifier.weight(1f))
+                    HeaderIconButton(
+                        onClick = {
+                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                        },
+                        contentDescription = "Messages"
+                    ) {
+                        Box {
+                            Icon(
+                                Lucide.Inbox,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            ElmsCountBadge(
+                                count = unreadCount,
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     HeaderIconButton(
                         onClick = {
                             dashboardNavController.navigate(DashboardRoute.Notifications.route)
@@ -282,118 +425,205 @@ fun DashboardScreen(
                         contentDescription = "Notifications"
                     ) {
                         Box {
-                            Icon(Lucide.Bell, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(18.dp))
-                            if (unread) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(AccentYellow)
-                                )
-                            }
+                            Icon(
+                                Lucide.Bell,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            ElmsCountBadge(
+                                count = unreadCount,
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    HeaderIconButton(onClick = onLogout, contentDescription = "Sign out") {
-                        Icon(Lucide.LogOut, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(18.dp))
+                }
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 0.dp
+                ) {
+                    bottomItems.forEach { dest ->
+                        val selected = !dest.opensDrawer && selectedBottom == dest.route
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                if (dest.opensDrawer) {
+                                    scope.launch { drawerState.open() }
+                                } else {
+                                    dashboardNavController.navigate(dest.route) {
+                                        popUpTo(dashboardNavController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                Icon(dest.icon, contentDescription = dest.label)
+                            },
+                            label = { Text(dest.label, fontSize = 11.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = ElmsCyan,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
                     }
                 }
             }
         ) { innerPadding ->
-            NavHost(
-                navController = dashboardNavController,
-                startDestination = DashboardRoute.Overview.route,
+            Column(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                composable(DashboardRoute.Overview.route) {
-                    DashboardOverviewScreen(
-                        onNavigateToBookCatalog = { dashboardNavController.navigate(DashboardRoute.BookCatalog.route) },
-                        onNavigateToResearchCatalog = { dashboardNavController.navigate(DashboardRoute.ResearchCatalog.route) },
-                        onNavigateToBorrowingHistory = { dashboardNavController.navigate(DashboardRoute.BorrowingHistory.route) },
-                        onNavigateToBorrowProcess = { dashboardNavController.navigate(DashboardRoute.BorrowProcess.route) },
-                        onNavigateToReturnBook = { dashboardNavController.navigate(DashboardRoute.ReturnBook.route) },
-                        onNavigateToReserveBook = { dashboardNavController.navigate(DashboardRoute.ReserveBook.route) },
-                        onNavigateToPrintingService = { dashboardNavController.navigate(DashboardRoute.PrintingService.route) },
-                        onNavigateToQrLogin = { dashboardNavController.navigate(DashboardRoute.QrLogin.route) },
-                        onNavigateToNotifications = { dashboardNavController.navigate(DashboardRoute.Notifications.route) },
-                        onLogout = onLogout
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Text(
+                        text = stringResource(R.string.system_identity_line),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = stringResource(R.string.system_full_descriptor),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
                     )
                 }
-                composable(DashboardRoute.BookCatalog.route) {
-                    BookCatalogScreen(
-                        onBookClick = { dashboardNavController.navigate(DashboardRoute.BookDetail.create(it)) },
-                        onCartClick = { dashboardNavController.navigate(DashboardRoute.BookCart.route) }
-                    )
-                }
-                composable(
-                    route = DashboardRoute.BookDetail.route,
-                    arguments = listOf(navArgument("bookId") { type = NavType.StringType })
-                ) { entry ->
-                    BookDetailScreen(
-                        bookId = entry.arguments?.getString("bookId").orEmpty(),
-                        onBack = { dashboardNavController.popBackStack() },
-                        onCartClick = { dashboardNavController.navigate(DashboardRoute.BookCart.route) }
-                    )
-                }
-                composable(DashboardRoute.BookCart.route) {
-                    BookCartScreen(onBack = { dashboardNavController.popBackStack() })
-                }
-                composable(DashboardRoute.BorrowProcess.route) {
-                    BorrowProcessScreen(
-                        onBack = { dashboardNavController.popBackStack() },
-                        onBrowseCatalog = { dashboardNavController.navigate(DashboardRoute.BookCatalog.route) },
-                        onOpenCart = { dashboardNavController.navigate(DashboardRoute.BookCart.route) }
-                    )
-                }
-                composable(DashboardRoute.ReturnBook.route) {
-                    ReturnBookScreen(onBack = { dashboardNavController.popBackStack() })
-                }
-                composable(DashboardRoute.ReserveBook.route) {
-                    ReserveBookScreen(
-                        onBack = { dashboardNavController.popBackStack() },
-                        onBrowseCatalog = { dashboardNavController.navigate(DashboardRoute.BookCatalog.route) }
-                    )
-                }
-                composable(DashboardRoute.Notifications.route) {
-                    NotificationsScreen(onBack = { dashboardNavController.popBackStack() })
-                }
-                composable(DashboardRoute.QrLogin.route) {
-                    AttendanceScreen()
-                }
-                composable(DashboardRoute.ResearchCatalog.route) {
-                    ResearchCatalogScreen(
-                        onResearchClick = { dashboardNavController.navigate(DashboardRoute.ResearchDetail.create(it)) }
-                    )
-                }
-                composable(
-                    route = DashboardRoute.ResearchDetail.route,
-                    arguments = listOf(navArgument("researchId") { type = NavType.StringType })
-                ) { entry ->
-                    ResearchDetailScreen(
-                        researchId = entry.arguments?.getString("researchId").orEmpty(),
-                        onBack = { dashboardNavController.popBackStack() }
-                    )
-                }
-                composable(DashboardRoute.BorrowingHistory.route) {
-                    BorrowingHistoryScreen()
-                }
-                composable(DashboardRoute.PrintingService.route) {
-                    PrintingServiceScreen(
-                        onViewHistory = { dashboardNavController.navigate(DashboardRoute.PrintingHistory.route) }
-                    )
-                }
-                composable(DashboardRoute.PrintingHistory.route) {
-                    PrintingHistoryScreen(onBack = { dashboardNavController.popBackStack() })
-                }
-                composable(DashboardRoute.Fines.route) {
-                    FinesScreen()
-                }
-                composable(DashboardRoute.Clearance.route) {
-                    ClearanceScreen()
+                NavHost(
+                    navController = dashboardNavController,
+                    startDestination = DashboardRoute.Overview.route,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    composable(DashboardRoute.Overview.route) {
+                        DashboardOverviewScreen(
+                            onNavigateToBookCatalog = {
+                                dashboardNavController.navigate(DashboardRoute.BookCatalog.route)
+                            },
+                            onNavigateToResearchCatalog = {
+                                dashboardNavController.navigate(DashboardRoute.ResearchCatalog.route)
+                            },
+                            onNavigateToBorrowingHistory = {
+                                dashboardNavController.navigate(DashboardRoute.BorrowingHistory.route)
+                            },
+                            onNavigateToBorrowProcess = {
+                                dashboardNavController.navigate(DashboardRoute.BorrowProcess.route)
+                            },
+                            onNavigateToReturnBook = {
+                                dashboardNavController.navigate(DashboardRoute.ReturnBook.route)
+                            },
+                            onNavigateToReserveBook = {
+                                dashboardNavController.navigate(DashboardRoute.ReserveBook.route)
+                            },
+                            onNavigateToPrintingService = {
+                                dashboardNavController.navigate(DashboardRoute.PrintingService.route)
+                            },
+                            onNavigateToQrLogin = {
+                                dashboardNavController.navigate(DashboardRoute.QrLogin.route)
+                            },
+                            onNavigateToNotifications = {
+                                dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                            },
+                            onLogout = { showLogoutConfirm = true }
+                        )
+                    }
+                    composable(DashboardRoute.BookCatalog.route) {
+                        BookCatalogScreen(
+                            onBookClick = {
+                                dashboardNavController.navigate(DashboardRoute.BookDetail.create(it))
+                            },
+                            onCartClick = {
+                                dashboardNavController.navigate(DashboardRoute.BookCart.route)
+                            }
+                        )
+                    }
+                    composable(
+                        route = DashboardRoute.BookDetail.route,
+                        arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+                    ) { entry ->
+                        BookDetailScreen(
+                            bookId = entry.arguments?.getString("bookId").orEmpty(),
+                            onBack = { dashboardNavController.popBackStack() },
+                            onCartClick = {
+                                dashboardNavController.navigate(DashboardRoute.BookCart.route)
+                            }
+                        )
+                    }
+                    composable(DashboardRoute.BookCart.route) {
+                        BookCartScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.BorrowProcess.route) {
+                        BorrowProcessScreen(
+                            onBack = { dashboardNavController.popBackStack() },
+                            onBrowseCatalog = {
+                                dashboardNavController.navigate(DashboardRoute.BookCatalog.route)
+                            },
+                            onOpenCart = {
+                                dashboardNavController.navigate(DashboardRoute.BookCart.route)
+                            }
+                        )
+                    }
+                    composable(DashboardRoute.ReturnBook.route) {
+                        ReturnBookScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.ReserveBook.route) {
+                        ReserveBookScreen(
+                            onBack = { dashboardNavController.popBackStack() },
+                            onBrowseCatalog = {
+                                dashboardNavController.navigate(DashboardRoute.BookCatalog.route)
+                            }
+                        )
+                    }
+                    composable(DashboardRoute.Notifications.route) {
+                        NotificationsScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.QrLogin.route) {
+                        AttendanceScreen()
+                    }
+                    composable(DashboardRoute.ResearchCatalog.route) {
+                        ResearchCatalogScreen(
+                            onResearchClick = {
+                                dashboardNavController.navigate(DashboardRoute.ResearchDetail.create(it))
+                            }
+                        )
+                    }
+                    composable(
+                        route = DashboardRoute.ResearchDetail.route,
+                        arguments = listOf(navArgument("researchId") { type = NavType.StringType })
+                    ) { entry ->
+                        ResearchDetailScreen(
+                            researchId = entry.arguments?.getString("researchId").orEmpty(),
+                            onBack = { dashboardNavController.popBackStack() }
+                        )
+                    }
+                    composable(DashboardRoute.BorrowingHistory.route) {
+                        BorrowingHistoryScreen()
+                    }
+                    composable(DashboardRoute.PrintingService.route) {
+                        PrintingServiceScreen(
+                            onViewHistory = {
+                                dashboardNavController.navigate(DashboardRoute.PrintingHistory.route)
+                            }
+                        )
+                    }
+                    composable(DashboardRoute.PrintingHistory.route) {
+                        PrintingHistoryScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.Fines.route) {
+                        FinesScreen()
+                    }
+                    composable(DashboardRoute.Clearance.route) {
+                        ClearanceScreen()
+                    }
                 }
             }
         }
@@ -411,7 +641,6 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
     )
     if (userType == UserType.STUDENT) {
         items += DrawerItem(DashboardRoute.PrintingService.route, "Printing service", Lucide.Printer)
-        items += DrawerItem(DashboardRoute.QrLogin.route, "QR attendance", Lucide.QrCode)
     }
     items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell, "My account")
     items += DrawerItem(DashboardRoute.Fines.route, "Fines", Lucide.CircleDollarSign)
@@ -419,34 +648,6 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
     return items
 }
 
-/** Web AttendanceFab: yellow pill, navy icon circle, 56dp height */
-@Composable
-private fun AttendanceQrFab(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .sizeIn(minWidth = 56.dp, minHeight = 56.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .background(AccentYellow)
-            .border(2.dp, Color.White, RoundedCornerShape(999.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(PrimaryBlue),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Lucide.QrCode, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("My QR", color = PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-    }
-}
-
-/** Web portal header control: rounded-xl bordered 48dp touch target */
 @Composable
 private fun HeaderIconButton(
     onClick: () -> Unit,
@@ -457,9 +658,7 @@ private fun HeaderIconButton(
         modifier = Modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clip(ShapeXl)
-            .border(1.dp, MaterialTheme.colorScheme.outline, ShapeXl)
-            .background(MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick, onClickLabel = contentDescription)
             .padding(10.dp),
         contentAlignment = Alignment.Center
     ) {

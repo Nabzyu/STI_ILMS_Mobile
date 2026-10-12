@@ -7,10 +7,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /**
- * Typography scale mapped from apps/web:
- * - font-sans / font-display → system default (Aptos/Segoe unavailable as bundled fonts)
- * - rem/px → sp (1:1 at default density)
- * - tracking-[0.18em] ≈ letterSpacing relative to font size
+ * Typography scale aligned with STI eLMS mobile chrome:
+ * clean sans hierarchy — page title → section → body → meta/kicker.
  */
 private val Sans = FontFamily.Default
 private val Display = FontFamily.Default

@@ -8,11 +8,9 @@ sealed class Screen(val route: String) {
 
     object Login : Screen("login")
 
+    object StaffHome : Screen("staff_home")
+
     object Register : Screen("student_register")
-
-    object FacultyRegister : Screen("faculty_register")
-
-    object QrLogin : Screen("qr_login")
 
     object Dashboard : Screen("dashboard/{userType}") {
         fun create(userType: UserType): String = "dashboard/${userType.name}"

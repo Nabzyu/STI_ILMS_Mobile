@@ -1,4 +1,5 @@
 package com.example.stismartlib.ui.auth
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
@@ -22,31 +24,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.navigation.Screen
-import com.example.stismartlib.ui.components.LibraryMark
+import com.example.stismartlib.network.ApiException
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
-import com.example.stismartlib.ui.theme.PrimaryBlue
-import androidx.compose.foundation.layout.sizeIn
+import com.example.stismartlib.ui.components.StiMark
+import com.example.stismartlib.ui.feedback.userFacingMessage
+import kotlinx.coroutines.launch
 
 private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
 private val ContactPattern = Regex("^\\+?[0-9 ()-]{7,30}$")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(
-    navController: NavHostController,
-    isFaculty: Boolean = false
-) {
+fun RegisterScreen(navController: NavHostController) {
+    val repository = rememberLibraryRepository()
+    val scope = rememberCoroutineScope()
     var schoolId by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -60,6 +65,7 @@ fun RegisterScreen(
     var yearMenuOpen by remember { mutableStateOf(false) }
     var errors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var message by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     val yearLevelOptions = yearLevelsForProgram(selectedProgram)
 
@@ -70,22 +76,29 @@ fun RegisterScreen(
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
-        LibraryMark()
+        StiMark()
         Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = "CREATE ACCOUNT",
             style = com.example.stismartlib.ui.theme.EyebrowStyle,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (isFaculty) "Faculty registration" else "Student registration",
-            style = MaterialTheme.typography.displayMedium,
+            text = "Student registration",
+            style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
         if (message.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
-            Text(message, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            ElmsBanner(
+                message = message,
+                tone = if (message.contains("correct", ignoreCase = true)) {
+                    ElmsBannerTone.Error
+                } else {
+                    ElmsBannerTone.Info
+                }
+            )
         }
         Spacer(modifier = Modifier.height(20.dp))
         PortalField(
@@ -205,12 +218,15 @@ fun RegisterScreen(
         )
         Spacer(modifier = Modifier.height(20.dp))
         PortalButton(
-            text = "CREATE ACCOUNT",
+            text = if (isSubmitting) "Creating account..." else "Create account",
             variant = PortalButtonVariant.Yellow,
+            enabled = !isSubmitting,
+            loading = isSubmitting,
             modifier = Modifier
                 .fillMaxWidth()
                 .sizeIn(minHeight = 52.dp),
             onClick = {
+                if (isSubmitting) return@PortalButton
                 val next = mutableMapOf<String, String>()
                 val normalized = schoolId.trim().uppercase()
                 if (normalized.isEmpty()) next["school_id"] = "Student ID is required."
@@ -224,12 +240,37 @@ fun RegisterScreen(
                 if (password.length < 8) next["password"] = "Password must contain at least 8 characters."
                 if (password != confirmPassword) next["confirm_password"] = "Password confirmation does not match."
                 errors = next
-                if (next.isEmpty()) {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Register.route) { inclusive = true }
-                    }
-                } else {
+                if (next.isNotEmpty()) {
                     message = "Please correct the highlighted fields."
+                    return@PortalButton
+                }
+                isSubmitting = true
+                message = ""
+                scope.launch {
+                    try {
+                        repository.registerStudent(
+                            schoolId = normalized,
+                            firstName = firstName,
+                            lastName = lastName,
+                            contactNumber = contactNumber,
+                            programStrand = selectedProgram,
+                            yearGradeLevel = selectedYearLevel,
+                            password = password,
+                            confirmPassword = confirmPassword,
+                        )
+                        password = ""
+                        confirmPassword = ""
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Register.route) { inclusive = true }
+                        }
+                    } catch (error: ApiException) {
+                        errors = error.fieldErrors
+                        message = userFacingMessage(error, "Registration could not be completed. Check your details and try again.")
+                    } catch (error: Exception) {
+                        message = userFacingMessage(error)
+                    } finally {
+                        isSubmitting = false
+                    }
                 }
             }
         )

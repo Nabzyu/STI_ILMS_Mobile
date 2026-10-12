@@ -8,7 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.example.stismartlib.data.ProvideLibraryRepository
 import com.example.stismartlib.navigation.AppNavGraph
 import com.example.stismartlib.ui.theme.LocalThemeController
-import com.example.stismartlib.ui.theme.STISmartLibTheme
+import com.example.stismartlib.ui.theme.STIOrmocLibraryTheme
 import com.example.stismartlib.ui.theme.isAppDarkTheme
 import com.example.stismartlib.ui.theme.rememberThemeController
 
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
             val themeController = rememberThemeController()
 
             CompositionLocalProvider(LocalThemeController provides themeController) {
-                STISmartLibTheme(darkTheme = isAppDarkTheme()) {
+                STIOrmocLibraryTheme(darkTheme = isAppDarkTheme()) {
                     ProvideLibraryRepository {
                         AppNavGraph()
                     }

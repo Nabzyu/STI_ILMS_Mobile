@@ -1,11 +1,11 @@
 package com.example.stismartlib.data
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocal
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import com.example.stismartlib.STIOrmocLibraryApp
 
 val LocalLibraryRepository = staticCompositionLocalOf<LibraryRepository> {
     error("LibraryRepository not provided. Call ProvideLibraryRepository at the root of your composition.")
@@ -13,8 +13,12 @@ val LocalLibraryRepository = staticCompositionLocalOf<LibraryRepository> {
 
 @Composable
 fun ProvideLibraryRepository(content: @Composable () -> Unit) {
-    val repository = remember { LibraryRepository() }
-    androidx.compose.runtime.CompositionLocalProvider(LocalLibraryRepository provides repository) {
+    val context = LocalContext.current.applicationContext
+    val repository = remember {
+        val app = context as STIOrmocLibraryApp
+        LibraryRepository(app.sessionStore)
+    }
+    CompositionLocalProvider(LocalLibraryRepository provides repository) {
         content()
     }
 }

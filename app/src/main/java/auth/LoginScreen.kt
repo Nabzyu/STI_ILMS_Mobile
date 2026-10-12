@@ -1,8 +1,8 @@
 package com.example.stismartlib.ui.auth
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,10 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,10 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -42,28 +38,32 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.navigation.Screen
-import com.example.stismartlib.ui.components.LibraryMark
+import com.example.stismartlib.network.ApiException
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalField
-import com.example.stismartlib.ui.components.ShapeXl
-import com.example.stismartlib.ui.theme.AccentYellow
+import com.example.stismartlib.ui.components.StiMark
+import com.example.stismartlib.ui.feedback.userFacingMessage
+import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.EyebrowStyle
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import kotlinx.coroutines.launch
 
 private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController) {
-    var selectedUserType by remember { mutableStateOf(UserType.STUDENT.displayName) }
+    val repository = rememberLibraryRepository()
+    val scope = rememberCoroutineScope()
     var schoolId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
-    var roleMenuOpen by remember { mutableStateOf(false) }
     var schoolIdError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var banner by remember { mutableStateOf<String?>(null) }
+    var isSubmitting by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -73,71 +73,36 @@ fun LoginScreen(navController: NavHostController) {
             .padding(horizontal = 20.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        LibraryMark()
+        StiMark()
         Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = "WELCOME BACK",
             style = EyebrowStyle,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Login",
-            style = MaterialTheme.typography.displayMedium,
+            text = "Sign in",
+            style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Use your school ID and password. Your workspace opens based on your account.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            fontSize = 14.sp,
+            lineHeight = 20.sp
         )
         if (banner != null) {
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = banner.orEmpty(),
-                color = PrimaryBlue,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(ShapeXl)
-                    .border(1.dp, PrimaryBlue, ShapeXl)
-                    .background(AccentYellow)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            )
+            ElmsBanner(message = banner.orEmpty(), tone = ElmsBannerTone.Error)
         }
         Spacer(modifier = Modifier.height(28.dp))
-        Text("Login as", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        ExposedDropdownMenuBox(
-            expanded = roleMenuOpen,
-            onExpandedChange = { roleMenuOpen = it }
-        ) {
-            PortalField(
-                label = "",
-                value = selectedUserType,
-                onValueChange = {},
-                placeholder = "Student",
-                leadingIcon = Lucide.UserRound,
-                modifier = Modifier.menuAnchor()
-            )
-            ExposedDropdownMenu(
-                expanded = roleMenuOpen,
-                onDismissRequest = { roleMenuOpen = false }
-            ) {
-                UserType.allDisplayNames.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold) },
-                        onClick = {
-                            selectedUserType = option
-                            roleMenuOpen = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(20.dp))
         PortalField(
             label = "School ID",
             value = schoolId,
             onValueChange = { schoolId = it.uppercase() },
-            placeholder = "Enter your Student, Faculty, or Staff ID",
+            placeholder = "Enter your school ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
@@ -148,7 +113,11 @@ fun LoginScreen(navController: NavHostController) {
             onValueChange = { password = it },
             placeholder = "Enter your password",
             leadingIcon = Lucide.LockKeyhole,
-            visualTransformation = if (showPassword) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+            visualTransformation = if (showPassword) {
+                androidx.compose.ui.text.input.VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
             error = passwordError,
             trailing = {
                 IconButton(
@@ -173,7 +142,7 @@ fun LoginScreen(navController: NavHostController) {
             Checkbox(
                 checked = showPassword,
                 onCheckedChange = { showPassword = it },
-                colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue, uncheckedColor = PrimaryBlue)
+                colors = CheckboxDefaults.colors(checkedColor = ElmsCyan, uncheckedColor = ElmsCyan)
             )
             Text(
                 "Show password",
@@ -184,8 +153,9 @@ fun LoginScreen(navController: NavHostController) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         PortalButton(
-            text = "Login",
+            text = if (isSubmitting) "Signing in..." else "Sign in",
             onClick = {
+                if (isSubmitting) return@PortalButton
                 val normalized = schoolId.trim().uppercase()
                 schoolIdError = when {
                     normalized.isEmpty() -> "School ID is required."
@@ -193,15 +163,37 @@ fun LoginScreen(navController: NavHostController) {
                     else -> null
                 }
                 passwordError = if (password.isEmpty()) "Password is required." else null
-                if (schoolIdError == null && passwordError == null) {
-                    val userType = UserType.fromDisplayName(selectedUserType)
-                    navController.navigate(Screen.Dashboard.create(userType)) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                } else {
+                if (schoolIdError != null || passwordError != null) {
                     banner = null
+                    return@PortalButton
+                }
+                isSubmitting = true
+                banner = null
+                scope.launch {
+                    try {
+                        repository.login(normalized, password)
+                        password = ""
+                        val destination = if (repository.session.userType.isStaff) {
+                            Screen.StaffHome.route
+                        } else {
+                            Screen.Dashboard.create(repository.session.userType)
+                        }
+                        navController.navigate(destination) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    } catch (error: ApiException) {
+                        banner = userFacingMessage(error, "Invalid school ID or password.")
+                        schoolIdError = error.fieldErrors["school_id"]
+                        passwordError = error.fieldErrors["password"]
+                    } catch (error: Exception) {
+                        banner = userFacingMessage(error)
+                    } finally {
+                        isSubmitting = false
+                    }
                 }
             },
+            enabled = !isSubmitting,
+            loading = isSubmitting,
             modifier = Modifier
                 .fillMaxWidth()
                 .sizeIn(minHeight = 52.dp)
@@ -215,7 +207,7 @@ fun LoginScreen(navController: NavHostController) {
                         SpanStyle(
                             fontWeight = FontWeight.Black,
                             textDecoration = TextDecoration.Underline,
-                            color = PrimaryBlue
+                            color = ElmsCyan
                         )
                     ) {
                         append("Register as Student")

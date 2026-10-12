@@ -15,14 +15,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,13 +35,19 @@ import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.components.StatCard
-import com.example.stismartlib.ui.theme.PrimaryBlue
-import com.example.stismartlib.ui.theme.PrimaryBlue5
+import com.example.stismartlib.ui.theme.ElmsCyan
+import com.example.stismartlib.ui.theme.ElmsCyanSoft
 import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun AttendanceScreen() {
     val repository = rememberLibraryRepository()
+    val pass = repository.attendancePass
+    LaunchedEffect(repository.session.accountId) {
+        if (repository.session.isAuthenticated) {
+            runCatching { repository.loadAttendancePass() }
+        }
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -55,7 +65,7 @@ fun AttendanceScreen() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(PrimaryBlue)
+                        .background(ElmsCyan)
                         .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -83,34 +93,46 @@ fun AttendanceScreen() {
                             .fillMaxWidth(0.7f)
                             .aspectRatio(1f)
                             .clip(ShapeXl)
-                            .background(PrimaryBlue5)
+                            .background(ElmsCyanSoft)
                             .border(1.dp, MaterialTheme.colorScheme.outline, ShapeXl),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Lucide.QrCode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                                modifier = Modifier.size(48.dp)
+                        val qr = pass?.qrBitmap
+                        if (qr != null) {
+                            Image(
+                                bitmap = qr.asImageBitmap(),
+                                contentDescription = "Attendance QR pass",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentScale = ContentScale.Fit
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "QR code unavailable",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                                fontSize = 13.sp
-                            )
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Lucide.QrCode,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "QR code unavailable",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                    fontSize = 13.sp
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        repository.session.userName,
+                        pass?.fullName ?: repository.session.userName,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
                     Text(
-                        "Sign in to load your library pass",
+                        pass?.schoolId ?: repository.session.schoolId.ifBlank { "Library pass" },
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                         fontSize = 12.sp
                     )
@@ -119,12 +141,29 @@ fun AttendanceScreen() {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Visits this month", "0", null, Lucide.LibraryBig, modifier = Modifier.weight(1f))
-                StatCard("Today's check-in", "—", null, Lucide.Clock3, modifier = Modifier.weight(1f))
+                StatCard(
+                    "Visits this month",
+                    (pass?.visitsThisMonth ?: 0).toString(),
+                    null,
+                    Lucide.LibraryBig,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    "Today's check-in",
+                    pass?.todayCheckIn ?: "—",
+                    null,
+                    Lucide.Clock3,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
         item {
-            StatCard("Most common purpose", "—", "No visit history", Lucide.BookOpen)
+            StatCard(
+                "Most common purpose",
+                pass?.commonPurpose ?: "—",
+                if (pass?.commonPurpose == null) "No visit history" else null,
+                Lucide.BookOpen
+            )
         }
         item {
             SectionCard(contentPadding = 0.dp) {

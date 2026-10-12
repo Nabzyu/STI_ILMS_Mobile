@@ -1,5 +1,6 @@
 package com.example.stismartlib.data.models
 
+import android.graphics.Bitmap
 import com.example.stismartlib.ui.auth.UserType
 
 data class Book(
@@ -14,7 +15,7 @@ data class Book(
     val availableCopies: Int,
     val totalCopies: Int,
     val description: String,
-    val coverColor: Long = 0xFF1C7ED6
+    val coverColor: Long = 0xFF1C7ED6,
 )
 
 data class Research(
@@ -26,7 +27,7 @@ data class Research(
     val abstract: String,
     val shelfLocation: String,
     val schoolName: String = "STI College",
-    val coverColor: Long = 0xFF2B8A3E
+    val coverColor: Long = 0xFF2B8A3E,
 )
 
 data class BorrowingRecord(
@@ -36,19 +37,21 @@ data class BorrowingRecord(
     val dueDate: String,
     val returnDate: String?,
     val borrowStatus: BorrowStatus,
-    val fineStatus: FineStatus
+    val fineStatus: FineStatus,
 )
 
 enum class BorrowStatus(val label: String) {
+    PENDING("Pending"),
     BORROWED("Borrowed"),
     RETURNED("Returned"),
-    OVERDUE("Overdue")
+    OVERDUE("Overdue"),
+    CANCELLED("Cancelled"),
 }
 
 enum class FineStatus(val label: String) {
     NONE("No Fine"),
     UNPAID("Unpaid"),
-    PAID("Paid")
+    PAID("Paid"),
 }
 
 data class FineRecord(
@@ -58,21 +61,22 @@ data class FineRecord(
     val reason: String,
     val dateIssued: String,
     val paymentStatus: FineStatus,
-    val paymentDate: String?
+    val paymentDate: String?,
 )
 
 data class Reservation(
     val id: String,
     val book: Book,
     val queuePosition: Int,
-    val dateReserved: String
+    val dateReserved: String,
+    val status: String = "pending",
 )
 
 enum class NotificationCategory(val label: String) {
     BOOKS("Books"),
     PRINTING("Printing"),
     REMINDERS("Reminders"),
-    GENERAL("General")
+    GENERAL("General"),
 }
 
 data class NotificationItem(
@@ -81,7 +85,7 @@ data class NotificationItem(
     val message: String,
     val time: String,
     val category: NotificationCategory = NotificationCategory.GENERAL,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
 )
 
 data class PrintRequest(
@@ -94,30 +98,41 @@ data class PrintRequest(
     val totalCost: Double,
     val amountPaid: Double,
     val status: PrintStatus,
-    val dateSubmitted: String
+    val dateSubmitted: String,
 )
 
 enum class PrintStatus(val label: String) {
     PENDING("Pending"),
     PRINTING("Printing"),
     READY("Ready for Pickup"),
-    COMPLETED("Completed")
+    COMPLETED("Completed"),
+    CANCELLED("Cancelled"),
 }
 
 data class CartItem(
     val book: Book,
-    val isAvailable: Boolean
+    val isAvailable: Boolean,
 )
 
 data class LibrarySession(
     val userType: UserType = UserType.STUDENT,
-    val userName: String = "Student User"
+    val userName: String = "Student User",
+    val schoolId: String = "",
+    val accountId: Int = 0,
+    val isAuthenticated: Boolean = false,
+)
+
+data class AttendancePass(
+    val schoolId: String,
+    val fullName: String,
+    val role: String,
+    val visitsThisMonth: Int = 0,
+    val todayCheckIn: String? = null,
+    val commonPurpose: String? = null,
+    val qrBitmap: Bitmap? = null,
 )
 
 fun Book.apaCitation(): String {
-    val initials = author.split(" ").filter { it.isNotBlank() }.joinToString(", ") { part ->
-        "${part.first()}. "
-    }.trim().removeSuffix(",")
     return "$author ($yearPublished). $title. $publisher."
 }
 

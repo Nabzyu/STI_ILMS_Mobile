@@ -1,4 +1,5 @@
 package com.example.stismartlib.ui.dashboard.catalog
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
@@ -37,13 +40,17 @@ import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun BookCartScreen(onBack: () -> Unit) {
     val repository = rememberLibraryRepository()
+    val scope = rememberCoroutineScope()
     var showBorrowDialog by remember { mutableStateOf(false) }
     var showReserveDialog by remember { mutableStateOf(false) }
+    var dialogMessage by remember { mutableStateOf("Your cart is ready to claim at the library desk.") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val cartItems = repository.cart
     val allAvailable = repository.allCartItemsAvailable()
     val cartLimitText = if (repository.session.userType == UserType.STUDENT) {
@@ -55,6 +62,10 @@ fun BookCartScreen(onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         PageHeader(eyebrow = "My library", title = "Book cart", description = cartLimitText)
         Spacer(modifier = Modifier.height(12.dp))
+        if (errorMessage != null) {
+            Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         if (cartItems.isEmpty()) {
             Text("Your cart is empty. Browse the catalog to add books.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
         } else {
@@ -80,7 +91,26 @@ fun BookCartScreen(onBack: () -> Unit) {
                 }
             }
             if (allAvailable) {
-                PortalButton(text = "Borrow books", onClick = { showBorrowDialog = true }, modifier = Modifier.fillMaxWidth())
+                PortalButton(
+                    text = if (isSubmitting) "Submitting..." else "Borrow books",
+                    onClick = {
+                        isSubmitting = true
+                        errorMessage = null
+                        scope.launch {
+                            try {
+                                dialogMessage = repository.submitBorrowCart()
+                                showBorrowDialog = true
+                            } catch (error: ApiException) {
+                                errorMessage = error.message
+                            } catch (_: Exception) {
+                                errorMessage = "Unable to submit the borrow request."
+                            } finally {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             } else {
                 PortalButton(text = "Reserve unavailable books", onClick = { showReserveDialog = true }, modifier = Modifier.fillMaxWidth())
             }
@@ -92,12 +122,9 @@ fun BookCartScreen(onBack: () -> Unit) {
         onDismiss = { showBorrowDialog = false },
         type = AppDialogType.SUCCESS,
         title = "Borrow request",
-        message = "Your cart is ready to claim at the library desk.",
+        message = dialogMessage,
         confirmText = "Done",
-        onConfirm = {
-            repository.clearCart()
-            showBorrowDialog = false
-        }
+        onConfirm = { showBorrowDialog = false }
     )
     AppDialog(
         visible = showReserveDialog,

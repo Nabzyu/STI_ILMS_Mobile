@@ -13,26 +13,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stismartlib.data.models.Reservation
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import com.example.stismartlib.ui.theme.ElmsCyan
+import kotlinx.coroutines.launch
 
 @Composable
 fun ReserveBookScreen(
@@ -40,7 +48,36 @@ fun ReserveBookScreen(
     onBrowseCatalog: () -> Unit
 ) {
     val repository = rememberLibraryRepository()
+    val scope = rememberCoroutineScope()
     val reservations = repository.reservations
+    var pendingCancel by remember { mutableStateOf<Reservation?>(null) }
+
+    if (pendingCancel != null) {
+        AlertDialog(
+            onDismissRequest = { pendingCancel = null },
+            title = { Text("Cancel reservation?") },
+            text = {
+                Text(
+                    "Cancel your reservation for \"${pendingCancel!!.book.title}\"? " +
+                        "You will lose your place in the queue."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = pendingCancel!!.id
+                        pendingCancel = null
+                        scope.launch {
+                            runCatching { repository.cancelReservation(id) }
+                        }
+                    }
+                ) { Text("Cancel reservation", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCancel = null }) { Text("Keep reservation") }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -70,7 +107,7 @@ fun ReserveBookScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(PrimaryBlue.copy(alpha = 0.06f))
+                            .background(ElmsCyan.copy(alpha = 0.12f))
                             .padding(10.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
@@ -84,7 +121,7 @@ fun ReserveBookScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(PrimaryBlue.copy(alpha = 0.05f))
+                        .background(ElmsCyan.copy(alpha = 0.08f))
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -95,7 +132,7 @@ fun ReserveBookScreen(
                     }
                     PortalButton(
                         text = "Cancel",
-                        onClick = { repository.cancelReservation(reservation.id) },
+                        onClick = { pendingCancel = reservation },
                         variant = PortalButtonVariant.Secondary
                     )
                 }

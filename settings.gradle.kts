@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "STISmartLib"
+rootProject.name = "STI College Ormoc Integrated Library Management System"
 include(":app")

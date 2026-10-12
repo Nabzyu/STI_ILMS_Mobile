@@ -1,4 +1,0 @@
-package components
-
-class PasswordTextField {
-}

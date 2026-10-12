@@ -19,18 +19,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.R
 import com.example.stismartlib.navigation.Screen
-import com.example.stismartlib.ui.components.LibraryMarkTile
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import com.example.stismartlib.ui.components.StiMarkTile
+import com.example.stismartlib.ui.theme.ElmsCyan
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun SplashScreen(navController: NavHostController) {
+    val repository = rememberLibraryRepository()
     val alpha = remember { Animatable(0f) }
     val scale = remember { Animatable(0.86f) }
 
@@ -41,9 +45,21 @@ fun SplashScreen(navController: NavHostController) {
         launch {
             scale.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
         }
-        delay(1400)
-        navController.navigate(Screen.Login.route) {
-            popUpTo(Screen.Splash.route) { inclusive = true }
+        delay(900)
+        val restored = repository.restoreSession()
+        if (restored) {
+            val destination = if (repository.session.userType.isStaff) {
+                Screen.StaffHome.route
+            } else {
+                Screen.Dashboard.create(repository.session.userType)
+            }
+            navController.navigate(destination) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        } else {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
         }
     }
 
@@ -60,22 +76,22 @@ fun SplashScreen(navController: NavHostController) {
                 .alpha(alpha.value)
                 .scale(scale.value)
         ) {
-            LibraryMarkTile(size = 112.dp, contentDescription = "STI Ormoc Smart Library")
+            StiMarkTile(size = 112.dp, contentDescription = stringResource(R.string.system_full_name))
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "STI ORMOC",
-                color = PrimaryBlue,
+                text = stringResource(R.string.system_identity_line),
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "SMART LIBRARY",
-                color = PrimaryBlue.copy(alpha = 0.6f),
-                fontSize = 12.sp,
+                text = stringResource(R.string.system_full_descriptor),
+                color = ElmsCyan,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp
+                letterSpacing = 0.7.sp
             )
         }
     }

@@ -12,37 +12,37 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
+    primary = ElmsCyan,
     onPrimary = Color.White,
-    primaryContainer = PrimaryBlue10,
-    onPrimaryContainer = PrimaryBlue,
-    secondary = AccentYellow,
-    onSecondary = PrimaryBlue,
+    primaryContainer = ElmsCyanSoft,
+    onPrimaryContainer = LightOnSurface,
+    secondary = StiYellow,
+    onSecondary = StiMarkBlue,
     secondaryContainer = AccentYellow10,
-    onSecondaryContainer = PrimaryBlue,
-    tertiary = PrimaryBlue,
+    onSecondaryContainer = StiMarkBlue,
+    tertiary = ElmsCyan,
     background = LightBackground,
     onBackground = LightOnSurface,
     surface = LightSurface,
     onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
-    outline = BrandBorder,
-    outlineVariant = BrandBorderSoft,
+    outline = LightOutline,
+    outlineVariant = LightOutline,
     error = ErrorRed,
     onError = Color.White
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
+    primary = ElmsCyan,
     onPrimary = Color.White,
     primaryContainer = DarkFocusFill,
     onPrimaryContainer = DarkOnSurface,
-    secondary = AccentYellow,
-    onSecondary = PrimaryBlue,
+    secondary = StiYellow,
+    onSecondary = StiMarkBlue,
     secondaryContainer = Color(0xFF3D3200),
-    onSecondaryContainer = AccentYellow,
-    tertiary = AccentYellow,
+    onSecondaryContainer = StiYellow,
+    tertiary = ElmsCyan,
     background = DarkBackground,
     onBackground = DarkOnSurface,
     surface = DarkSurface,
@@ -56,7 +56,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun STISmartLibTheme(
+fun STIOrmocLibraryTheme(
     darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {

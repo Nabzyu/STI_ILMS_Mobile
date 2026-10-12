@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +29,7 @@ import com.example.stismartlib.data.LibraryRepository
 import com.example.stismartlib.data.models.apaCitation
 import com.example.stismartlib.data.models.availabilityLabel
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
 import com.example.stismartlib.ui.components.PageHeader
@@ -37,6 +39,7 @@ import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
 import com.example.stismartlib.ui.theme.PrimaryBlue
+import kotlinx.coroutines.launch
 
 @Composable
 fun BookDetailScreen(
@@ -46,6 +49,7 @@ fun BookDetailScreen(
 ) {
     val repository = rememberLibraryRepository()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showApaCitation by remember { mutableStateOf(false) }
     val book = repository.books.find { it.id == bookId }
 
@@ -113,6 +117,25 @@ fun BookDetailScreen(
                 variant = PortalButtonVariant.Secondary,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (book.availableCopies <= 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                PortalButton(
+                    text = "Reserve this title",
+                    onClick = {
+                        scope.launch {
+                            try {
+                                repository.reserveBook(book)
+                                Toast.makeText(context, "Reservation submitted", Toast.LENGTH_SHORT).show()
+                            } catch (error: ApiException) {
+                                Toast.makeText(context, error.message, Toast.LENGTH_LONG).show()
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "Unable to reserve this title", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 

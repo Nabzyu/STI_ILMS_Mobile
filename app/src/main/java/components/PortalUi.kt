@@ -1,4 +1,5 @@
 package com.example.stismartlib.ui.components
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
@@ -18,8 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,78 +36,79 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.ui.theme.AccentYellow
+import com.example.stismartlib.R
 import com.example.stismartlib.ui.theme.AccentYellow35
-import com.example.stismartlib.ui.theme.BrandBorder
-import com.example.stismartlib.ui.theme.BrandBorderSoft
-import com.example.stismartlib.ui.theme.BrandBorderStrong
-import com.example.stismartlib.ui.theme.BrandPlaceholder
 import com.example.stismartlib.ui.theme.CardShadow
+import com.example.stismartlib.ui.theme.ElmsCyan
+import com.example.stismartlib.ui.theme.ElmsCyanSoft
 import com.example.stismartlib.ui.theme.EyebrowStyle
-import com.example.stismartlib.ui.theme.PrimaryBlue
-import com.example.stismartlib.ui.theme.PrimaryBlue5
-import com.example.stismartlib.ui.theme.PrimaryBlue10
+import com.example.stismartlib.ui.theme.StiMarkBlue
+import com.example.stismartlib.ui.theme.StiYellow
 
-/** Web: rounded-xl = 12dp, rounded-2xl = 16dp, rounded-3xl = 24dp */
 val ShapeXl = RoundedCornerShape(12.dp)
 val Shape2Xl = RoundedCornerShape(16.dp)
 val Shape3Xl = RoundedCornerShape(24.dp)
 val ShapePill = RoundedCornerShape(999.dp)
 
 @Composable
-fun LibraryMarkTile(
+fun StiMarkTile(
     size: Dp = 40.dp,
-    contentDescription: String? = null
+    contentDescription: String? = "STI"
 ) {
     Box(
         modifier = Modifier
             .size(size)
-            .shadow(1.dp, ShapeXl, spotColor = CardShadow, ambientColor = CardShadow)
-            .clip(ShapeXl)
-            .background(AccentYellow),
+            .clip(RoundedCornerShape(6.dp))
+            .background(StiYellow)
+            .semantics { if (contentDescription != null) this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Lucide.LibraryBig,
-            contentDescription = contentDescription,
-            tint = PrimaryBlue,
-            modifier = Modifier.size(size * 0.55f)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(4.dp)
-                .background(PrimaryBlue)
+        Text(
+            text = "STI",
+            color = StiMarkBlue,
+            fontWeight = FontWeight.Black,
+            fontSize = (size.value * 0.32f).sp,
+            letterSpacing = (-0.5).sp
         )
     }
 }
 
 @Composable
-fun LibraryMark(onDark: Boolean = false) {
+fun StiMark(onDark: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        LibraryMarkTile()
+        StiMarkTile()
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = "STI ORMOC",
-                color = if (onDark) Color.White else PrimaryBlue,
+                text = stringResource(R.string.system_identity_line),
+                color = if (onDark) Color.White else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Black,
                 fontSize = 14.sp,
                 letterSpacing = (-0.01).sp
             )
             Text(
-                text = "SMART LIBRARY",
-                color = if (onDark) Color.White.copy(alpha = 0.7f) else PrimaryBlue.copy(alpha = 0.6f),
+                text = stringResource(R.string.system_full_descriptor),
+                color = if (onDark) {
+                    Color.White.copy(alpha = 0.7f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 10.sp,
-                letterSpacing = (0.16 * 10).sp
+                fontSize = 8.sp,
+                letterSpacing = 0.35.sp
             )
         }
     }
@@ -118,12 +122,14 @@ fun PageHeader(
     action: @Composable (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = eyebrow.uppercase(),
-            style = EyebrowStyle,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        if (eyebrow.isNotBlank()) {
+            Text(
+                text = eyebrow.uppercase(),
+                style = EyebrowStyle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
@@ -134,7 +140,7 @@ fun PageHeader(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 20.sp
             )
         }
@@ -157,12 +163,20 @@ fun SectionCard(
             .shadow(1.dp, Shape2Xl, spotColor = CardShadow, ambientColor = CardShadow)
             .clip(Shape2Xl)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, Shape2Xl)
+            .border(1.dp, MaterialTheme.colorScheme.outline, Shape2Xl)
             .padding(contentPadding)
     ) {
         content()
     }
 }
+
+/** ELMS-style section card alias */
+@Composable
+fun ElmsSectionCard(
+    modifier: Modifier = Modifier,
+    contentPadding: Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit
+) = SectionCard(modifier, contentPadding, content)
 
 @Composable
 fun StatCard(
@@ -178,7 +192,7 @@ fun StatCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     label,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -192,7 +206,7 @@ fun StatCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         note,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -200,13 +214,13 @@ fun StatCard(
             Box(
                 modifier = Modifier
                     .clip(ShapeXl)
-                    .background(if (highlight) AccentYellow35 else PrimaryBlue5)
+                    .background(if (highlight) AccentYellow35 else ElmsCyanSoft)
                     .padding(10.dp)
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = if (highlight) PrimaryBlue else MaterialTheme.colorScheme.onSurface,
+                    tint = if (highlight) StiMarkBlue else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -216,7 +230,7 @@ fun StatCard(
 
 @Composable
 fun StatusBadge(label: String, warning: Boolean = false) {
-    val background = if (warning) AccentYellow35 else PrimaryBlue5
+    val background = if (warning) AccentYellow35 else ElmsCyanSoft
     Text(
         text = label,
         color = MaterialTheme.colorScheme.onSurface,
@@ -225,9 +239,228 @@ fun StatusBadge(label: String, warning: Boolean = false) {
         modifier = Modifier
             .clip(ShapePill)
             .background(background)
-            .border(1.dp, BrandBorderSoft, ShapePill)
+            .border(1.dp, MaterialTheme.colorScheme.outline, ShapePill)
             .padding(horizontal = 10.dp, vertical = 4.dp)
     )
+}
+
+@Composable
+fun ElmsPillTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    count: Int? = null,
+    modifier: Modifier = Modifier
+) {
+    val bg = if (selected) ElmsCyan else Color.Transparent
+    val fg = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier = modifier
+            .sizeIn(minHeight = 40.dp)
+            .clip(ShapePill)
+            .background(bg)
+            .then(
+                if (!selected) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, ShapePill)
+                else Modifier
+            )
+            .clickable(onClick = onClick)
+            .semantics {
+                role = Role.Tab
+                contentDescription = if (count != null) "$label, $count" else label
+            }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        if (count != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .sizeIn(minWidth = 22.dp, minHeight = 22.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) Color.White else ElmsCyan),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = count.toString(),
+                    color = if (selected) ElmsCyan else Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ElmsCountBadge(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    if (count <= 0) return
+    Box(
+        modifier = modifier
+            .sizeIn(minWidth = 18.dp, minHeight = 18.dp)
+            .clip(CircleShape)
+            .background(ElmsCyan),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 99) "99+" else count.toString(),
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+    }
+}
+
+@Composable
+fun ElmsListRow(
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    leading: @Composable () -> Unit,
+    trailing: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = 64.dp)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clip(ShapeXl)
+                        .clickable(onClick = onClick)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = title
+                        }
+                } else Modifier
+            )
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(ShapeXl)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            leading()
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        if (trailing != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            trailing()
+        }
+    }
+}
+
+enum class ElmsBannerTone { Error, Success, Info }
+
+@Composable
+fun ElmsBanner(
+    message: String,
+    tone: ElmsBannerTone = ElmsBannerTone.Error,
+    modifier: Modifier = Modifier
+) {
+    val bg = when (tone) {
+        ElmsBannerTone.Error -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+        ElmsBannerTone.Success -> SuccessGreenSoft
+        ElmsBannerTone.Info -> ElmsCyanSoft
+    }
+    val fg = when (tone) {
+        ElmsBannerTone.Error -> MaterialTheme.colorScheme.error
+        ElmsBannerTone.Success -> Color(0xFF2B8A3E)
+        ElmsBannerTone.Info -> ElmsCyan
+    }
+    Text(
+        text = message,
+        color = fg,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(ShapeXl)
+            .background(bg)
+            .border(1.dp, fg.copy(alpha = 0.25f), ShapeXl)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    )
+}
+
+private val SuccessGreenSoft = Color(0x1A2B8A3E)
+
+@Composable
+fun ElmsEmptyState(
+    title: String,
+    description: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (actionLabel != null && onAction != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            PortalButton(text = actionLabel, onClick = onAction)
+        }
+    }
+}
+
+@Composable
+fun ElmsLoadingBlock(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            color = ElmsCyan,
+            modifier = Modifier.size(36.dp),
+            strokeWidth = 3.dp
+        )
+    }
 }
 
 enum class PortalButtonVariant { Primary, Secondary, Ghost, Yellow }
@@ -239,41 +472,49 @@ fun PortalButton(
     modifier: Modifier = Modifier,
     variant: PortalButtonVariant = PortalButtonVariant.Primary,
     enabled: Boolean = true,
+    loading: Boolean = false,
     leadingIcon: ImageVector? = null
 ) {
     val background = when (variant) {
-        PortalButtonVariant.Primary -> PrimaryBlue
+        PortalButtonVariant.Primary -> ElmsCyan
         PortalButtonVariant.Secondary -> MaterialTheme.colorScheme.surface
         PortalButtonVariant.Ghost -> Color.Transparent
         PortalButtonVariant.Yellow -> AccentYellow
     }
     val contentColor = when (variant) {
         PortalButtonVariant.Primary -> Color.White
-        PortalButtonVariant.Yellow -> PrimaryBlue
+        PortalButtonVariant.Yellow -> StiMarkBlue
         else -> MaterialTheme.colorScheme.onSurface
     }
     val borderColor = when (variant) {
-        PortalButtonVariant.Secondary -> BrandBorder
+        PortalButtonVariant.Secondary -> MaterialTheme.colorScheme.outline
         else -> Color.Transparent
     }
-    val showShadow = variant == PortalButtonVariant.Primary
+    val clickable = enabled && !loading
 
     Row(
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .then(
-                if (showShadow) Modifier.shadow(2.dp, ShapeXl, spotColor = PrimaryBlue10, ambientColor = PrimaryBlue10)
-                else Modifier
-            )
             .clip(ShapeXl)
-            .background(if (enabled) background else background.copy(alpha = 0.45f))
+            .background(if (clickable) background else background.copy(alpha = 0.45f))
             .border(1.dp, borderColor, ShapeXl)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = clickable, onClick = onClick)
+            .semantics {
+                role = Role.Button
+                contentDescription = text
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        if (leadingIcon != null) {
+        if (loading) {
+            CircularProgressIndicator(
+                color = contentColor,
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        } else if (leadingIcon != null) {
             Icon(leadingIcon, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
         }
@@ -291,14 +532,15 @@ fun PortalField(
     modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: @Composable (() -> Unit)? = null,
-    error: String? = null
+    error: String? = null,
+    enabled: Boolean = true
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val borderColor = when {
-        error != null -> PrimaryBlue
-        focused -> PrimaryBlue
-        else -> BrandBorderStrong
+        error != null -> MaterialTheme.colorScheme.error
+        focused -> ElmsCyan
+        else -> MaterialTheme.colorScheme.outline
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -324,7 +566,7 @@ fun PortalField(
             Icon(
                 leadingIcon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -332,7 +574,7 @@ fun PortalField(
                 if (value.isEmpty()) {
                     Text(
                         placeholder,
-                        color = BrandPlaceholder,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 14.sp
                     )
                 }
@@ -340,13 +582,14 @@ fun PortalField(
                     value = value,
                     onValueChange = onValueChange,
                     singleLine = true,
+                    enabled = enabled,
                     interactionSource = interaction,
                     textStyle = TextStyle(
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(ElmsCyan),
                     visualTransformation = visualTransformation,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -364,7 +607,7 @@ fun PortalField(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 error,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )

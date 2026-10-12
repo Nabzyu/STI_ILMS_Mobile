@@ -1,9 +1,11 @@
 package com.example.stismartlib.ui.dashboard.overview
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.BorrowStatus
@@ -33,21 +37,19 @@ import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.PrintStatus
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.UserType
-import com.example.stismartlib.ui.components.PageHeader
+import com.example.stismartlib.ui.components.ElmsListRow
+import com.example.stismartlib.ui.components.ElmsPillTab
+import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
-import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.Shape2Xl
-import com.example.stismartlib.ui.components.Shape3Xl
 import com.example.stismartlib.ui.components.ShapePill
 import com.example.stismartlib.ui.components.ShapeXl
-import com.example.stismartlib.ui.components.StatCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
 import com.example.stismartlib.ui.theme.AccentYellow
-import com.example.stismartlib.ui.theme.EyebrowStyle
-import com.example.stismartlib.ui.theme.PrimaryBlue
-import com.example.stismartlib.ui.theme.PrimaryBlue5
+import com.example.stismartlib.ui.theme.ElmsCyan
+import com.example.stismartlib.ui.theme.ElmsCyanSoft
 
 @Composable
 fun DashboardOverviewScreen(
@@ -74,371 +76,217 @@ fun DashboardOverviewScreen(
     val unread = repository.notifications.count { !it.isRead }
     val outstanding = repository.fines.filter { it.paymentStatus == FineStatus.UNPAID }.sumOf { it.amount }
     val readyPrint = repository.printHistory.firstOrNull { it.status == PrintStatus.READY }
-    val currentLoan = activeLoans.firstOrNull()
-    val slotsRemaining = (2 - activeLoans.size).coerceAtLeast(0)
-    val recommendedBooks = repository.books.take(3)
     val firstName = repository.session.userName.trim().split(Regex("\\s+")).firstOrNull().orEmpty()
         .ifBlank { "Library user" }
     val latestNotification = repository.notifications.firstOrNull()
     val reservation = repository.reservations.firstOrNull()
+    val recommendedBooks = repository.books.take(5)
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            PageHeader(
-                eyebrow = "Student workspace",
-                title = "Good day, $firstName!"
-            )
-        }
-
-        // Hero — matches UserDashboardPage navy banner
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(Shape3Xl)
-                    .background(PrimaryBlue)
-                    .padding(24.dp)
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .clip(ShapePill)
-                            .background(Color.White.copy(alpha = 0.10f))
-                            .border(1.dp, Color.White.copy(alpha = 0.10f), ShapePill)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Lucide.Sparkles, contentDescription = null, tint = AccentYellow, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text("Your library, made smarter", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Your books, requests, updates, and library visit in one place.",
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineMedium,
-                        lineHeight = 30.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        "Check your account and explore available library resources.",
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 14.sp,
-                        lineHeight = 22.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    PortalButton(
-                        text = "Explore catalog",
-                        onClick = onNavigateToBookCatalog,
-                        variant = PortalButtonVariant.Yellow,
-                        leadingIcon = Lucide.ArrowRight
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PortalButton(
-                        text = "Browse research",
-                        onClick = onNavigateToResearchCatalog,
-                        variant = PortalButtonVariant.Ghost,
-                        modifier = Modifier
-                            .clip(ShapeXl)
-                            .background(Color.White.copy(alpha = 0.10f))
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(Shape2Xl)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .border(1.dp, Color.White.copy(alpha = 0.10f), Shape2Xl)
-                                .padding(16.dp)
-                        ) {
-                            Text("Library occupancy", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                            Text("—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Unavailable", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(Shape2Xl)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .border(1.dp, Color.White.copy(alpha = 0.10f), Shape2Xl)
-                                .padding(16.dp)
-                        ) {
-                            Text("Clearance status", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Lucide.CircleCheck, contentDescription = null, tint = AccentYellow, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Text(
-                                    if (outstanding == 0.0) "Cleared" else "Hold",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                if (outstanding == 0.0) "No clearance block" else "Resolve account obligations",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Stats 2×2 — web grid-cols-2
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    "Active loans",
-                    activeLoans.size.toString(),
-                    if (slotsRemaining == 1) "1 slot remaining" else "$slotsRemaining slots remaining",
-                    Lucide.BookOpen,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    "Reservations",
-                    repository.reservations.size.toString(),
-                    null,
-                    Lucide.BookMarked,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    "Unread updates",
-                    unread.toString(),
-                    null,
-                    Lucide.Bell,
-                    highlight = unread > 0,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    "Outstanding fines",
-                    "₱${"%.2f".format(outstanding)}",
-                    null,
-                    Lucide.CircleDollarSign,
-                    highlight = outstanding > 0,
-                    modifier = Modifier.weight(1f)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ElmsPillTab(label = "Dashboard", selected = true, onClick = {})
+                ElmsPillTab(
+                    label = "Updates",
+                    selected = false,
+                    onClick = onNavigateToNotifications,
+                    count = unread.takeIf { it > 0 }
                 )
             }
         }
 
-        // Recommendations (web order: before loan cards)
         item {
-            SectionCard(contentPadding = 20.dp) {
+            ElmsSectionCard(contentPadding = 16.dp) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            "RECOMMENDED FOR YOU",
-                            style = EyebrowStyle,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Available to borrow",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                     Text(
-                        "View all",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        modifier = Modifier
-                            .sizeIn(minHeight = 48.dp)
-                            .clickable(onClick = onNavigateToBookCatalog)
-                            .padding(vertical = 12.dp)
+                        "Welcome",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Hi, $firstName",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (recommendedBooks.isEmpty()) {
-                    EmptyLine("No available recommendations right now.")
-                } else {
-                    recommendedBooks.forEach { book ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .sizeIn(minHeight = 48.dp)
-                                .clickable { onNavigateToBookCatalog() }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BookCoverPlaceholder(
-                                title = book.title,
-                                color = Color(book.coverColor),
-                                modifier = Modifier
-                                    .size(width = 48.dp, height = 64.dp)
-                                    .clip(ShapeXl)
-                            )
-                            Spacer(modifier = Modifier.size(12.dp))
-                            Column {
-                                Text(book.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(book.author, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontSize = 11.sp)
-                            }
-                        }
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(Shape2Xl)
+                        .background(ElmsCyan)
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(
+                            "Your library, made smarter",
+                            color = AccentYellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Books, requests, and visits in one place.",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        PortalButton(
+                            text = "Explore catalog",
+                            onClick = onNavigateToBookCatalog,
+                            variant = PortalButtonVariant.Yellow,
+                            leadingIcon = Lucide.ArrowRight
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            }
+        }
+
+        item {
+            WidgetHeader(
+                title = "Active loans",
+                badgeCount = activeLoans.size,
+                onViewAll = onNavigateToBorrowingHistory
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (activeLoans.isEmpty()) {
+                ElmsSectionCard {
+                    Text(
+                        "No active borrowed books.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     PortalButton(
                         text = "Browse catalog",
                         onClick = onNavigateToBookCatalog,
-                        leadingIcon = Lucide.Search
-                    )
-                    PortalButton(
-                        text = "Borrow cart",
-                        onClick = onNavigateToBorrowProcess,
-                        variant = PortalButtonVariant.Secondary,
-                        leadingIcon = Lucide.ShoppingBag
+                        variant = PortalButtonVariant.Secondary
                     )
                 }
-            }
-        }
-
-        // Current loan
-        item {
-            SectionCard(contentPadding = 20.dp) {
+            } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column {
-                        Text(
-                            "CURRENT LOAN",
-                            style = EyebrowStyle,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Return reminder",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    if (currentLoan != null) {
-                        StatusBadge(
-                            currentLoan.borrowStatus.label,
-                            warning = currentLoan.borrowStatus == BorrowStatus.OVERDUE
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (currentLoan == null) {
-                    EmptyLine("You have no active borrowed books.")
-                } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(Shape2Xl)
-                            .background(PrimaryBlue5)
-                            .padding(16.dp)
-                    ) {
-                        BookCoverPlaceholder(
-                            title = currentLoan.book.title,
-                            color = Color(currentLoan.book.coverColor),
-                            modifier = Modifier
-                                .size(width = 80.dp, height = 112.dp)
-                                .clip(ShapeXl)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, ShapeXl)
-                        )
-                        Spacer(modifier = Modifier.size(16.dp))
-                        Column {
-                            Text(currentLoan.book.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                            Text(currentLoan.book.author, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 13.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Lucide.CalendarClock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Text("Due ${currentLoan.dueDate}", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
-                            }
+                    activeLoans.take(5).forEach { loan ->
+                        ElmsSectionCard(
+                            modifier = Modifier.width(260.dp),
+                            contentPadding = 12.dp
+                        ) {
+                            BookCoverPlaceholder(
+                                title = loan.book.title,
+                                color = Color(loan.book.coverColor),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .clip(ShapeXl)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                loan.book.title,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Lucide.MapPin, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.size(6.dp))
-                                Text(currentLoan.book.shelfLocation, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
-                            }
+                            StatusBadge(
+                                loan.borrowStatus.label,
+                                warning = loan.borrowStatus == BorrowStatus.OVERDUE
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Due ${loan.dueDate}",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            PortalButton(
+                                text = "Return",
+                                onClick = onNavigateToReturnBook,
+                                variant = PortalButtonVariant.Secondary,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    PortalButton(
-                        text = "Return book",
-                        onClick = onNavigateToReturnBook,
-                        variant = PortalButtonVariant.Secondary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
 
-        // Print service
         item {
-            SectionCard(contentPadding = 20.dp) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            "PRINT SERVICE",
-                            style = EyebrowStyle,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Latest request",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Icon(Lucide.Printer, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(21.dp))
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (readyPrint == null) {
-                    EmptyLine("No active print request.")
+            WidgetHeader(title = "Recommended", onViewAll = onNavigateToBookCatalog)
+            Spacer(modifier = Modifier.height(8.dp))
+            ElmsSectionCard(contentPadding = 8.dp) {
+                if (recommendedBooks.isEmpty()) {
+                    Text(
+                        "No recommendations yet.",
+                        modifier = Modifier.padding(12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(Shape2Xl)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, Shape2Xl)
-                            .background(PrimaryBlue5)
-                            .padding(16.dp)
-                    ) {
-                        Text(readyPrint.fileName, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "${readyPrint.copies} copies · ${readyPrint.printType}",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "₱${"%.2f".format(readyPrint.totalCost)}",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                    recommendedBooks.forEach { book ->
+                        ElmsListRow(
+                            title = book.title,
+                            subtitle = book.author,
+                            onClick = onNavigateToBookCatalog,
+                            leading = {
+                                BookCoverPlaceholder(
+                                    title = book.title,
+                                    color = Color(book.coverColor),
+                                    modifier = Modifier.size(52.dp)
+                                )
+                            }
                         )
                     }
+                }
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                QuickStat(
+                    label = "Unread",
+                    value = unread.toString(),
+                    highlight = unread > 0,
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToNotifications
+                )
+                QuickStat(
+                    label = "Fines",
+                    value = "₱${"%.0f".format(outstanding)}",
+                    highlight = outstanding > 0,
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToBorrowingHistory
+                )
+            }
+        }
+
+        item {
+            ElmsSectionCard {
+                WidgetHeader(title = "Printing", badgeCount = if (readyPrint != null) 1 else 0)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (readyPrint == null) {
+                    Text("No active print request.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text(readyPrint.fileName, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "${readyPrint.copies} copies · ₱${"%.2f".format(readyPrint.totalCost)}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 PortalButton(
-                    text = "View request",
+                    text = "Printing service",
                     onClick = onNavigateToPrintingService,
                     variant = PortalButtonVariant.Secondary,
                     modifier = Modifier.fillMaxWidth()
@@ -446,173 +294,178 @@ fun DashboardOverviewScreen(
             }
         }
 
-        // Reservation + notifications
         item {
-            SectionCard(contentPadding = 20.dp) {
-                Text(
-                    "RESERVATION",
-                    style = EyebrowStyle,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Queue and pickup",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            ElmsSectionCard {
+                WidgetHeader(title = "Reservations", badgeCount = repository.reservations.size)
+                Spacer(modifier = Modifier.height(8.dp))
                 if (reservation == null) {
-                    EmptyLine("No active reservation.")
+                    Text("No active reservation.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    Text(reservation.book.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(reservation.book.title, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Queue position #${reservation.queuePosition}",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    PortalButton(
-                        text = "View reservations",
-                        onClick = onNavigateToReserveBook,
-                        variant = PortalButtonVariant.Secondary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-
-        item {
-            SectionCard(contentPadding = 20.dp) {
-                Text(
-                    "LATEST UPDATE",
-                    style = EyebrowStyle,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Notifications",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                if (latestNotification == null) {
-                    EmptyLine("You are all caught up.")
-                } else {
-                    Text(latestNotification.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        latestNotification.message,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                        fontSize = 14.sp,
-                        lineHeight = 22.sp
+                        "Queue #${reservation.queuePosition}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    "View notifications",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    modifier = Modifier
-                        .sizeIn(minHeight = 48.dp)
-                        .clickable(onClick = onNavigateToNotifications)
-                        .padding(vertical = 12.dp)
+                PortalButton(
+                    text = "View reservations",
+                    onClick = onNavigateToReserveBook,
+                    variant = PortalButtonVariant.Secondary,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        // Recent borrowing
         item {
-            SectionCard(contentPadding = 20.dp) {
-                Text(
-                    "RECENT BORROWING",
-                    style = EyebrowStyle,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "History preview",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            ElmsSectionCard {
+                WidgetHeader(title = "Latest update", onViewAll = onNavigateToNotifications)
                 Spacer(modifier = Modifier.height(8.dp))
-                if (repository.borrowingHistory.isEmpty()) {
-                    EmptyLine("No borrowing history yet.")
+                if (latestNotification == null) {
+                    Text("You are all caught up.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    repository.borrowingHistory.take(3).forEach { record ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(record.book.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                                Text(record.borrowDate, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                            }
-                            StatusBadge(
-                                record.borrowStatus.label,
-                                warning = record.borrowStatus == BorrowStatus.OVERDUE
-                            )
-                        }
-                    }
+                    Text(latestNotification.title, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        latestNotification.message,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-                Text(
-                    "View full history",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    modifier = Modifier
-                        .sizeIn(minHeight = 48.dp)
-                        .clickable(onClick = onNavigateToBorrowingHistory)
-                        .padding(vertical = 12.dp)
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                PortalButton(
+                    text = "Borrow cart",
+                    onClick = onNavigateToBorrowProcess,
+                    leadingIcon = Lucide.ShoppingBag,
+                    modifier = Modifier.weight(1f)
+                )
+                PortalButton(
+                    text = "My QR",
+                    onClick = onNavigateToQrLogin,
+                    variant = PortalButtonVariant.Secondary,
+                    leadingIcon = Lucide.QrCode,
+                    modifier = Modifier.weight(1f)
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            PortalButton(
+                text = "Browse research",
+                onClick = onNavigateToResearchCatalog,
+                variant = PortalButtonVariant.Ghost,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun EmptyLine(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-        fontSize = 14.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp)
-    )
+private fun WidgetHeader(
+    title: String,
+    badgeCount: Int = 0,
+    onViewAll: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (badgeCount > 0) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    badgeCount.toString(),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(ShapePill)
+                        .background(ElmsCyan)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+        if (onViewAll != null) {
+            Text(
+                "View all",
+                color = ElmsCyan,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .sizeIn(minHeight = 48.dp)
+                    .clickable(onClick = onViewAll)
+                    .padding(vertical = 12.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickStat(
+    label: String,
+    value: String,
+    highlight: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(Shape2Xl)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, Shape2Xl)
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            value,
+            color = if (highlight) ElmsCyan else MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp
+        )
+    }
 }
 
 @Composable
 private fun FacultyOverview() {
     Column(modifier = Modifier.padding(16.dp)) {
-        PageHeader(eyebrow = "Faculty workspace", title = "Good day!")
-        Spacer(modifier = Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(Shape3Xl)
-                .background(PrimaryBlue)
-                .padding(24.dp)
-        ) {
-            Column {
-                Icon(Lucide.ShieldCheck, contentDescription = null, tint = AccentYellow, modifier = Modifier.size(36.dp))
-                Spacer(modifier = Modifier.height(16.dp))
+        ElmsSectionCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Lucide.ShieldCheck, contentDescription = null, tint = ElmsCyan, modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Faculty workspace", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(
+                        "Welcome to your dashboard",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(Shape2Xl)
+                    .background(ElmsCyanSoft)
+                    .padding(16.dp)
+            ) {
                 Text(
-                    "AUTHORIZED WORKSPACE",
-                    color = AccentYellow,
-                    style = EyebrowStyle
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Welcome to your faculty dashboard.",
-                    color = Color.White,
-                    style = MaterialTheme.typography.headlineLarge,
-                    lineHeight = 34.sp
+                    "Use the navigation bar to browse the catalog, research, and account tools.",
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
