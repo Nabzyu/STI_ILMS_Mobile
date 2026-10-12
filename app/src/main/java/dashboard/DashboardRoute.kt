@@ -21,4 +21,5 @@ sealed class DashboardRoute(val route: String) {
     object PrintingHistory : DashboardRoute("printing_history")
     object Fines : DashboardRoute("fines")
     object Clearance : DashboardRoute("clearance")
+    object Profile : DashboardRoute("profile")
 }

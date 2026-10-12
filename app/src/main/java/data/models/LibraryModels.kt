@@ -122,6 +122,34 @@ data class LibrarySession(
     val isAuthenticated: Boolean = false,
 )
 
+enum class AvatarApprovalStatus(val label: String) {
+    NONE("No photo"),
+    PENDING("Pending approval"),
+    APPROVED("Approved"),
+    REJECTED("Rejected"),
+    UNKNOWN("Unknown"),
+}
+
+data class UserProfile(
+    val accountId: Int = 0,
+    val schoolId: String = "",
+    val firstName: String = "",
+    val lastName: String = "",
+    val fullName: String = "",
+    val email: String = "",
+    val role: String = "",
+    val programStrand: String = "",
+    val yearGradeLevel: String = "",
+    val status: String = "",
+)
+
+data class ProfileAvatar(
+    val status: AvatarApprovalStatus = AvatarApprovalStatus.NONE,
+    val imageUrl: String? = null,
+    val rejectionReason: String? = null,
+    val note: String? = null,
+)
+
 data class AttendancePass(
     val schoolId: String,
     val fullName: String,

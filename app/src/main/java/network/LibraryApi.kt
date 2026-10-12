@@ -12,15 +12,22 @@ import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
 import com.example.stismartlib.network.dto.PrintRequestDto
+import com.example.stismartlib.network.dto.ProfileAvatarDto
+import com.example.stismartlib.network.dto.ProfileMeDto
+import com.example.stismartlib.network.dto.ProfileUpdateRequest
 import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveResultDto
+import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.PATCH
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -78,6 +85,21 @@ interface LibraryApi {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 50,
     ): Response<ApiEnvelope<FineListDto>>
+
+    @GET("api/v1/profile/me")
+    suspend fun profileMe(): Response<ApiEnvelope<ProfileMeDto>>
+
+    @PATCH("api/v1/profile/me")
+    suspend fun updateProfileMe(@Body body: ProfileUpdateRequest): Response<ApiEnvelope<ProfileMeDto>>
+
+    @GET("api/v1/profile/avatar/me")
+    suspend fun profileAvatarMe(): Response<ApiEnvelope<ProfileAvatarDto>>
+
+    @Multipart
+    @POST("api/v1/profile/avatar/me")
+    suspend fun uploadProfileAvatarMe(
+        @Part image: MultipartBody.Part,
+    ): Response<ApiEnvelope<ProfileAvatarDto>>
 
     @GET("api/v1/notifications")
     suspend fun notifications(@Query("limit") limit: Int = 100): Response<ApiEnvelope<NotificationListDto>>

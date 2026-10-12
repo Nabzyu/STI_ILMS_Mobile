@@ -10,6 +10,7 @@ import com.example.stismartlib.ui.components.PortalScreen
 import com.example.stismartlib.ui.dashboard.DashboardScreen
 import com.example.stismartlib.ui.dashboard.account.ClearanceScreen
 import com.example.stismartlib.ui.dashboard.account.FinesScreen
+import com.example.stismartlib.ui.dashboard.account.ProfileScreen
 import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCartScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCatalogScreen
@@ -417,6 +418,26 @@ private fun ClearanceScreenDarkPreview() {
     PreviewApp(darkTheme = true) {
         NestedPreview {
             ClearanceScreen()
+        }
+    }
+}
+
+@Preview(name = "My profile", showBackground = true, showSystemUi = true)
+@Composable
+private fun ProfileScreenPreview() {
+    PreviewApp {
+        NestedPreview {
+            ProfileScreen()
+        }
+    }
+}
+
+@Preview(name = "My profile · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ProfileScreenDarkPreview() {
+    PreviewApp(darkTheme = true) {
+        NestedPreview {
+            ProfileScreen()
         }
     }
 }

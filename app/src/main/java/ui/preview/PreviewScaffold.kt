@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.example.stismartlib.data.LibraryRepository
 import com.example.stismartlib.data.LocalLibraryRepository
+import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
@@ -15,8 +16,10 @@ import com.example.stismartlib.data.models.NotificationCategory
 import com.example.stismartlib.data.models.NotificationItem
 import com.example.stismartlib.data.models.PrintRequest
 import com.example.stismartlib.data.models.PrintStatus
+import com.example.stismartlib.data.models.ProfileAvatar
 import com.example.stismartlib.data.models.Research
 import com.example.stismartlib.data.models.Reservation
+import com.example.stismartlib.data.models.UserProfile
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.theme.LocalThemeController
@@ -146,6 +149,27 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 amountPaid = 0.0,
                 status = PrintStatus.PENDING,
                 dateSubmitted = "2026-10-10",
+            ),
+        )
+    }
+    if (repository.profile == null) {
+        repository.applyPreviewProfile(
+            userProfile = UserProfile(
+                accountId = 1,
+                schoolId = "02000XXXXXX",
+                firstName = "Ana",
+                lastName = "Santos",
+                fullName = "Ana Santos",
+                email = "ana.santos@example.com",
+                role = "Student",
+                programStrand = "BSIT",
+                yearGradeLevel = "3rd Year",
+                status = "Active",
+            ),
+            avatar = ProfileAvatar(
+                status = AvatarApprovalStatus.PENDING,
+                imageUrl = null,
+                note = "Photo submitted. It stays private until a librarian approves it.",
             ),
         )
     }

@@ -68,6 +68,7 @@ import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.components.StiMarkTile
 import com.example.stismartlib.ui.dashboard.account.ClearanceScreen
 import com.example.stismartlib.ui.dashboard.account.FinesScreen
+import com.example.stismartlib.ui.dashboard.account.ProfileScreen
 import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCartScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCatalogScreen
@@ -339,6 +340,12 @@ fun DashboardScreen(
                                 .fillMaxWidth()
                                 .clip(ShapeXl)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable {
+                                    dashboardNavController.navigate(DashboardRoute.Profile.route) {
+                                        launchSingleTop = true
+                                    }
+                                    scope.launch { drawerState.close() }
+                                }
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -630,6 +637,9 @@ fun DashboardScreen(
                     composable(DashboardRoute.Clearance.route) {
                         ClearanceScreen()
                     }
+                    composable(DashboardRoute.Profile.route) {
+                        ProfileScreen()
+                    }
                 }
             }
         }
@@ -648,7 +658,8 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
     if (userType == UserType.STUDENT) {
         items += DrawerItem(DashboardRoute.PrintingService.route, "Printing service", Lucide.Printer)
     }
-    items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell, "My account")
+    items += DrawerItem(DashboardRoute.Profile.route, "My profile", Lucide.User, "My account")
+    items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell)
     items += DrawerItem(DashboardRoute.Fines.route, "Fines", Lucide.CircleDollarSign)
     items += DrawerItem(DashboardRoute.Clearance.route, "Clearance status", Lucide.BadgeCheck)
     return items

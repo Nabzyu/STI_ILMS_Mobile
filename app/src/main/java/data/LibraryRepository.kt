@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.stismartlib.data.models.AttendancePass
+import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
@@ -17,17 +18,26 @@ import com.example.stismartlib.data.models.NotificationCategory
 import com.example.stismartlib.data.models.NotificationItem
 import com.example.stismartlib.data.models.PrintRequest
 import com.example.stismartlib.data.models.PrintStatus
+import com.example.stismartlib.data.models.ProfileAvatar
 import com.example.stismartlib.data.models.Research
 import com.example.stismartlib.data.models.Reservation
+import com.example.stismartlib.data.models.UserProfile
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.ProfileAvatarDto
+import com.example.stismartlib.network.dto.ProfileMeDto
+import com.example.stismartlib.network.dto.ProfileUpdateRequest
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class LibraryRepository(
     private val sessionStore: SessionStore,
@@ -53,8 +63,32 @@ class LibraryRepository(
     var attendancePass by mutableStateOf<AttendancePass?>(null)
         private set
 
+    var profile by mutableStateOf<UserProfile?>(null)
+        private set
+    var profileAvatar by mutableStateOf<ProfileAvatar?>(null)
+        private set
+    var isProfileSaving by mutableStateOf(false)
+        private set
+    var isAvatarUploading by mutableStateOf(false)
+        private set
+    var profileActionError by mutableStateOf<String?>(null)
+        private set
+
     fun setUserType(userType: UserType) {
         session = session.copy(userType = userType)
+    }
+
+    /** Preview / demo seed; not used by production API flows. */
+    fun applyPreviewProfile(userProfile: UserProfile, avatar: ProfileAvatar? = null) {
+        profile = userProfile
+        profileAvatar = avatar
+        session = session.copy(
+            userName = userProfile.fullName.ifBlank { session.userName },
+            schoolId = userProfile.schoolId.ifBlank { session.schoolId },
+            userType = UserType.fromServerRole(userProfile.role).takeIf {
+                userProfile.role.isNotBlank()
+            } ?: session.userType,
+        )
     }
 
     fun cartLimit(): Int? = if (session.userType == UserType.STUDENT) 2 else null
@@ -462,6 +496,132 @@ class LibraryRepository(
         loadReservations()
     }
 
+    suspend fun loadProfile() = withContext(Dispatchers.IO) {
+        val dto = ApiClient.unwrap(ApiClient.api.profileMe())
+        profile = dto.toUserProfile()
+    }
+
+    suspend fun loadProfileAvatar() = withContext(Dispatchers.IO) {
+        val dto = ApiClient.unwrap(ApiClient.api.profileAvatarMe())
+        profileAvatar = dto.toProfileAvatar()
+    }
+
+    suspend fun refreshProfileScreen() = withContext(Dispatchers.IO) {
+        isLoading = true
+        lastError = null
+        try {
+            loadProfile()
+            loadProfileAvatar()
+        } catch (error: ApiException) {
+            lastError = error.message
+            throw error
+        } finally {
+            isLoading = false
+        }
+    }
+
+    suspend fun saveProfile(
+        firstName: String,
+        lastName: String,
+        programStrand: String?,
+        yearGradeLevel: String?,
+    ) = withContext(Dispatchers.IO) {
+        isProfileSaving = true
+        profileActionError = null
+        try {
+            val dto = ApiClient.unwrap(
+                ApiClient.api.updateProfileMe(
+                    ProfileUpdateRequest(
+                        firstName = firstName.trim(),
+                        lastName = lastName.trim(),
+                        programStrand = programStrand?.trim()?.takeIf { it.isNotEmpty() },
+                        yearGradeLevel = yearGradeLevel?.trim()?.takeIf { it.isNotEmpty() },
+                    ),
+                ),
+            )
+            val updated = dto.toUserProfile()
+            profile = updated
+            val stored = sessionStore.getSession()
+            if (stored != null) {
+                val displayName = updated.fullName.ifBlank {
+                    listOf(updated.firstName, updated.lastName)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                }.ifBlank { stored.fullName }
+                sessionStore.save(
+                    token = stored.token,
+                    accountId = stored.accountId,
+                    schoolId = updated.schoolId.ifBlank { stored.schoolId },
+                    fullName = displayName,
+                    role = updated.role.ifBlank { stored.role },
+                )
+                session = session.copy(
+                    userName = displayName,
+                    schoolId = updated.schoolId.ifBlank { session.schoolId },
+                )
+            }
+        } catch (error: ApiException) {
+            profileActionError = error.message
+            throw error
+        } finally {
+            isProfileSaving = false
+        }
+    }
+
+    suspend fun uploadProfileAvatar(imageBytes: ByteArray, mimeType: String, fileName: String) =
+        withContext(Dispatchers.IO) {
+            isAvatarUploading = true
+            profileActionError = null
+            try {
+                val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
+                val body = imageBytes.toRequestBody(mediaType)
+                val part = MultipartBody.Part.createFormData("image", fileName, body)
+                val dto = ApiClient.unwrap(ApiClient.api.uploadProfileAvatarMe(part))
+                profileAvatar = dto.toProfileAvatar()
+            } catch (error: ApiException) {
+                profileActionError = error.message
+                throw error
+            } finally {
+                isAvatarUploading = false
+            }
+        }
+
+    private fun ProfileMeDto.toUserProfile(): UserProfile {
+        val composed = listOf(firstName, lastName).filter { !it.isNullOrBlank() }.joinToString(" ")
+        return UserProfile(
+            accountId = accountId ?: id ?: 0,
+            schoolId = schoolId.orEmpty(),
+            firstName = firstName.orEmpty(),
+            lastName = lastName.orEmpty(),
+            fullName = fullName?.takeIf { it.isNotBlank() } ?: composed,
+            email = email.orEmpty(),
+            role = role.orEmpty(),
+            programStrand = programStrand.orEmpty(),
+            yearGradeLevel = yearGradeLevel.orEmpty(),
+            status = status.orEmpty(),
+        )
+    }
+
+    private fun ProfileAvatarDto.toProfileAvatar(): ProfileAvatar {
+        val raw = status.orEmpty()
+        val mapped = when {
+            raw.isBlank() && resolvedUrl().isNullOrBlank() -> AvatarApprovalStatus.NONE
+            raw.contains("pend", ignoreCase = true) -> AvatarApprovalStatus.PENDING
+            raw.contains("reject", ignoreCase = true) ||
+                raw.contains("denied", ignoreCase = true) -> AvatarApprovalStatus.REJECTED
+            raw.contains("approv", ignoreCase = true) ||
+                raw.equals("active", ignoreCase = true) -> AvatarApprovalStatus.APPROVED
+            !resolvedUrl().isNullOrBlank() -> AvatarApprovalStatus.APPROVED
+            else -> AvatarApprovalStatus.UNKNOWN
+        }
+        return ProfileAvatar(
+            status = mapped,
+            imageUrl = resolvedUrl(),
+            rejectionReason = rejectionReason,
+            note = message,
+        )
+    }
+
     private fun clearLocalData() {
         cart.clear()
         books.clear()
@@ -472,6 +632,11 @@ class LibraryRepository(
         printHistory.clear()
         reservations.clear()
         attendancePass = null
+        profile = null
+        profileAvatar = null
+        isProfileSaving = false
+        isAvatarUploading = false
+        profileActionError = null
         lastError = null
     }
 
