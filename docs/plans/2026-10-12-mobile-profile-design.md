@@ -5,6 +5,8 @@
 **App:** STI ILMS Mobile (`C:\Users\Ethan\AndroidStudioProjects\STI ILMS`)  
 **Backend:** Existing hosted API (no new database work)
 
+**Implementation plan:** [`2026-10-12-mobile-profile-implementation.md`](./2026-10-12-mobile-profile-implementation.md) (covers this design + the earlier plan draft)
+
 ## Goal
 
 Let Student and Faculty (and staff who sign into this app) view and edit their own profile and submit a private avatar for librarian approval, matching web “My profile” behaviour via the same APIs.
