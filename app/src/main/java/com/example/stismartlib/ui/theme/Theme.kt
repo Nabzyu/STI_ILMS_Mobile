@@ -12,15 +12,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = ElmsCyan,
+    primary = StiBrandBlue,
     onPrimary = Color.White,
-    primaryContainer = ElmsCyanSoft,
-    onPrimaryContainer = LightOnSurface,
+    primaryContainer = StiBrandBlueSoft,
+    onPrimaryContainer = StiBrandBlue,
     secondary = StiYellow,
-    onSecondary = StiMarkBlue,
+    onSecondary = StiBrandBlue,
     secondaryContainer = AccentYellow10,
-    onSecondaryContainer = StiMarkBlue,
-    tertiary = ElmsCyan,
+    onSecondaryContainer = StiBrandBlue,
+    tertiary = StiBrandBlue,
     background = LightBackground,
     onBackground = LightOnSurface,
     surface = LightSurface,
@@ -34,15 +34,15 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = ElmsCyan,
+    primary = StiBrandBlue,
     onPrimary = Color.White,
     primaryContainer = DarkFocusFill,
     onPrimaryContainer = DarkOnSurface,
     secondary = StiYellow,
-    onSecondary = StiMarkBlue,
+    onSecondary = StiBrandBlue,
     secondaryContainer = Color(0xFF3D3200),
     onSecondaryContainer = StiYellow,
-    tertiary = ElmsCyan,
+    tertiary = StiBrandBlue,
     background = DarkBackground,
     onBackground = DarkOnSurface,
     surface = DarkSurface,
@@ -50,7 +50,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceMuted,
     outline = DarkBorder,
-    outlineVariant = Color(0x1FFFFFFF),
+    outlineVariant = Color(0x2EFFFFFF),
     error = Color(0xFFFF6B6B),
     onError = DarkBackground
 )

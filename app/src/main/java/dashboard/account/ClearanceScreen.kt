@@ -32,7 +32,8 @@ import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.theme.AccentYellow
-import com.example.stismartlib.ui.theme.PrimaryBlue
+import com.example.stismartlib.ui.theme.ErrorRed
+import com.example.stismartlib.ui.theme.StiBrandBlue
 
 @Composable
 fun ClearanceScreen() {
@@ -43,6 +44,9 @@ fun ClearanceScreen() {
     val unpaid = repository.fines.filter { it.paymentStatus == FineStatus.UNPAID }
     val outstanding = unpaid.sumOf { it.amount }
     val cleared = activeLoans.isEmpty() && outstanding == 0.0
+    val bannerColor = if (cleared) StiBrandBlue else ErrorRed
+    val bannerIcon = if (cleared) Lucide.BadgeCheck else Lucide.ShieldAlert
+    val bannerIconTint = if (cleared) AccentYellow else Color.White
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -57,11 +61,11 @@ fun ClearanceScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .background(PrimaryBlue)
+                    .background(bannerColor)
                     .padding(24.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Lucide.BadgeCheck, contentDescription = null, tint = AccentYellow, modifier = Modifier.size(16.dp))
+                    Icon(bannerIcon, contentDescription = null, tint = bannerIconTint, modifier = Modifier.size(16.dp))
                     Text(
                         if (cleared) " CLEARED" else " BLOCKED",
                         color = Color.White,

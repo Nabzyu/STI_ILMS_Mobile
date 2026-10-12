@@ -25,12 +25,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.Research
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.ElmsListRow
 import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.ElmsSectionCard
+import com.example.stismartlib.ui.components.PortalButton
+import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
 import com.example.stismartlib.ui.components.StatusBadge
+import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.ElmsCyan
 import kotlinx.coroutines.delay
 
@@ -39,10 +44,18 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
     val repository = rememberLibraryRepository()
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
-    LaunchedEffect(query) {
+    var loadError by remember { mutableStateOf<String?>(null) }
+    var reloadToken by remember { mutableStateOf(0) }
+    LaunchedEffect(query, reloadToken) {
         loading = true
+        loadError = null
         delay(300)
         runCatching { repository.loadResearch(query.ifBlank { null }) }
+            .onFailure { error ->
+                if (repository.research.isEmpty()) {
+                    loadError = userFacingMessage(error, "Unable to load research titles.")
+                }
+            }
         loading = false
     }
     val rows = repository.research.filter {
@@ -77,8 +90,21 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                 leadingIcon = Lucide.Search
             )
         }
+        if (loadError != null) {
+            item {
+                ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+            }
+            item {
+                PortalButton(
+                    text = "Try again",
+                    onClick = { reloadToken += 1 },
+                    variant = PortalButtonVariant.Secondary
+                )
+            }
+        }
         when {
             loading && repository.research.isEmpty() -> item { ElmsLoadingBlock() }
+            loadError != null && repository.research.isEmpty() -> { /* banner + retry above */ }
             rows.isEmpty() -> item {
                 ElmsEmptyState(
                     title = "No research found",

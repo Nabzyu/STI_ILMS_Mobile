@@ -12,21 +12,16 @@ import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.dashboard.DashboardScreen
 import com.example.stismartlib.ui.dashboard.staff.StaffHomeScreen
-import com.example.stismartlib.ui.splash.SplashScreen
 
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(startDestination: String = Screen.Login.route) {
 
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route
+        startDestination = startDestination
     ) {
-
-        composable(Screen.Splash.route) {
-            SplashScreen(navController)
-        }
 
         composable(Screen.Login.route) {
             LoginScreen(navController)

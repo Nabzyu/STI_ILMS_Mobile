@@ -38,6 +38,7 @@ import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
+import com.example.stismartlib.ui.components.PortalScreen
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.theme.ElmsCyan
 
@@ -65,6 +66,7 @@ fun StaffHomeScreen(onLogout: () -> Unit) {
         )
     }
 
+    PortalScreen {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -140,6 +142,7 @@ fun StaffHomeScreen(onLogout: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
     }
 }
 

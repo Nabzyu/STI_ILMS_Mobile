@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Custom splash so Android 12+ does not fall back to ic_launcher. -->
+    <style name="Theme.STIOrmocLibrary" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/light_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_sti_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.STIOrmocLibrary.Main</item>
+    </style>
 
-    <style name="Theme.STIOrmocLibrary" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.STIOrmocLibrary.Main" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/light_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

@@ -4,8 +4,6 @@ import com.example.stismartlib.ui.auth.UserType
 
 sealed class Screen(val route: String) {
 
-    object Splash : Screen("splash")
-
     object Login : Screen("login")
 
     object StaffHome : Screen("staff_home")

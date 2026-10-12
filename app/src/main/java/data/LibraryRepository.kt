@@ -175,7 +175,7 @@ class LibraryRepository(
         schoolId: String,
         firstName: String,
         lastName: String,
-        contactNumber: String,
+        email: String,
         programStrand: String,
         yearGradeLevel: String,
         password: String,
@@ -184,10 +184,10 @@ class LibraryRepository(
         lastError = null
         val response = ApiClient.api.register(
             RegisterRequest(
-                schoolId = schoolId.trim().uppercase(),
+                schoolId = schoolId.trim(),
                 firstName = firstName.trim(),
                 lastName = lastName.trim(),
-                contactNumber = contactNumber.trim(),
+                email = email.trim().lowercase(),
                 programStrand = programStrand.trim(),
                 yearGradeLevel = yearGradeLevel.trim(),
                 password = password,

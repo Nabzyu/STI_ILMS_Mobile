@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.availabilityLabel
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.ElmsListRow
 import com.example.stismartlib.ui.components.ElmsLoadingBlock
@@ -42,6 +44,8 @@ import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.feedback.userFacingMessage
+import com.example.stismartlib.ui.theme.EyebrowStyle
 import kotlinx.coroutines.delay
 
 @Composable
@@ -54,11 +58,19 @@ fun BookCatalogScreen(
     var availabilityFilter by remember { mutableStateOf("All") }
     var category by remember { mutableStateOf("All") }
     var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    var reloadToken by remember { mutableStateOf(0) }
 
-    LaunchedEffect(searchQuery) {
+    LaunchedEffect(searchQuery, reloadToken) {
         loading = true
+        loadError = null
         delay(300)
         runCatching { repository.loadBooks(searchQuery.ifBlank { null }) }
+            .onFailure { error ->
+                if (repository.books.isEmpty()) {
+                    loadError = userFacingMessage(error, "Unable to load the catalog.")
+                }
+            }
         loading = false
     }
 
@@ -104,40 +116,53 @@ fun BookCatalogScreen(
             )
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ElmsPillTab(
-                    label = "All",
-                    selected = availabilityFilter == "All",
-                    onClick = { availabilityFilter = "All" },
-                    count = repository.books.size
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Availability",
+                    style = EyebrowStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                ElmsPillTab(
-                    label = "Available",
-                    selected = availabilityFilter == "Available",
-                    onClick = { availabilityFilter = "Available" }
-                )
-                ElmsPillTab(
-                    label = "Unavailable",
-                    selected = availabilityFilter == "Unavailable",
-                    onClick = { availabilityFilter = "Unavailable" }
-                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ElmsPillTab(
+                        label = "All",
+                        selected = availabilityFilter == "All",
+                        onClick = { availabilityFilter = "All" },
+                        count = repository.books.size
+                    )
+                    ElmsPillTab(
+                        label = "Available",
+                        selected = availabilityFilter == "Available",
+                        onClick = { availabilityFilter = "Available" }
+                    )
+                    ElmsPillTab(
+                        label = "Unavailable",
+                        selected = availabilityFilter == "Unavailable",
+                        onClick = { availabilityFilter = "Unavailable" }
+                    )
+                }
             }
         }
         item {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                categories.forEach { item ->
-                    PortalButton(
-                        text = item,
-                        onClick = { category = item },
-                        variant = if (category == item) {
-                            PortalButtonVariant.Primary
-                        } else {
-                            PortalButtonVariant.Secondary
-                        }
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Category",
+                    style = EyebrowStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    categories.forEach { item ->
+                        ElmsPillTab(
+                            label = item,
+                            selected = category == item,
+                            onClick = { category = item }
+                        )
+                    }
                 }
             }
         }
@@ -160,8 +185,21 @@ fun BookCatalogScreen(
                 )
             }
         }
+        if (loadError != null) {
+            item {
+                ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+            }
+            item {
+                PortalButton(
+                    text = "Try again",
+                    onClick = { reloadToken += 1 },
+                    variant = PortalButtonVariant.Secondary
+                )
+            }
+        }
         when {
             loading && repository.books.isEmpty() -> item { ElmsLoadingBlock() }
+            loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
             visible.isEmpty() -> item {
                 ElmsEmptyState(
                     title = "No books found",

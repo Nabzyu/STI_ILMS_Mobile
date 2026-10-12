@@ -44,7 +44,7 @@ data class RegisterRequest(
     @SerializedName("school_id") val schoolId: String,
     @SerializedName("first_name") val firstName: String,
     @SerializedName("last_name") val lastName: String,
-    @SerializedName("contact_number") val contactNumber: String,
+    val email: String,
     @SerializedName("program_strand") val programStrand: String,
     @SerializedName("year_grade_level") val yearGradeLevel: String,
     val password: String,

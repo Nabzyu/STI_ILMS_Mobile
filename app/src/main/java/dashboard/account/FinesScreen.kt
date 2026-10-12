@@ -1,4 +1,5 @@
 package com.example.stismartlib.ui.dashboard.account
+
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -18,16 +19,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
+import com.example.stismartlib.ui.components.ElmsEmptyState
+import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatCard
 import com.example.stismartlib.ui.components.StatusBadge
-import com.example.stismartlib.ui.theme.PrimaryBlue
 
 @Composable
 fun FinesScreen() {
     val repository = rememberLibraryRepository()
     val fines = repository.fines
+    val loading = repository.isLoading && fines.isEmpty()
+    val loadError = repository.lastError.takeIf { fines.isEmpty() }
     val assessed = fines.sumOf { it.amount }
     val outstanding = fines.filter { it.paymentStatus == FineStatus.UNPAID }.sumOf { it.amount }
     val collected = fines.filter { it.paymentStatus == FineStatus.PAID }.sumOf { it.amount }
@@ -44,24 +50,35 @@ fun FinesScreen() {
                 Text("Cash payment at the library counter", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Online payment is not available. Bring your school ID and pay an authorized librarian. A receipt appears here after the cash payment is recorded.",
+                    "Online payment is not available. Bring your student ID and pay an authorized librarian. A receipt appears here after the cash payment is recorded.",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 14.sp
                 )
             }
         }
         item { Text("Fine history", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
-        if (fines.isEmpty()) {
-            item { Text("You have no fine records.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)) }
+        if (loadError != null) {
+            item {
+                ElmsBanner(message = loadError, tone = ElmsBannerTone.Error)
+            }
         }
-        items(fines, key = { it.id }) { fine ->
-            SectionCard {
-                Text(fine.bookTitle, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                Text(fine.reason, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
-                Text(fine.dateIssued, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(peso(fine.amount), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                StatusBadge(fine.paymentStatus.label, warning = fine.paymentStatus == FineStatus.UNPAID)
+        when {
+            loading -> item { ElmsLoadingBlock() }
+            fines.isEmpty() -> item {
+                ElmsEmptyState(
+                    title = "No fines",
+                    description = "You're all clear — no fine records on file."
+                )
+            }
+            else -> items(fines, key = { it.id }) { fine ->
+                SectionCard {
+                    Text(fine.bookTitle, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    Text(fine.reason, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
+                    Text(fine.dateIssued, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(peso(fine.amount), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    StatusBadge(fine.paymentStatus.label, warning = fine.paymentStatus == FineStatus.UNPAID)
+                }
             }
         }
         item {

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="elms_cyan">#FF00A0D2</color>
+    <color name="elms_cyan">#FF0B5EA2</color>
+    <color name="sti_brand_blue">#FF0B5EA2</color>
     <color name="sti_yellow">#FFFFF200</color>
-    <color name="sti_mark_blue">#FF003399</color>
-    <color name="light_background">#FFF5F6F8</color>
-    <color name="dark_background">#FF121218</color>
+    <color name="sti_mark_blue">#FF0B5EA2</color>
+    <color name="light_background">#FFFFFFFF</color>
+    <color name="dark_background">#FF14151B</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

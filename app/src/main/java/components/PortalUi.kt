@@ -2,6 +2,7 @@ package com.example.stismartlib.ui.components
 
 import com.composables.icons.lucide.*
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,22 +71,14 @@ fun StiMarkTile(
     size: Dp = 40.dp,
     contentDescription: String? = "STI"
 ) {
-    Box(
+    Image(
+        painter = painterResource(R.drawable.ic_sti_logo),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Crop,
         modifier = Modifier
             .size(size)
             .clip(RoundedCornerShape(6.dp))
-            .background(StiYellow)
-            .semantics { if (contentDescription != null) this.contentDescription = contentDescription },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "STI",
-            color = StiMarkBlue,
-            fontWeight = FontWeight.Black,
-            fontSize = (size.value * 0.32f).sp,
-            letterSpacing = (-0.5).sp
-        )
-    }
+    )
 }
 
 @Composable
@@ -200,7 +195,9 @@ fun StatCard(
                 Text(
                     value,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (note != null) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -256,7 +253,7 @@ fun ElmsPillTab(
     val fg = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
     Row(
         modifier = modifier
-            .sizeIn(minHeight = 40.dp)
+            .sizeIn(minHeight = 48.dp)
             .clip(ShapePill)
             .background(bg)
             .then(
@@ -268,7 +265,7 @@ fun ElmsPillTab(
                 role = Role.Tab
                 contentDescription = if (count != null) "$label, $count" else label
             }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -323,7 +320,8 @@ fun ElmsListRow(
     onClick: (() -> Unit)? = null,
     leading: @Composable () -> Unit,
     trailing: @Composable (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitleMaxLines: Int = 1,
 ) {
     Row(
         modifier = modifier
@@ -368,7 +366,7 @@ fun ElmsListRow(
                     text = subtitle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
-                    maxLines = 1,
+                    maxLines = subtitleMaxLines,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -532,22 +530,26 @@ fun PortalField(
     modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: @Composable (() -> Unit)? = null,
+    trailingIcon: ImageVector? = null,
     error: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val borderColor = when {
         error != null -> MaterialTheme.colorScheme.error
+        !enabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         focused -> ElmsCyan
         else -> MaterialTheme.colorScheme.outline
     }
+    val contentAlpha = if (enabled) 1f else 0.45f
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (label.isNotEmpty()) {
             Text(
                 label,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -559,14 +561,17 @@ fun PortalField(
                 .sizeIn(minHeight = 52.dp)
                 .clip(ShapeXl)
                 .border(1.dp, borderColor, ShapeXl)
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    if (enabled) MaterialTheme.colorScheme.surface
+                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 leadingIcon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -574,7 +579,7 @@ fun PortalField(
                 if (value.isEmpty()) {
                     Text(
                         placeholder,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f * contentAlpha),
                         fontSize = 14.sp
                     )
                 }
@@ -583,9 +588,10 @@ fun PortalField(
                     onValueChange = onValueChange,
                     singleLine = true,
                     enabled = enabled,
+                    readOnly = readOnly,
                     interactionSource = interaction,
                     textStyle = TextStyle(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -594,12 +600,21 @@ fun PortalField(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            if (trailing != null) {
+            if (trailing != null || trailingIcon != null) {
                 Box(
                     modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    trailing()
+                    if (trailing != null) {
+                        trailing()
+                    } else if (trailingIcon != null) {
+                        Icon(
+                            trailingIcon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

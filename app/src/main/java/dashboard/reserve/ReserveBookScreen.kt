@@ -34,6 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.Reservation
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
+import com.example.stismartlib.ui.components.ElmsEmptyState
+import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -50,6 +54,8 @@ fun ReserveBookScreen(
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
     val reservations = repository.reservations
+    val loading = repository.isLoading && reservations.isEmpty()
+    val loadError = repository.lastError.takeIf { reservations.isEmpty() }
     var pendingCancel by remember { mutableStateOf<Reservation?>(null) }
 
     if (pendingCancel != null) {
@@ -94,49 +100,69 @@ fun ReserveBookScreen(
                 }
             )
         }
-        if (reservations.isEmpty()) {
-            item { Text("You have no reservations.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)) }
+        if (loadError != null) {
+            item {
+                ElmsBanner(message = loadError, tone = ElmsBannerTone.Error)
+            }
         }
-        items(reservations, key = { it.id }) { reservation ->
-            SectionCard {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Icon(
-                        Lucide.BookMarked,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(ElmsCyan.copy(alpha = 0.12f))
-                            .padding(10.dp)
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    StatusBadge("Queued", warning = true)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(reservation.book.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("Request ${reservation.id} · ${reservation.dateReserved}", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(ElmsCyan.copy(alpha = 0.08f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("QUEUE POSITION", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("#${reservation.queuePosition}", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        when {
+            loading -> item { ElmsLoadingBlock() }
+            reservations.isEmpty() -> item {
+                ElmsEmptyState(
+                    title = "No reservations",
+                    description = "Reserve unavailable books from the catalog.",
+                    actionLabel = "Find a book",
+                    onAction = onBrowseCatalog
+                )
+            }
+            else -> items(reservations, key = { it.id }) { reservation ->
+                SectionCard {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Icon(
+                            Lucide.BookMarked,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(ElmsCyan.copy(alpha = 0.12f))
+                                .padding(10.dp)
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        StatusBadge("Queued", warning = true)
                     }
-                    PortalButton(
-                        text = "Cancel",
-                        onClick = { pendingCancel = reservation },
-                        variant = PortalButtonVariant.Secondary
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(reservation.book.title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Request ${reservation.id} · ${reservation.dateReserved}", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(ElmsCyan.copy(alpha = 0.08f))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("QUEUE POSITION", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("#${reservation.queuePosition}", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                        PortalButton(
+                            text = "Cancel",
+                            onClick = { pendingCancel = reservation },
+                            variant = PortalButtonVariant.Secondary
+                        )
+                    }
                 }
             }
+        }
+        item {
+            PortalButton(
+                text = "Back",
+                onClick = onBack,
+                variant = PortalButtonVariant.Ghost
+            )
         }
     }
 }

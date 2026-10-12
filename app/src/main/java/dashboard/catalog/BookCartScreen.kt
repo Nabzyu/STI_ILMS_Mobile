@@ -35,11 +35,15 @@ import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
+import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,11 +67,16 @@ fun BookCartScreen(onBack: () -> Unit) {
         PageHeader(eyebrow = "My library", title = "Book cart", description = cartLimitText)
         Spacer(modifier = Modifier.height(12.dp))
         if (errorMessage != null) {
-            Text(errorMessage.orEmpty(), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            ElmsBanner(message = errorMessage.orEmpty(), tone = ElmsBannerTone.Error)
             Spacer(modifier = Modifier.height(8.dp))
         }
         if (cartItems.isEmpty()) {
-            Text("Your cart is empty. Browse the catalog to add books.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+            ElmsEmptyState(
+                title = "Your cart is empty",
+                description = "Browse the catalog to add books.",
+                actionLabel = "Go back",
+                onAction = onBack
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -101,9 +110,9 @@ fun BookCartScreen(onBack: () -> Unit) {
                                 dialogMessage = repository.submitBorrowCart()
                                 showBorrowDialog = true
                             } catch (error: ApiException) {
-                                errorMessage = error.message
-                            } catch (_: Exception) {
-                                errorMessage = "Unable to submit the borrow request."
+                                errorMessage = userFacingMessage(error, "Unable to submit the borrow request.")
+                            } catch (error: Exception) {
+                                errorMessage = userFacingMessage(error, "Unable to submit the borrow request.")
                             } finally {
                                 isSubmitting = false
                             }

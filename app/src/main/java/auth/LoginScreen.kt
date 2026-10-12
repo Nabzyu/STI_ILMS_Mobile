@@ -2,7 +2,6 @@ package com.example.stismartlib.ui.auth
 
 import com.composables.icons.lucide.*
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,13 +44,14 @@ import com.example.stismartlib.ui.components.ElmsBanner
 import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalField
+import com.example.stismartlib.ui.components.PortalScreen
 import com.example.stismartlib.ui.components.StiMark
 import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.EyebrowStyle
 import kotlinx.coroutines.launch
 
-private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
+private val StudentIdPattern = Regex("^\\d{11}$")
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
@@ -65,12 +65,12 @@ fun LoginScreen(navController: NavHostController) {
     var banner by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
 
+    PortalScreen {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 32.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.Center
     ) {
         StiMark()
@@ -88,7 +88,7 @@ fun LoginScreen(navController: NavHostController) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Use your school ID and password. Your workspace opens based on your account.",
+            text = "Use your student ID and password. Your workspace opens based on your account.",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             fontSize = 14.sp,
             lineHeight = 20.sp
@@ -99,10 +99,10 @@ fun LoginScreen(navController: NavHostController) {
         }
         Spacer(modifier = Modifier.height(28.dp))
         PortalField(
-            label = "School ID",
+            label = "Student ID",
             value = schoolId,
-            onValueChange = { schoolId = it.uppercase() },
-            placeholder = "Enter your school ID",
+            onValueChange = { schoolId = it.filter(Char::isDigit).take(11) },
+            placeholder = "Enter your Student ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
@@ -136,8 +136,12 @@ fun LoginScreen(navController: NavHostController) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
+                .fillMaxWidth()
                 .sizeIn(minHeight = 48.dp)
-                .clickable { showPassword = !showPassword }
+                .clickable(
+                    onClick = { showPassword = !showPassword },
+                    role = androidx.compose.ui.semantics.Role.Checkbox
+                )
         ) {
             Checkbox(
                 checked = showPassword,
@@ -156,10 +160,10 @@ fun LoginScreen(navController: NavHostController) {
             text = if (isSubmitting) "Signing in..." else "Sign in",
             onClick = {
                 if (isSubmitting) return@PortalButton
-                val normalized = schoolId.trim().uppercase()
+                val normalized = schoolId.trim()
                 schoolIdError = when {
-                    normalized.isEmpty() -> "School ID is required."
-                    !SchoolIdPattern.matches(normalized) -> "Enter a valid STI school ID."
+                    normalized.isEmpty() -> "Student ID is required."
+                    !StudentIdPattern.matches(normalized) -> "Student ID must be exactly 11 digits."
                     else -> null
                 }
                 passwordError = if (password.isEmpty()) "Password is required." else null
@@ -182,7 +186,7 @@ fun LoginScreen(navController: NavHostController) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     } catch (error: ApiException) {
-                        banner = userFacingMessage(error, "Invalid school ID or password.")
+                        banner = userFacingMessage(error, "Invalid student ID or password.")
                         schoolIdError = error.fieldErrors["school_id"]
                         passwordError = error.fieldErrors["password"]
                     } catch (error: Exception) {
@@ -221,5 +225,6 @@ fun LoginScreen(navController: NavHostController) {
                     .padding(vertical = 12.dp)
             )
         }
+    }
     }
 }

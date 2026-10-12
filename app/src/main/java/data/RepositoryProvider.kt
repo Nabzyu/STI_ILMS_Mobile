@@ -15,8 +15,7 @@ val LocalLibraryRepository = staticCompositionLocalOf<LibraryRepository> {
 fun ProvideLibraryRepository(content: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
     val repository = remember {
-        val app = context as STIOrmocLibraryApp
-        LibraryRepository(app.sessionStore)
+        (context as STIOrmocLibraryApp).libraryRepository
     }
     CompositionLocalProvider(LocalLibraryRepository provides repository) {
         content()

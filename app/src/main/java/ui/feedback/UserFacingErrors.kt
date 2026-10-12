@@ -14,7 +14,7 @@ fun userFacingMessage(
     return when (error) {
         is ApiException -> when (error.code) {
             "INVALID_CREDENTIALS" ->
-                "Invalid school ID or password."
+                "Invalid student ID or password."
             "ACCOUNT_DEACTIVATED" ->
                 "Your account is currently deactivated. Please coordinate with the campus librarian."
             "TOO_MANY_LOGIN_ATTEMPTS" ->
@@ -38,6 +38,9 @@ private fun sanitizeApiMessage(raw: String?): String? {
             lower.contains("sql") ||
             lower.contains("at com.") ||
             lower.contains("traceback") ||
+            lower.contains("bearer") ||
+            lower.contains("unauthorized") ||
+            lower.contains("authorization") ||
             lower.contains("{") ||
             lower.contains("</") ||
             Regex("""\b(500|502|503|504)\b""").containsMatchIn(raw)

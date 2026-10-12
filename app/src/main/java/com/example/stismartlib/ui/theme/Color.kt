@@ -3,73 +3,87 @@ package com.example.stismartlib.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * STI eLMS–inspired design tokens (light + dark).
- * Accent cyan for interactive states; yellow STI mark; charcoal/white surfaces.
+ * SmartLib design tokens — aligned with STI-College-Library-System (apps/web).
+ * Brand navy for interactive states and light-mode ink; yellow STI mark; white/navy surfaces.
+ *
+ * Source of truth (web `index.css`):
+ *   --sl-brand / --sl-text (light): #0B5EA2
+ *   --sl-accent: #FFF200
+ *   dark --sl-bg: #14151B, --sl-bg-elevated: #22232E, --sl-text: #F7F9FF
  */
 
-/** Interactive accent — eLMS sky/cyan */
-val ElmsCyan = Color(0xFF00A0D2)
-val ElmsCyanSoft = Color(0x1A00A0D2)
-val ElmsCyanMedium = Color(0x3300A0D2)
-val ElmsCyanStrong = Color(0x6600A0D2)
+/** Brand primary — STI SmartLib navy */
+val StiBrandBlue = Color(0xFF0B5EA2)
+val StiBrandBlueSoft = Color(0x0D0B5EA2)   // ~5% — muted fills
+val StiBrandBlueMedium = Color(0x1A0B5EA2) // ~10%
+val StiBrandBlueStrong = Color(0x660B5EA2) // ~40%
 
-/** STI brand yellow (logo tile) */
+/**
+ * @deprecated Name kept for call-site compatibility; value is SmartLib navy, not eLMS cyan.
+ * Prefer [StiBrandBlue] in new code.
+ */
+val ElmsCyan = StiBrandBlue
+val ElmsCyanSoft = StiBrandBlueSoft
+val ElmsCyanMedium = StiBrandBlueMedium
+val ElmsCyanStrong = StiBrandBlueStrong
+
+/** STI brand yellow (logo tile / accent CTAs) */
 val StiYellow = Color(0xFFFFF200)
 val AccentYellow = StiYellow
 val AccentYellow10 = Color(0x1AFFF200)
 val AccentYellow35 = Color(0x59FFF200)
 val AccentYellow40 = Color(0x66FFF200)
 
-/** Deep blue for STI mark lettering on yellow */
-val StiMarkBlue = Color(0xFF003399)
+/** Ink on yellow surfaces — same as brand (web rule: yellow fill → navy text) */
+val StiMarkBlue = StiBrandBlue
 
-/** @deprecated Prefer ElmsCyan; kept as alias for gradual migration */
-val PrimaryBlue = ElmsCyan
-val PrimaryBlue5 = ElmsCyanSoft
-val PrimaryBlue10 = Color(0x1A00A0D2)
-val PrimaryBlue15 = Color(0x2600A0D2)
-val PrimaryBlue20 = Color(0x3300A0D2)
-val PrimaryBlue45 = Color(0x7300A0D2)
-val PrimaryBlue50 = Color(0x8000A0D2)
-val PrimaryBlue60 = Color(0x9900A0D2)
-val PrimaryBlue65 = Color(0xA600A0D2)
-val PrimaryBlue70 = Color(0xB300A0D2)
-val PrimaryBlue90 = Color(0xE600A0D2)
+/** @deprecated Prefer StiBrandBlue / ElmsCyan; kept as alias for gradual migration */
+val PrimaryBlue = StiBrandBlue
+val PrimaryBlue5 = StiBrandBlueSoft
+val PrimaryBlue10 = StiBrandBlueMedium
+val PrimaryBlue15 = Color(0x260B5EA2)
+val PrimaryBlue20 = Color(0x330B5EA2)
+val PrimaryBlue45 = Color(0x730B5EA2)
+val PrimaryBlue50 = Color(0x800B5EA2)
+val PrimaryBlue60 = Color(0x990B5EA2)
+val PrimaryBlue65 = Color(0xA60B5EA2)
+val PrimaryBlue70 = Color(0xB30B5EA2)
+val PrimaryBlue90 = Color(0xE60B5EA2)
 
 val SuccessGreen = Color(0xFF2B8A3E)
 val WarningYellow = AccentYellow
 val WarningOrange = Color(0xFFF76707)
 val ErrorRed = Color(0xFFE03131)
-val InfoBlue = ElmsCyan
+val InfoBlue = StiBrandBlue
 
-/* —— Light surfaces —— */
-val LightBackground = Color(0xFFF5F6F8)
+/* —— Light surfaces (web :root) —— */
+val LightBackground = Color(0xFFFFFFFF)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceVariant = Color(0xFFEBEDF0)
-val LightOnSurface = Color(0xFF1A1B1F)
-val LightOnSurfaceVariant = Color(0xFF5C5F66)
-val LightOutline = Color(0x1F1A1B1F)
-val LightOutlineStrong = Color(0x331A1B1F)
-val LightPlaceholder = Color(0x991A1B1F)
+val LightSurfaceVariant = Color(0x0D0B5EA2) // brand @ 5%
+val LightOnSurface = Color(0xFF0B5EA2)
+val LightOnSurfaceVariant = Color(0xA60B5EA2) // brand @ ~65%
+val LightOutline = Color(0x260B5EA2) // brand @ ~15%
+val LightOutlineStrong = Color(0x400B5EA2)
+val LightPlaceholder = Color(0x660B5EA2)
 val LightInput = Color(0xFFFFFFFF)
 val CardShadow = Color(0x14000000)
 
-/* —— Dark surfaces (eLMS charcoal) —— */
-val DarkBackground = Color(0xFF121218)
-val DarkSurface = Color(0xFF1E1E26)
-val DarkSurfaceVariant = Color(0xFF2A2A34)
-val DarkOnSurface = Color(0xFFF5F6F8)
-val DarkOnSurfaceMuted = Color(0xFFB8BAC0)
-val DarkOnSurfaceSubtle = Color(0xFF8A8D96)
-val DarkBorder = Color(0x33FFFFFF)
-val DarkInput = Color(0xFF18181F)
-val DarkFocusFill = Color(0xFF243040)
+/* —— Dark surfaces (web html.dark) —— */
+val DarkBackground = Color(0xFF14151B)
+val DarkSurface = Color(0xFF22232E)
+val DarkSurfaceVariant = Color(0xFF2A2B36)
+val DarkOnSurface = Color(0xFFF7F9FF)
+val DarkOnSurfaceMuted = Color(0xE0F7F9FF) // ~88%
+val DarkOnSurfaceSubtle = Color(0xB8F7F9FF) // ~72%
+val DarkBorder = Color(0x2EFFFFFF) // ~18%
+val DarkInput = Color(0xFF001433)
+val DarkFocusFill = Color(0xFF002266)
 
-/* Legacy brand aliases → map to ELMS light semantics */
-val BrandMutedBg = ElmsCyanSoft
+/* Legacy brand aliases → SmartLib light semantics */
+val BrandMutedBg = StiBrandBlueSoft
 val BrandBorder = LightOutline
 val BrandBorderSoft = LightOutline
 val BrandBorderStrong = LightOutlineStrong
 val BrandTextMuted = LightOnSurfaceVariant
-val BrandTextSubtle = Color(0x991A1B1F)
+val BrandTextSubtle = Color(0x660B5EA2)
 val BrandPlaceholder = LightPlaceholder

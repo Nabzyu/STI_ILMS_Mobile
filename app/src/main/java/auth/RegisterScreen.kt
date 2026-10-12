@@ -2,7 +2,6 @@ package com.example.stismartlib.ui.auth
 
 import com.composables.icons.lucide.*
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +18,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,12 +40,13 @@ import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
+import com.example.stismartlib.ui.components.PortalScreen
 import com.example.stismartlib.ui.components.StiMark
 import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.launch
 
-private val SchoolIdPattern = Regex("^[A-Z0-9][A-Z0-9._-]{2,49}$")
-private val ContactPattern = Regex("^\\+?[0-9 ()-]{7,30}$")
+private val StudentIdPattern = Regex("^\\d{11}$")
+private val StiEmailPattern = Regex("^[A-Za-z0-9._%+-]+@stu\\.sti\\.edu\\.ph$", RegexOption.IGNORE_CASE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +56,7 @@ fun RegisterScreen(navController: NavHostController) {
     var schoolId by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
-    var contactNumber by remember { mutableStateOf("") }
+    var stiEmail by remember { mutableStateOf("") }
     var selectedProgram by remember { mutableStateOf("") }
     var selectedYearLevel by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -69,12 +70,12 @@ fun RegisterScreen(navController: NavHostController) {
 
     val yearLevelOptions = yearLevelsForProgram(selectedProgram)
 
+    PortalScreen {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(16.dp)
     ) {
         StiMark()
         Spacer(modifier = Modifier.height(32.dp))
@@ -104,8 +105,8 @@ fun RegisterScreen(navController: NavHostController) {
         PortalField(
             label = "Student ID",
             value = schoolId,
-            onValueChange = { schoolId = it.uppercase() },
-            placeholder = "Enter your STI Student ID",
+            onValueChange = { schoolId = it.filter(Char::isDigit).take(11) },
+            placeholder = "Enter your Student ID",
             leadingIcon = Lucide.IdCard,
             error = errors["school_id"]
         )
@@ -129,24 +130,25 @@ fun RegisterScreen(navController: NavHostController) {
         )
         Spacer(modifier = Modifier.height(14.dp))
         PortalField(
-            label = "Contact number",
-            value = contactNumber,
-            onValueChange = { contactNumber = it },
-            placeholder = "09xx xxx xxxx",
-            leadingIcon = Lucide.Phone,
-            error = errors["contact_number"]
+            label = "STI Email Address",
+            value = stiEmail,
+            onValueChange = { stiEmail = it },
+            placeholder = "name@stu.sti.edu.ph",
+            leadingIcon = Lucide.Mail,
+            error = errors["email"]
         )
         Spacer(modifier = Modifier.height(14.dp))
-        Text("Program or strand", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(8.dp))
+        val programSelected = selectedProgram.isNotEmpty()
         ExposedDropdownMenuBox(expanded = programMenuOpen, onExpandedChange = { programMenuOpen = it }) {
             PortalField(
-                label = "",
+                label = "Program or strand",
                 value = selectedProgram,
                 onValueChange = {},
                 placeholder = "Select a program",
-                leadingIcon = Lucide.UserRound,
-                modifier = Modifier.menuAnchor(),
+                leadingIcon = Lucide.GraduationCap,
+                trailingIcon = Lucide.ChevronDown,
+                readOnly = true,
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
                 error = errors["program_strand"]
             )
             ExposedDropdownMenu(expanded = programMenuOpen, onDismissRequest = { programMenuOpen = false }) {
@@ -163,16 +165,20 @@ fun RegisterScreen(navController: NavHostController) {
             }
         }
         Spacer(modifier = Modifier.height(14.dp))
-        Text("Year or grade level", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        ExposedDropdownMenuBox(expanded = yearMenuOpen, onExpandedChange = { if (selectedProgram.isNotEmpty()) yearMenuOpen = it }) {
+        ExposedDropdownMenuBox(
+            expanded = yearMenuOpen,
+            onExpandedChange = { if (programSelected) yearMenuOpen = it }
+        ) {
             PortalField(
-                label = "",
+                label = "Year or grade level",
                 value = selectedYearLevel,
                 onValueChange = {},
-                placeholder = "Select a year level",
-                leadingIcon = Lucide.UserRound,
-                modifier = Modifier.menuAnchor(),
+                placeholder = if (programSelected) "Select a year level" else "Select a program first",
+                leadingIcon = Lucide.Calendar,
+                trailingIcon = Lucide.ChevronDown,
+                readOnly = true,
+                enabled = programSelected,
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = programSelected),
                 error = errors["year_grade_level"]
             )
             ExposedDropdownMenu(expanded = yearMenuOpen, onDismissRequest = { yearMenuOpen = false }) {
@@ -186,6 +192,14 @@ fun RegisterScreen(navController: NavHostController) {
                     )
                 }
             }
+        }
+        if (!programSelected) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Select a program first to choose a year or grade level.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
         }
         Spacer(modifier = Modifier.height(14.dp))
         PortalField(
@@ -228,13 +242,16 @@ fun RegisterScreen(navController: NavHostController) {
             onClick = {
                 if (isSubmitting) return@PortalButton
                 val next = mutableMapOf<String, String>()
-                val normalized = schoolId.trim().uppercase()
+                val normalized = schoolId.trim()
+                val normalizedEmail = stiEmail.trim().lowercase()
                 if (normalized.isEmpty()) next["school_id"] = "Student ID is required."
-                else if (!SchoolIdPattern.matches(normalized)) next["school_id"] = "Enter a valid STI Student ID."
+                else if (!StudentIdPattern.matches(normalized)) next["school_id"] = "Student ID must be exactly 11 digits."
                 if (firstName.isBlank()) next["first_name"] = "First name is required."
                 if (lastName.isBlank()) next["last_name"] = "Last name is required."
-                if (contactNumber.isBlank()) next["contact_number"] = "Contact number is required."
-                else if (!ContactPattern.matches(contactNumber.trim())) next["contact_number"] = "Enter a valid contact number."
+                if (normalizedEmail.isEmpty()) next["email"] = "STI Email Address is required."
+                else if (!StiEmailPattern.matches(normalizedEmail)) {
+                    next["email"] = "Enter a valid STI email (name@stu.sti.edu.ph)."
+                }
                 if (selectedProgram.isBlank()) next["program_strand"] = "Program or strand is required."
                 if (selectedYearLevel.isBlank()) next["year_grade_level"] = "Year or grade level is required."
                 if (password.length < 8) next["password"] = "Password must contain at least 8 characters."
@@ -252,7 +269,7 @@ fun RegisterScreen(navController: NavHostController) {
                             schoolId = normalized,
                             firstName = firstName,
                             lastName = lastName,
-                            contactNumber = contactNumber,
+                            email = normalizedEmail,
                             programStrand = selectedProgram,
                             yearGradeLevel = selectedYearLevel,
                             password = password,
@@ -279,8 +296,12 @@ fun RegisterScreen(navController: NavHostController) {
             text = "Already registered? Back to Login",
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.clickable { navController.popBackStack() }
+            modifier = Modifier
+                .sizeIn(minHeight = 48.dp)
+                .clickable { navController.popBackStack() }
+                .padding(vertical = 12.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
+    }
     }
 }

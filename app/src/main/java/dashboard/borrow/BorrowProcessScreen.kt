@@ -74,9 +74,7 @@ fun BorrowProcessScreen(
                 if (cartItems.isEmpty()) {
                     ElmsEmptyState(
                         title = "Cart is empty",
-                        description = "Browse the catalog to start borrowing.",
-                        actionLabel = "Browse catalog",
-                        onAction = onBrowseCatalog
+                        description = "Browse the catalog to start borrowing."
                     )
                 } else {
                     cartItems.forEach { item ->
@@ -95,20 +93,30 @@ fun BorrowProcessScreen(
                 }
             }
         }
-        item {
-            PortalButton(
-                text = "Browse book catalog",
-                onClick = onBrowseCatalog,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        item {
-            PortalButton(
-                text = "Open book cart (${cartItems.size})",
-                onClick = onOpenCart,
-                variant = PortalButtonVariant.Secondary,
-                modifier = Modifier.fillMaxWidth()
-            )
+        if (cartItems.isEmpty()) {
+            item {
+                PortalButton(
+                    text = "Browse catalog",
+                    onClick = onBrowseCatalog,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            item {
+                PortalButton(
+                    text = "Open book cart (${cartItems.size})",
+                    onClick = onOpenCart,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                PortalButton(
+                    text = "Browse catalog",
+                    onClick = onBrowseCatalog,
+                    variant = PortalButtonVariant.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         item {
             PortalButton(

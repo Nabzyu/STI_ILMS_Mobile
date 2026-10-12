@@ -27,23 +27,31 @@ import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.ElmsListRow
+import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.ElmsPillTab
 import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.StatCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.format.formatDateMedium
+import com.example.stismartlib.ui.format.formatDateShort
 
 @Composable
 fun BorrowingHistoryScreen() {
     val repository = rememberLibraryRepository()
     val records = repository.borrowingHistory
+    val loading = repository.isLoading && records.isEmpty()
+    val loadError = repository.lastError.takeIf { records.isEmpty() }
     var filter by remember { mutableStateOf("All") }
     val active = records.count {
         it.borrowStatus == BorrowStatus.BORROWED || it.borrowStatus == BorrowStatus.OVERDUE
     }
-    val nextDue = records.firstOrNull { it.returnDate == null }?.dueDate ?: "None"
+    val nextDueRaw = records.firstOrNull { it.returnDate == null }?.dueDate
+    val nextDue = nextDueRaw?.let { formatDateShort(it) } ?: "None"
     val unpaid = repository.fines.filter { it.paymentStatus == FineStatus.UNPAID }.sumOf { it.amount }
     val visible = records.filter {
         when (filter) {
@@ -107,19 +115,34 @@ fun BorrowingHistoryScreen() {
                 highlight = unpaid > 0
             )
         }
-        if (visible.isEmpty()) {
+        if (loadError != null) {
             item {
-                ElmsEmptyState(
-                    title = "No history yet",
-                    description = "Borrowed books will appear here."
-                )
+                ElmsBanner(message = loadError, tone = ElmsBannerTone.Error)
             }
-        } else {
-            items(visible, key = { it.id }) { record ->
+        }
+        when {
+            loading -> item { ElmsLoadingBlock() }
+            visible.isEmpty() -> item {
+                if (records.isEmpty()) {
+                    ElmsEmptyState(
+                        title = "No history yet",
+                        description = "Borrowed books will appear here."
+                    )
+                } else {
+                    ElmsEmptyState(
+                        title = "No matching loans",
+                        description = "Try another filter.",
+                        actionLabel = "Show all",
+                        onAction = { filter = "All" }
+                    )
+                }
+            }
+            else -> items(visible, key = { it.id }) { record ->
                 ElmsSectionCard(contentPadding = 8.dp) {
                     ElmsListRow(
                         title = record.book.title,
-                        subtitle = "Borrowed ${record.borrowDate} · Due ${record.dueDate}",
+                        subtitle = "Borrowed ${formatDateShort(record.borrowDate)} · Due ${formatDateMedium(record.dueDate)}",
+                        subtitleMaxLines = 2,
                         leading = {
                             BookCoverPlaceholder(
                                 title = record.book.title,

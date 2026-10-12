@@ -15,7 +15,7 @@ data class Book(
     val availableCopies: Int,
     val totalCopies: Int,
     val description: String,
-    val coverColor: Long = 0xFF1C7ED6,
+    val coverColor: Long = 0xFF0B5EA2,
 )
 
 data class Research(

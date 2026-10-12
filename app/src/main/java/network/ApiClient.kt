@@ -72,7 +72,7 @@ object ApiClient {
         val rawMessage = errorEnvelope?.message ?: body?.message
         val message = sanitizeUserMessage(rawMessage)
             ?: when (response.code()) {
-                401 -> "Invalid school ID or password."
+                401 -> "Invalid student ID or password."
                 403 -> "Your account is currently deactivated. Please coordinate with the campus librarian."
                 429 -> "Too many login attempts. Please wait 15 minutes and try again."
                 else -> "The request could not be completed."

@@ -4,18 +4,27 @@ import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stismartlib.data.models.NotificationItem
@@ -23,10 +32,11 @@ import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.ElmsBanner
 import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsEmptyState
-import com.example.stismartlib.ui.components.ElmsListRow
+import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
+import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.ElmsCyanSoft
 
@@ -34,6 +44,8 @@ import com.example.stismartlib.ui.theme.ElmsCyanSoft
 fun NotificationsScreen(onBack: () -> Unit) {
     val repository = rememberLibraryRepository()
     val items = repository.notifications
+    val loading = repository.isLoading && items.isEmpty()
+    val loadError = repository.lastError.takeIf { items.isEmpty() }
     val unread = items.count { !it.isRead }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -50,6 +62,11 @@ fun NotificationsScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )
+        }
+        if (loadError != null) {
+            item {
+                ElmsBanner(message = loadError, tone = ElmsBannerTone.Error)
+            }
         }
         if (unread > 0) {
             item {
@@ -73,17 +90,24 @@ fun NotificationsScreen(onBack: () -> Unit) {
                 )
             }
         }
-        if (items.isEmpty()) {
-            item {
+        when {
+            loading -> item { ElmsLoadingBlock() }
+            items.isEmpty() -> item {
                 ElmsEmptyState(
                     title = "You're all caught up",
                     description = "New library updates will show up here."
                 )
             }
-        } else {
-            items(items, key = { it.id }) { item ->
+            else -> items(items, key = { it.id }) { item ->
                 NotificationRow(item)
             }
+        }
+        item {
+            PortalButton(
+                text = "Back",
+                onClick = onBack,
+                variant = PortalButtonVariant.Ghost
+            )
         }
     }
 }
@@ -91,13 +115,20 @@ fun NotificationsScreen(onBack: () -> Unit) {
 @Composable
 private fun NotificationRow(item: NotificationItem) {
     ElmsSectionCard(
-        contentPadding = 8.dp,
+        contentPadding = 12.dp,
         modifier = if (item.isRead) Modifier else Modifier.background(ElmsCyanSoft)
     ) {
-        ElmsListRow(
-            title = item.title,
-            subtitle = "${item.message}\n${item.category.label} · ${item.time}",
-            leading = {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(ShapeXl)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     Lucide.Bell,
                     contentDescription = null,
@@ -105,6 +136,34 @@ private fun NotificationRow(item: NotificationItem) {
                     modifier = Modifier.size(22.dp)
                 )
             }
-        )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.message,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "${item.category.label} · ${item.time}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
