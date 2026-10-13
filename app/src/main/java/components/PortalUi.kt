@@ -440,7 +440,11 @@ fun ElmsEmptyState(
         )
         if (actionLabel != null && onAction != null) {
             Spacer(modifier = Modifier.height(16.dp))
-            PortalButton(text = actionLabel, onClick = onAction)
+            PortalButton(
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -492,7 +496,7 @@ fun PortalButton(
 
     Row(
         modifier = modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 52.dp)
             .clip(ShapeXl)
             .background(if (clickable) background else background.copy(alpha = 0.45f))
             .border(1.dp, borderColor, ShapeXl)
@@ -501,7 +505,7 @@ fun PortalButton(
                 role = Role.Button
                 contentDescription = text
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -528,6 +532,7 @@ fun PortalField(
     placeholder: String,
     leadingIcon: ImageVector,
     modifier: Modifier = Modifier,
+    textFieldModifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: @Composable (() -> Unit)? = null,
     trailingIcon: ImageVector? = null,
@@ -597,7 +602,9 @@ fun PortalField(
                     ),
                     cursorBrush = SolidColor(ElmsCyan),
                     visualTransformation = visualTransformation,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(textFieldModifier),
                 )
             }
             if (trailing != null || trailingIcon != null) {

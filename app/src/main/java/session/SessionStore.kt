@@ -23,19 +23,21 @@ class SessionStore(context: Context) {
 
     fun getToken(): String? = prefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() }
 
-    /** Last successful API portal for a school ID (`user` or `staff`). Survives logout. */
-    fun preferredLoginPortal(schoolId: String): String? {
+    /**
+     * Last successful `login_as` role for a school ID (`Student`, `Faculty`, or `Admin`).
+     * Migrates older `user` / `staff` portal hints.
+     */
+    fun preferredLoginAs(schoolId: String): String? {
         val key = schoolId.trim().uppercase()
         if (key.isBlank()) return null
-        return loginHints.getString(hintKey(key), null)
-            ?.takeIf { it == "user" || it == "staff" }
+        return normalizeLoginAs(loginHints.getString(hintKey(key), null))
     }
 
-    fun rememberLoginPortal(schoolId: String, portal: String) {
+    fun rememberLoginAs(schoolId: String, loginAs: String) {
         val key = schoolId.trim().uppercase()
+        val role = normalizeLoginAs(loginAs) ?: return
         if (key.isBlank()) return
-        if (portal != "user" && portal != "staff") return
-        loginHints.edit().putString(hintKey(key), portal).apply()
+        loginHints.edit().putString(hintKey(key), role).apply()
     }
 
     fun getSession(): StoredSession? {
@@ -81,8 +83,25 @@ class SessionStore(context: Context) {
         const val PREFS_ENCRYPTED = "smartlib_session"
         const val PREFS_FALLBACK = "smartlib_session_fallback"
         const val PREFS_LOGIN_HINTS = "smartlib_login_hints"
+        const val LOGIN_AS_STUDENT = "Student"
+        const val LOGIN_AS_FACULTY = "Faculty"
+        const val LOGIN_AS_ADMIN = "Admin"
 
         fun hintKey(schoolId: String): String = "portal_$schoolId"
+
+        fun normalizeLoginAs(raw: String?): String? {
+            val value = raw?.trim().orEmpty()
+            if (value.isEmpty()) return null
+            return when {
+                value.equals("Student", ignoreCase = true) -> LOGIN_AS_STUDENT
+                value.equals("Faculty", ignoreCase = true) -> LOGIN_AS_FACULTY
+                value.equals("Admin", ignoreCase = true) -> LOGIN_AS_ADMIN
+                value.equals("Librarian", ignoreCase = true) -> LOGIN_AS_ADMIN
+                value.equals("user", ignoreCase = true) -> LOGIN_AS_STUDENT
+                value.equals("staff", ignoreCase = true) -> LOGIN_AS_ADMIN
+                else -> null
+            }
+        }
 
         fun createPrefs(context: Context): SharedPreferences {
             return try {

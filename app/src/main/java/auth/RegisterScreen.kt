@@ -211,7 +211,10 @@ fun RegisterScreen(navController: NavHostController) {
             visualTransformation = if (showPasswords) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
             error = errors["password"],
             trailing = {
-                IconButton(onClick = { showPasswords = !showPasswords }) {
+                IconButton(
+                    onClick = { showPasswords = !showPasswords },
+                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                ) {
                     Icon(
                         imageVector = if (showPasswords) Lucide.EyeOff else Lucide.Eye,
                         contentDescription = if (showPasswords) "Hide password" else "Show password",

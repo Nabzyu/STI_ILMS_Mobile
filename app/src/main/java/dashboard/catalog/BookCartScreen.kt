@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
@@ -92,7 +93,10 @@ fun BookCartScreen(onBack: () -> Unit) {
                                 Text(item.book.author, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
                                 StatusBadge(if (item.isAvailable) "Available" else "Unavailable", warning = !item.isAvailable)
                             }
-                            IconButton(onClick = { repository.removeFromCart(item.book.id) }) {
+                            IconButton(
+                                onClick = { repository.removeFromCart(item.book.id) },
+                                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                            ) {
                                 Icon(Lucide.Trash2, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface)
                             }
                         }
@@ -103,6 +107,7 @@ fun BookCartScreen(onBack: () -> Unit) {
                 PortalButton(
                     text = if (isSubmitting) "Submitting..." else "Borrow books",
                     onClick = {
+                        if (isSubmitting) return@PortalButton
                         isSubmitting = true
                         errorMessage = null
                         scope.launch {
@@ -118,7 +123,9 @@ fun BookCartScreen(onBack: () -> Unit) {
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSubmitting,
+                    loading = isSubmitting,
                 )
             } else {
                 PortalButton(text = "Reserve unavailable books", onClick = { showReserveDialog = true }, modifier = Modifier.fillMaxWidth())

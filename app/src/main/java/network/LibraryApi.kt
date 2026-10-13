@@ -19,6 +19,7 @@ import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
+import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.network.dto.ReserveResultDto
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
@@ -53,8 +54,8 @@ interface LibraryApi {
     @GET("api/v1/catalog/books/{titleId}")
     suspend fun bookOverview(@Path("titleId") titleId: Int): Response<ApiEnvelope<BookCatalogItemDto>>
 
-    @POST("api/v1/catalog/books/{titleId}/reservations")
-    suspend fun reserveBook(@Path("titleId") titleId: Int): Response<ApiEnvelope<ReserveResultDto>>
+    @POST("api/v1/reservations/request")
+    suspend fun reserveBook(@Body body: ReserveRequestDto): Response<ApiEnvelope<ReserveResultDto>>
 
     @GET("api/v1/catalog/research")
     suspend fun research(

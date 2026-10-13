@@ -22,4 +22,5 @@ sealed class DashboardRoute(val route: String) {
     object Fines : DashboardRoute("fines")
     object Clearance : DashboardRoute("clearance")
     object Profile : DashboardRoute("profile")
+    object Search : DashboardRoute("search")
 }

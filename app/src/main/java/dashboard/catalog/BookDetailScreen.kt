@@ -38,6 +38,7 @@ import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.PrimaryBlue
 import kotlinx.coroutines.launch
 
@@ -127,9 +128,17 @@ fun BookDetailScreen(
                                 repository.reserveBook(book)
                                 Toast.makeText(context, "Reservation submitted", Toast.LENGTH_SHORT).show()
                             } catch (error: ApiException) {
-                                Toast.makeText(context, error.message, Toast.LENGTH_LONG).show()
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "Unable to reserve this title", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    context,
+                                    userFacingMessage(error, "Unable to reserve this title."),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } catch (error: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    userFacingMessage(error, "Unable to reserve this title."),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             }
                         }
                     },

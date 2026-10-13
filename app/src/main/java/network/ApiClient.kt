@@ -69,21 +69,31 @@ object ApiClient {
             return body.data
         }
         val errorEnvelope = parseError(response)
+        val serverCode = errorEnvelope?.code ?: body?.code
         val rawMessage = errorEnvelope?.message ?: body?.message
-        val message = sanitizeUserMessage(rawMessage)
-            ?: when (response.code()) {
-                401 -> "Invalid student ID or password."
-                403 -> "Your account is currently deactivated. Please coordinate with the campus librarian."
-                429 -> "Too many login attempts. Please wait 15 minutes and try again."
-                else -> "The request could not be completed."
-            }
-        val code = errorEnvelope?.code
-            ?: body?.code
+        // Strip dumps/HTML only; meaning rewrites happen in userFacingMessage.
+        val lightMessage = sanitizeTransportMessage(rawMessage)
+        val code = serverCode
             ?: when (response.code()) {
                 429 -> "TOO_MANY_LOGIN_ATTEMPTS"
-                401 -> "INVALID_CREDENTIALS"
+                401 -> "JWT_REQUIRED"
+                403 -> "JWT_ROLE_FORBIDDEN"
                 else -> "REQUEST_FAILED"
             }
+        val message = when {
+            serverCode == "INVALID_CREDENTIALS" ->
+                lightMessage ?: "Invalid school ID or password."
+            serverCode == "TOO_MANY_LOGIN_ATTEMPTS" ->
+                lightMessage ?: "Too many login attempts. Please wait 15 minutes and try again."
+            !lightMessage.isNullOrBlank() -> lightMessage
+            else -> when (response.code()) {
+                401 -> "Sign-in is required."
+                403 -> "You do not have access to this action."
+                404 -> "This feature is not available right now."
+                429 -> "Too many requests. Please wait and try again."
+                else -> "The request could not be completed."
+            }
+        }
         val fieldErrors = errorEnvelope?.details?.errors ?: body?.details?.errors ?: emptyMap()
         if (::sessionStore.isInitialized && code != "INVALID_CREDENTIALS") {
             val shouldClear = code in setOf(
@@ -108,8 +118,8 @@ object ApiClient {
         }
     }
 
-    /** Drop messages that look like stack traces, HTML, or internal server dump. */
-    private fun sanitizeUserMessage(raw: String?): String? {
+    /** Drop stack traces, HTML, and JSON dumps. Keep auth wording for display mapping. */
+    private fun sanitizeTransportMessage(raw: String?): String? {
         if (raw.isNullOrBlank()) return null
         val lower = raw.lowercase()
         val looksInternal =

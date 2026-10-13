@@ -422,6 +422,7 @@ private fun QuickStat(
 ) {
     Column(
         modifier = modifier
+            .sizeIn(minHeight = 48.dp)
             .clip(Shape2Xl)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, Shape2Xl)

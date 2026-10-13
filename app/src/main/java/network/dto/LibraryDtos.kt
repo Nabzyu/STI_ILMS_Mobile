@@ -68,6 +68,10 @@ data class ReservationItemDto(
     val pickupDeadline: String? = null,
 )
 
+data class ReserveRequestDto(
+    @SerializedName("bookTitleId") val bookTitleId: Int,
+)
+
 data class ReserveResultDto(
     val reservationId: Int? = null,
     val queuePosition: Int? = null,

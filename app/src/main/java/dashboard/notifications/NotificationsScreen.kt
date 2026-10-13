@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -43,12 +44,16 @@ import com.example.stismartlib.ui.theme.ElmsCyanSoft
 @Composable
 fun NotificationsScreen(onBack: () -> Unit) {
     val repository = rememberLibraryRepository()
-    val items = repository.notifications
-    val loading = repository.isLoading && items.isEmpty()
-    val loadError = repository.lastError.takeIf { items.isEmpty() }
-    val unread = items.count { !it.isRead }
+    val notifications = repository.notifications
+    val loading = repository.isLoading && notifications.isEmpty()
+    val loadError = repository.lastError.takeIf { notifications.isEmpty() }
+    val unread = notifications.count { !it.isRead }
 
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         item {
             Text(
                 "Notifications",
@@ -76,29 +81,30 @@ fun NotificationsScreen(onBack: () -> Unit) {
                 )
             }
         }
-        if (items.isNotEmpty()) {
+        if (notifications.isNotEmpty()) {
             item {
                 PortalButton(
                     text = "Mark all as read",
                     onClick = {
-                        val updated = items.map { it.copy(isRead = true) }
-                        items.clear()
-                        items.addAll(updated)
+                        val updated = notifications.map { it.copy(isRead = true) }
+                        notifications.clear()
+                        notifications.addAll(updated)
                     },
                     variant = PortalButtonVariant.Secondary,
-                    leadingIcon = Lucide.CircleCheck
+                    leadingIcon = Lucide.CircleCheck,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
         when {
             loading -> item { ElmsLoadingBlock() }
-            items.isEmpty() -> item {
+            notifications.isEmpty() -> item {
                 ElmsEmptyState(
                     title = "You're all caught up",
                     description = "New library updates will show up here."
                 )
             }
-            else -> items(items, key = { it.id }) { item ->
+            else -> items(notifications, key = { it.id }) { item ->
                 NotificationRow(item)
             }
         }
@@ -106,7 +112,8 @@ fun NotificationsScreen(onBack: () -> Unit) {
             PortalButton(
                 text = "Back",
                 onClick = onBack,
-                variant = PortalButtonVariant.Ghost
+                variant = PortalButtonVariant.Ghost,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

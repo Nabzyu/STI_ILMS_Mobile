@@ -53,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -83,6 +84,7 @@ import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
 import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
+import com.example.stismartlib.ui.dashboard.search.GlobalSearchScreen
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.LocalThemeController
 import com.example.stismartlib.ui.theme.StiMarkBlue
@@ -104,6 +106,30 @@ private data class BottomDest(
     val icon: ImageVector,
     val opensDrawer: Boolean = false
 )
+
+/**
+ * Bottom-bar / drawer navigation that does not get stuck on stacked screens
+ * (e.g. Notifications on top of Overview). Prefer popping back to an existing
+ * destination before using restoreState navigate.
+ */
+private fun NavController.navigateDashboardRoute(route: String) {
+    if (currentDestination?.route == route) return
+    if (popBackStack(route, inclusive = false)) return
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+private fun NavController.openStackedRoute(route: String) {
+    if (currentDestination?.route == route) return
+    navigate(route) {
+        launchSingleTop = true
+    }
+}
 
 @Composable
 fun DashboardScreen(
@@ -191,7 +217,10 @@ fun DashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         HeaderIconButton(
-                            onClick = { /* search reserved for future */ },
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Search.route)
+                                scope.launch { drawerState.close() }
+                            },
                             contentDescription = "Search"
                         ) {
                             Icon(
@@ -236,17 +265,29 @@ fun DashboardScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .sizeIn(minHeight = 48.dp)
                                     .clip(ShapeXl)
                                     .background(
                                         if (selected) ElmsCyan.copy(alpha = 0.15f) else Color.Transparent
                                     )
                                     .clickable {
-                                        dashboardNavController.navigate(item.route) {
-                                            popUpTo(dashboardNavController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                        // Secondary screens (notifications, fines, …) stack; tabs restore.
+                                        val stacksOverTabs = item.route in setOf(
+                                            DashboardRoute.Notifications.route,
+                                            DashboardRoute.Fines.route,
+                                            DashboardRoute.Clearance.route,
+                                            DashboardRoute.Profile.route,
+                                            DashboardRoute.ReserveBook.route,
+                                            DashboardRoute.BorrowProcess.route,
+                                            DashboardRoute.ReturnBook.route,
+                                            DashboardRoute.PrintingService.route,
+                                            DashboardRoute.QrLogin.route,
+                                            DashboardRoute.Search.route,
+                                        )
+                                        if (stacksOverTabs) {
+                                            dashboardNavController.openStackedRoute(item.route)
+                                        } else {
+                                            dashboardNavController.navigateDashboardRoute(item.route)
                                         }
                                         scope.launch { drawerState.close() }
                                     }
@@ -271,11 +312,10 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable {
-                                    dashboardNavController.navigate(DashboardRoute.QrLogin.route) {
-                                        launchSingleTop = true
-                                    }
+                                    dashboardNavController.openStackedRoute(DashboardRoute.QrLogin.route)
                                     scope.launch { drawerState.close() }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -296,6 +336,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable {
                                     themeController.themeMode =
@@ -320,6 +361,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable { showLogoutConfirm = true }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -338,12 +380,11 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable {
-                                    dashboardNavController.navigate(DashboardRoute.Profile.route) {
-                                        launchSingleTop = true
-                                    }
+                                    dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
                                     scope.launch { drawerState.close() }
                                 }
                                 .padding(12.dp),
@@ -407,32 +448,15 @@ fun DashboardScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.weight(1f))
-                    StiMarkTile(size = 36.dp, contentDescription = stringResource(R.string.system_full_name))
-                    Spacer(modifier = Modifier.weight(1f))
-                    HeaderIconButton(
-                        onClick = {
-                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
-                        },
-                        contentDescription = "Messages"
-                    ) {
-                        Box {
-                            Icon(
-                                Lucide.Inbox,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            ElmsCountBadge(
-                                count = unreadCount,
-                                modifier = Modifier.align(Alignment.TopEnd)
-                            )
-                        }
-                    }
                     Spacer(modifier = Modifier.width(4.dp))
+                    StiMarkTile(
+                        size = 36.dp,
+                        contentDescription = stringResource(R.string.system_full_name),
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
                     HeaderIconButton(
                         onClick = {
-                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                            dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
                         },
                         contentDescription = "Notifications"
                     ) {
@@ -440,12 +464,42 @@ fun DashboardScreen(
                             Icon(
                                 Lucide.Bell,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                                tint = ElmsCyan,
+                                modifier = Modifier.size(24.dp)
                             )
                             ElmsCountBadge(
                                 count = unreadCount,
                                 modifier = Modifier.align(Alignment.TopEnd)
+                            )
+                        }
+                    }
+                    HeaderIconButton(
+                        onClick = {
+                            dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
+                        },
+                        contentDescription = "My profile"
+                    ) {
+                        val initials = repository.session.userName
+                            .trim()
+                            .split(Regex("\\s+"))
+                            .filter { it.isNotEmpty() }
+                            .take(2)
+                            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+                            .joinToString("")
+                            .ifBlank { userType.displayName.take(2).uppercase() }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(StiYellow)
+                                .border(1.dp, ElmsCyan.copy(alpha = 0.25f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                color = StiMarkBlue,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.sp,
                             )
                         }
                     }
@@ -466,13 +520,7 @@ fun DashboardScreen(
                                 if (dest.opensDrawer) {
                                     scope.launch { drawerState.open() }
                                 } else {
-                                    dashboardNavController.navigate(dest.route) {
-                                        popUpTo(dashboardNavController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                    dashboardNavController.navigateDashboardRoute(dest.route)
                                 }
                             },
                             icon = {
@@ -544,7 +592,7 @@ fun DashboardScreen(
                                 dashboardNavController.navigate(DashboardRoute.QrLogin.route)
                             },
                             onNavigateToNotifications = {
-                                dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                                dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
                             },
                             onLogout = { showLogoutConfirm = true }
                         )
@@ -598,6 +646,20 @@ fun DashboardScreen(
                     }
                     composable(DashboardRoute.Notifications.route) {
                         NotificationsScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.Search.route) {
+                        GlobalSearchScreen(
+                            onBack = { dashboardNavController.popBackStack() },
+                            onBookClick = { bookId ->
+                                dashboardNavController.navigate(DashboardRoute.BookDetail.create(bookId))
+                            },
+                            onResearchClick = { researchId ->
+                                dashboardNavController.navigate(DashboardRoute.ResearchDetail.create(researchId))
+                            },
+                            onBrowseCatalog = {
+                                dashboardNavController.navigateDashboardRoute(DashboardRoute.BookCatalog.route)
+                            },
+                        )
                     }
                     composable(DashboardRoute.QrLogin.route) {
                         AttendanceScreen()

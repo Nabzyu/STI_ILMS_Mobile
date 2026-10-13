@@ -30,8 +30,10 @@ import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
 import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
+import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -120,61 +122,70 @@ class LibraryRepository(
 
     /**
      * Single sign-in for Student, Faculty, and Librarian/Admin.
-     * The API keeps separate user/staff portals, so we try the remembered portal first,
-     * then the other only on INVALID_CREDENTIALS (Admin is rejected by the user portal).
+     * The API requires `login_as` (`Student` / `Faculty` / `Admin`). Try the remembered
+     * role first, then the remaining roles on INVALID_CREDENTIALS only.
      */
     suspend fun login(schoolId: String, password: String) = withContext(Dispatchers.IO) {
         lastError = null
         val normalizedSchoolId = schoolId.trim().uppercase()
-        val preferred = sessionStore.preferredLoginPortal(normalizedSchoolId)
-        val primary = preferred ?: PORTAL_USER
-        val fallback = if (primary == PORTAL_STAFF) PORTAL_USER else PORTAL_STAFF
-        try {
-            authenticatePortal(normalizedSchoolId, password, primary)
-        } catch (error: ApiException) {
-            if (error.code != "INVALID_CREDENTIALS") throw error
-            try {
-                authenticatePortal(normalizedSchoolId, password, fallback)
-            } catch (fallbackError: ApiException) {
-                // Prefer rate-limit / deactivation messages from the second attempt when present.
-                if (fallbackError.code == "TOO_MANY_LOGIN_ATTEMPTS" ||
-                    fallbackError.code == "ACCOUNT_DEACTIVATED"
-                ) {
-                    throw fallbackError
-                }
-                throw error
+        val preferred = sessionStore.preferredLoginAs(normalizedSchoolId)
+        val loginOrder = buildList {
+            if (preferred != null) add(preferred)
+            for (role in LOGIN_AS_ROLES) {
+                if (role !in this) add(role)
             }
         }
+
+        var lastInvalid: ApiException? = null
+        for (loginAs in loginOrder) {
+            try {
+                authenticateAs(normalizedSchoolId, password, loginAs)
+                return@withContext
+            } catch (error: ApiException) {
+                when (error.code) {
+                    "INVALID_CREDENTIALS" -> lastInvalid = error
+                    "TOO_MANY_LOGIN_ATTEMPTS", "ACCOUNT_DEACTIVATED" -> throw error
+                    else -> throw error
+                }
+            }
+        }
+        throw lastInvalid
+            ?: ApiException("Invalid school ID or password.", "INVALID_CREDENTIALS")
     }
 
-    private suspend fun authenticatePortal(schoolId: String, password: String, portal: String) {
-        require(portal == PORTAL_USER || portal == PORTAL_STAFF) {
-            "Unsupported login portal."
-        }
+    private suspend fun authenticateAs(schoolId: String, password: String, loginAs: String) {
+        require(loginAs in LOGIN_AS_ROLES) { "Unsupported login role." }
         // Drop any previous token so login is not sent with a stale Authorization header.
         sessionStore.clear()
         clearLocalData()
         session = LibrarySession()
 
         val normalizedSchoolId = schoolId.trim().uppercase()
+        val portal = if (loginAs == LOGIN_AS_ADMIN) PORTAL_STAFF else PORTAL_USER
         val response = ApiClient.api.login(
             LoginRequest(
                 schoolId = normalizedSchoolId,
                 password = password,
+                loginAs = loginAs,
                 portal = portal,
             ),
         )
         val data = ApiClient.unwrap(response)
-        val user = data.user ?: throw ApiException("The server returned an incomplete login response.")
+        val user = data.user
+            ?: throw ApiException("Sign-in could not be completed. Please try again.")
         val token = data.token?.takeIf { it.isNotBlank() }
-            ?: throw ApiException("The server returned an invalid access token.", "INVALID_TOKEN_RESPONSE")
-        val accountId = user.accountId ?: user.id ?: throw ApiException("Missing account id.")
+            ?: throw ApiException(
+                "Sign-in could not be completed. Please try again.",
+                "INVALID_TOKEN_RESPONSE",
+            )
+        val accountId = user.accountId ?: user.id
+            ?: throw ApiException("Sign-in could not be completed. Please try again.")
         val resolvedRole = user.role.orEmpty()
         val resolvedSchoolId = user.schoolId ?: normalizedSchoolId
         val resolvedName = user.fullName?.takeIf { it.isNotBlank() } ?: resolvedSchoolId
         val userType = UserType.fromServerRole(resolvedRole)
 
-        if (portal == PORTAL_STAFF && !userType.isStaff) {
+        if (loginAs == LOGIN_AS_ADMIN && !userType.isStaff) {
             sessionStore.clear()
             throw ApiException(
                 "This sign-in is for Librarian / Admin accounts only.",
@@ -197,12 +208,16 @@ class LibraryRepository(
             accountId = accountId,
             isAuthenticated = true,
         )
-        sessionStore.rememberLoginPortal(resolvedSchoolId, portal)
+        sessionStore.rememberLoginAs(resolvedSchoolId, loginAs)
     }
 
     private companion object {
         const val PORTAL_USER = "user"
         const val PORTAL_STAFF = "staff"
+        const val LOGIN_AS_STUDENT = "Student"
+        const val LOGIN_AS_FACULTY = "Faculty"
+        const val LOGIN_AS_ADMIN = "Admin"
+        val LOGIN_AS_ROLES = listOf(LOGIN_AS_STUDENT, LOGIN_AS_FACULTY, LOGIN_AS_ADMIN)
     }
 
     suspend fun registerStudent(
@@ -258,7 +273,7 @@ class LibraryRepository(
             sessionStore.clear()
             clearLocalData()
             session = LibrarySession()
-            lastError = error.message
+            lastError = userFacingMessage(error, "Unable to restore your session.")
             false
         }
     }
@@ -283,7 +298,7 @@ class LibraryRepository(
             loadPrintHistory()
             loadAttendancePass()
         } catch (error: ApiException) {
-            lastError = error.message
+            lastError = userFacingMessage(error, "Unable to refresh your library data.")
             throw error
         } finally {
             isLoading = false
@@ -485,13 +500,15 @@ class LibraryRepository(
     }
 
     suspend fun reserveBook(book: Book) = withContext(Dispatchers.IO) {
-        val titleId = book.id.toIntOrNull() ?: throw ApiException("Invalid book id.")
-        ApiClient.unwrap(ApiClient.api.reserveBook(titleId))
+        val titleId = book.id.toIntOrNull()
+            ?: throw ApiException("This book could not be reserved.")
+        ApiClient.unwrap(ApiClient.api.reserveBook(ReserveRequestDto(bookTitleId = titleId)))
         loadReservations()
     }
 
     suspend fun cancelReservation(reservationId: String) = withContext(Dispatchers.IO) {
-        val id = reservationId.toIntOrNull() ?: throw ApiException("Invalid reservation id.")
+        val id = reservationId.toIntOrNull()
+            ?: throw ApiException("This reservation could not be updated.")
         ApiClient.unwrap(ApiClient.api.cancelReservation(id))
         loadReservations()
     }
@@ -513,7 +530,7 @@ class LibraryRepository(
             loadProfile()
             loadProfileAvatar()
         } catch (error: ApiException) {
-            lastError = error.message
+            lastError = userFacingMessage(error, "Unable to load your profile.")
             throw error
         } finally {
             isLoading = false
@@ -529,7 +546,7 @@ class LibraryRepository(
         isProfileSaving = true
         profileActionError = null
         try {
-            val dto = ApiClient.unwrap(
+            ApiClient.unwrap(
                 ApiClient.api.updateProfileMe(
                     ProfileUpdateRequest(
                         firstName = firstName.trim(),
@@ -539,8 +556,9 @@ class LibraryRepository(
                     ),
                 ),
             )
-            val updated = dto.toUserProfile()
-            profile = updated
+            // PATCH /profile/me returns { id, changed_fields }, not the full profile.
+            loadProfile()
+            val updated = profile ?: throw ApiException("Profile saved, but the updated details could not be loaded.")
             val stored = sessionStore.getSession()
             if (stored != null) {
                 val displayName = updated.fullName.ifBlank {
@@ -561,7 +579,7 @@ class LibraryRepository(
                 )
             }
         } catch (error: ApiException) {
-            profileActionError = error.message
+            profileActionError = userFacingMessage(error, "Unable to update your profile.")
             throw error
         } finally {
             isProfileSaving = false
@@ -576,10 +594,11 @@ class LibraryRepository(
                 val mediaType = mimeType.toMediaTypeOrNull() ?: "image/jpeg".toMediaType()
                 val body = imageBytes.toRequestBody(mediaType)
                 val part = MultipartBody.Part.createFormData("image", fileName, body)
-                val dto = ApiClient.unwrap(ApiClient.api.uploadProfileAvatarMe(part))
-                profileAvatar = dto.toProfileAvatar()
+                ApiClient.unwrap(ApiClient.api.uploadProfileAvatarMe(part))
+                // Upload returns { status: "Pending" }; reload for signed URL / rejection state.
+                loadProfileAvatar()
             } catch (error: ApiException) {
-                profileActionError = error.message
+                profileActionError = userFacingMessage(error, "Unable to upload your photo.")
                 throw error
             } finally {
                 isAvatarUploading = false
@@ -598,12 +617,12 @@ class LibraryRepository(
             role = role.orEmpty(),
             programStrand = programStrand.orEmpty(),
             yearGradeLevel = yearGradeLevel.orEmpty(),
-            status = status.orEmpty(),
+            status = (accountStatus ?: status).orEmpty(),
         )
     }
 
     private fun ProfileAvatarDto.toProfileAvatar(): ProfileAvatar {
-        val raw = status.orEmpty()
+        val raw = resolvedStatus().orEmpty()
         val mapped = when {
             raw.isBlank() && resolvedUrl().isNullOrBlank() -> AvatarApprovalStatus.NONE
             raw.contains("pend", ignoreCase = true) -> AvatarApprovalStatus.PENDING
@@ -617,7 +636,7 @@ class LibraryRepository(
         return ProfileAvatar(
             status = mapped,
             imageUrl = resolvedUrl(),
-            rejectionReason = rejectionReason,
+            rejectionReason = resolvedRejectionReason(),
             note = message,
         )
     }

@@ -26,6 +26,7 @@ import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
 import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
 import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
+import com.example.stismartlib.ui.dashboard.search.GlobalSearchScreen
 import com.example.stismartlib.ui.dashboard.staff.StaffHomeScreen
 import com.example.stismartlib.ui.splash.SplashScreen
 
@@ -318,6 +319,21 @@ private fun NotificationsScreenPreview() {
     PreviewApp {
         NestedPreview {
             NotificationsScreen(onBack = NoOp)
+        }
+    }
+}
+
+@Preview(name = "Global search", showBackground = true, showSystemUi = true)
+@Composable
+private fun GlobalSearchScreenPreview() {
+    PreviewApp {
+        NestedPreview {
+            GlobalSearchScreen(
+                onBack = NoOp,
+                onBookClick = {},
+                onResearchClick = {},
+                onBrowseCatalog = NoOp,
+            )
         }
     }
 }

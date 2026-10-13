@@ -51,8 +51,6 @@ import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.EyebrowStyle
 import kotlinx.coroutines.launch
 
-private val StudentIdPattern = Regex("^\\d{11}$")
-
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val repository = rememberLibraryRepository()
@@ -86,13 +84,6 @@ fun LoginScreen(navController: NavHostController) {
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Use your student ID and password. Your workspace opens based on your account.",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-            fontSize = 14.sp,
-            lineHeight = 20.sp
-        )
         if (banner != null) {
             Spacer(modifier = Modifier.height(24.dp))
             ElmsBanner(message = banner.orEmpty(), tone = ElmsBannerTone.Error)
@@ -101,7 +92,7 @@ fun LoginScreen(navController: NavHostController) {
         PortalField(
             label = "Student ID",
             value = schoolId,
-            onValueChange = { schoolId = it.filter(Char::isDigit).take(11) },
+            onValueChange = { schoolId = it },
             placeholder = "Enter your Student ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
@@ -161,11 +152,7 @@ fun LoginScreen(navController: NavHostController) {
             onClick = {
                 if (isSubmitting) return@PortalButton
                 val normalized = schoolId.trim()
-                schoolIdError = when {
-                    normalized.isEmpty() -> "Student ID is required."
-                    !StudentIdPattern.matches(normalized) -> "Student ID must be exactly 11 digits."
-                    else -> null
-                }
+                schoolIdError = if (normalized.isEmpty()) "Student ID is required." else null
                 passwordError = if (password.isEmpty()) "Password is required." else null
                 if (schoolIdError != null || passwordError != null) {
                     banner = null
@@ -186,7 +173,7 @@ fun LoginScreen(navController: NavHostController) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     } catch (error: ApiException) {
-                        banner = userFacingMessage(error, "Invalid student ID or password.")
+                        banner = userFacingMessage(error, "Invalid school ID or password.")
                         schoolIdError = error.fieldErrors["school_id"]
                         passwordError = error.fieldErrors["password"]
                     } catch (error: Exception) {

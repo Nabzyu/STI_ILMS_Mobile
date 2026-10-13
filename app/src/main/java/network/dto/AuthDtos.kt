@@ -18,24 +18,25 @@ data class ApiErrorDetails(
 data class LoginRequest(
     @SerializedName("school_id") val schoolId: String,
     val password: String,
-    /** "user" for Student/Faculty, "staff" for Librarian/Admin. */
+    /** API role: "Student", "Faculty", or "Admin". */
+    @SerializedName("login_as") val loginAs: String,
+    /** Legacy portal hint; "user" for Student/Faculty, "staff" for Admin. */
     val portal: String? = null,
-    @SerializedName("login_as") val loginAs: String? = null,
 )
 
 data class LoginData(
     val token: String? = null,
-    val tokenType: String? = null,
-    val expiresIn: Int? = null,
+    @SerializedName("token_type") val tokenType: String? = null,
+    @SerializedName("expires_in") val expiresIn: Int? = null,
     val redirect: String? = null,
     val user: LoginUser? = null,
 )
 
 data class LoginUser(
     val id: Int? = null,
-    val accountId: Int? = null,
-    val schoolId: String? = null,
-    val fullName: String? = null,
+    @SerializedName("account_id") val accountId: Int? = null,
+    @SerializedName("school_id") val schoolId: String? = null,
+    @SerializedName("full_name") val fullName: String? = null,
     val email: String? = null,
     val role: String? = null,
 )
@@ -57,17 +58,17 @@ data class RegisterData(
 
 data class RegisterAccount(
     val id: Int? = null,
-    val schoolId: String? = null,
+    @SerializedName("school_id") val schoolId: String? = null,
     val role: String? = null,
-    val firstName: String? = null,
-    val lastName: String? = null,
+    @SerializedName("first_name") val firstName: String? = null,
+    @SerializedName("last_name") val lastName: String? = null,
 )
 
 data class MeUser(
     val id: Int? = null,
-    val accountId: Int? = null,
-    val schoolId: String? = null,
-    val fullName: String? = null,
+    @SerializedName("account_id") val accountId: Int? = null,
+    @SerializedName("school_id") val schoolId: String? = null,
+    @SerializedName("full_name") val fullName: String? = null,
     val email: String? = null,
     val role: String? = null,
 )
