@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
@@ -24,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +49,11 @@ import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
 import com.example.stismartlib.ui.components.StatusBadge
+import com.example.stismartlib.ui.dashboard.components.BookCatalogGridTile
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.dashboard.components.CatalogViewMode
+import com.example.stismartlib.ui.dashboard.components.CatalogViewPrefs
+import com.example.stismartlib.ui.dashboard.components.CatalogViewToggle
 import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.EyebrowStyle
 import kotlinx.coroutines.delay
@@ -54,6 +64,13 @@ fun BookCatalogScreen(
     onCartClick: () -> Unit
 ) {
     val repository = rememberLibraryRepository()
+    val context = LocalContext.current
+    val viewPrefs = remember { CatalogViewPrefs(context) }
+    var viewMode by remember { mutableStateOf(viewPrefs.get(CatalogViewPrefs.KEY_BOOKS)) }
+    fun setViewMode(mode: CatalogViewMode) {
+        viewMode = mode
+        viewPrefs.set(CatalogViewPrefs.KEY_BOOKS, mode)
+    }
     var searchQuery by remember { mutableStateOf("") }
     var availabilityFilter by remember { mutableStateOf("All") }
     var category by remember { mutableStateOf("All") }
@@ -87,154 +104,296 @@ fun BookCatalogScreen(
         matchesCategory && matchesAvailability && matchesSearch
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            Text(
-                "Catalog",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "Search by title, author, or ISBN",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp
-            )
-        }
-        item {
-            PortalField(
-                label = "",
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = "Search title, author, or ISBN...",
-                leadingIcon = Lucide.Search
-            )
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Availability",
-                    style = EyebrowStyle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    val listContentPadding = PaddingValues(16.dp)
+    val listSpacing = 8.dp
+
+    if (viewMode == CatalogViewMode.GRID_2) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = listContentPadding,
+            horizontalArrangement = Arrangement.spacedBy(listSpacing),
+            verticalArrangement = Arrangement.spacedBy(listSpacing)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BookCatalogHeader()
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                PortalField(
+                    label = "",
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = "Search title, author, or ISBN...",
+                    leadingIcon = Lucide.Search
                 )
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ElmsPillTab(
-                        label = "All",
-                        selected = availabilityFilter == "All",
-                        onClick = { availabilityFilter = "All" },
-                        count = repository.books.size
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BookCatalogAvailabilityFilters(
+                    availabilityFilter = availabilityFilter,
+                    onAvailabilityChange = { availabilityFilter = it },
+                    totalCount = repository.books.size
+                )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BookCatalogCategoryFilters(
+                    categories = categories,
+                    selected = category,
+                    onCategoryChange = { category = it }
+                )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BookCatalogResultsBar(
+                    count = visible.size,
+                    viewMode = viewMode,
+                    onViewModeChange = ::setViewMode,
+                    onCartClick = onCartClick
+                )
+            }
+            if (loadError != null) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    PortalButton(
+                        text = "Try again",
+                        onClick = { reloadToken += 1 },
+                        variant = PortalButtonVariant.Secondary
                     )
-                    ElmsPillTab(
-                        label = "Available",
-                        selected = availabilityFilter == "Available",
-                        onClick = { availabilityFilter = "Available" }
-                    )
-                    ElmsPillTab(
-                        label = "Unavailable",
-                        selected = availabilityFilter == "Unavailable",
-                        onClick = { availabilityFilter = "Unavailable" }
+                }
+            }
+            when {
+                loading && repository.books.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) { ElmsLoadingBlock() }
+                }
+                loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
+                visible.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        ElmsEmptyState(
+                            title = "No books found",
+                            description = "Try another search or category.",
+                            actionLabel = "Clear filters",
+                            onAction = {
+                                searchQuery = ""
+                                category = "All"
+                                availabilityFilter = "All"
+                            }
+                        )
+                    }
+                }
+                else -> items(visible, key = { it.id }) { book ->
+                    BookCatalogGridTile(
+                        book = book,
+                        onClick = { onBookClick(book.id) }
                     )
                 }
             }
         }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Category",
-                    style = EyebrowStyle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = listContentPadding,
+            verticalArrangement = Arrangement.spacedBy(listSpacing)
+        ) {
+            item { BookCatalogHeader() }
+            item {
+                PortalField(
+                    label = "",
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = "Search title, author, or ISBN...",
+                    leadingIcon = Lucide.Search
                 )
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { item ->
-                        ElmsPillTab(
-                            label = item,
-                            selected = category == item,
-                            onClick = { category = item }
+            }
+            item {
+                BookCatalogAvailabilityFilters(
+                    availabilityFilter = availabilityFilter,
+                    onAvailabilityChange = { availabilityFilter = it },
+                    totalCount = repository.books.size
+                )
+            }
+            item {
+                BookCatalogCategoryFilters(
+                    categories = categories,
+                    selected = category,
+                    onCategoryChange = { category = it }
+                )
+            }
+            item {
+                BookCatalogResultsBar(
+                    count = visible.size,
+                    viewMode = viewMode,
+                    onViewModeChange = ::setViewMode,
+                    onCartClick = onCartClick
+                )
+            }
+            if (loadError != null) {
+                item {
+                    ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                }
+                item {
+                    PortalButton(
+                        text = "Try again",
+                        onClick = { reloadToken += 1 },
+                        variant = PortalButtonVariant.Secondary
+                    )
+                }
+            }
+            when {
+                loading && repository.books.isEmpty() -> item { ElmsLoadingBlock() }
+                loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
+                visible.isEmpty() -> item {
+                    ElmsEmptyState(
+                        title = "No books found",
+                        description = "Try another search or category.",
+                        actionLabel = "Clear filters",
+                        onAction = {
+                            searchQuery = ""
+                            category = "All"
+                            availabilityFilter = "All"
+                        }
+                    )
+                }
+                else -> items(visible, key = { it.id }) { book ->
+                    ElmsSectionCard(contentPadding = 8.dp) {
+                        ElmsListRow(
+                            title = book.title,
+                            subtitle = "${book.author} · ${book.availabilityLabel()}",
+                            onClick = { onBookClick(book.id) },
+                            leading = {
+                                BookCoverPlaceholder(
+                                    title = book.title,
+                                    color = Color(book.coverColor),
+                                    modifier = Modifier.size(52.dp)
+                                )
+                            },
+                            trailing = {
+                                StatusBadge(
+                                    label = if (book.availableCopies > 0) "Available" else "Reserved",
+                                    warning = book.availableCopies == 0
+                                )
+                            }
                         )
                     }
                 }
             }
         }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    "${visible.size} resources",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
-                )
-                PortalButton(
-                    text = "Cart",
-                    onClick = onCartClick,
-                    variant = PortalButtonVariant.Ghost,
-                    leadingIcon = Lucide.ShoppingCart
+    }
+}
+
+@Composable
+private fun BookCatalogHeader() {
+    Column {
+        Text(
+            "Catalog",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Search by title, author, or ISBN",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp
+        )
+    }
+}
+
+@Composable
+private fun BookCatalogAvailabilityFilters(
+    availabilityFilter: String,
+    onAvailabilityChange: (String) -> Unit,
+    totalCount: Int
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Availability",
+            style = EyebrowStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ElmsPillTab(
+                label = "All",
+                selected = availabilityFilter == "All",
+                onClick = { onAvailabilityChange("All") },
+                count = totalCount
+            )
+            ElmsPillTab(
+                label = "Available",
+                selected = availabilityFilter == "Available",
+                onClick = { onAvailabilityChange("Available") }
+            )
+            ElmsPillTab(
+                label = "Unavailable",
+                selected = availabilityFilter == "Unavailable",
+                onClick = { onAvailabilityChange("Unavailable") }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BookCatalogCategoryFilters(
+    categories: List<String>,
+    selected: String,
+    onCategoryChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Category",
+            style = EyebrowStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categories.forEach { item ->
+                ElmsPillTab(
+                    label = item,
+                    selected = selected == item,
+                    onClick = { onCategoryChange(item) }
                 )
             }
         }
-        if (loadError != null) {
-            item {
-                ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
-            }
-            item {
-                PortalButton(
-                    text = "Try again",
-                    onClick = { reloadToken += 1 },
-                    variant = PortalButtonVariant.Secondary
-                )
-            }
+    }
+}
+
+@Composable
+private fun BookCatalogResultsBar(
+    count: Int,
+    viewMode: CatalogViewMode,
+    onViewModeChange: (CatalogViewMode) -> Unit,
+    onCartClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "$count resources",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp
+            )
+            CatalogViewToggle(
+                mode = viewMode,
+                onModeChange = onViewModeChange
+            )
         }
-        when {
-            loading && repository.books.isEmpty() -> item { ElmsLoadingBlock() }
-            loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
-            visible.isEmpty() -> item {
-                ElmsEmptyState(
-                    title = "No books found",
-                    description = "Try another search or category.",
-                    actionLabel = "Clear filters",
-                    onAction = {
-                        searchQuery = ""
-                        category = "All"
-                        availabilityFilter = "All"
-                    }
-                )
-            }
-            else -> items(visible, key = { it.id }) { book ->
-                ElmsSectionCard(contentPadding = 8.dp) {
-                    ElmsListRow(
-                        title = book.title,
-                        subtitle = "${book.author} · ${book.availabilityLabel()}",
-                        onClick = { onBookClick(book.id) },
-                        leading = {
-                            BookCoverPlaceholder(
-                                title = book.title,
-                                color = Color(book.coverColor),
-                                modifier = Modifier.size(52.dp)
-                            )
-                        },
-                        trailing = {
-                            StatusBadge(
-                                label = if (book.availableCopies > 0) "Available" else "Reserved",
-                                warning = book.availableCopies == 0
-                            )
-                        }
-                    )
-                }
-            }
-        }
+        PortalButton(
+            text = "Cart",
+            onClick = onCartClick,
+            variant = PortalButtonVariant.Ghost,
+            leadingIcon = Lucide.ShoppingCart
+        )
     }
 }
 
