@@ -1,5 +1,6 @@
 package com.example.stismartlib.ui.dashboard.catalog
 
+import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.horizontalScroll
@@ -207,6 +208,9 @@ fun BookCatalogScreen(
                             )
                         }
                     }
+                    if (visible.isNotEmpty() && repository.booksCursor.hasMore) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreBooks() } }
+                    }
                 }
             } else {
                 LazyColumn(
@@ -299,6 +303,9 @@ fun BookCatalogScreen(
                                 )
                             }
                         }
+                    }
+                    if (visible.isNotEmpty() && repository.booksCursor.hasMore) {
+                        item { LoadMoreFooter { repository.loadMoreBooks() } }
                     }
                 }
             }

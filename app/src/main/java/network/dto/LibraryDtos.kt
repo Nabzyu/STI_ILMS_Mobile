@@ -42,6 +42,7 @@ data class ResearchCatalogItemDto(
 data class BorrowingHistoryDataDto(
     val summary: BorrowingSummaryDto? = null,
     val items: List<BorrowingItemDto>? = null,
+    val pagination: PaginationDto? = null,
 )
 
 data class BorrowingSummaryDto(

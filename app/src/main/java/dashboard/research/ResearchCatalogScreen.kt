@@ -1,5 +1,6 @@
 package com.example.stismartlib.ui.dashboard.research
 
+import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -159,6 +160,9 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                         )
                     }
                 }
+                if (rows.isNotEmpty() && repository.researchCursor.hasMore) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreResearch() } }
+                }
             }
         } else {
             LazyColumn(
@@ -214,6 +218,9 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                     else -> items(rows, key = { it.id }) { item ->
                         ResearchListItem(item, onClick = { onResearchClick(item.id) })
                     }
+                }
+                if (rows.isNotEmpty() && repository.researchCursor.hasMore) {
+                    item { LoadMoreFooter { repository.loadMoreResearch() } }
                 }
             }
         }

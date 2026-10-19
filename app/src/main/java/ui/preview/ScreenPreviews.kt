@@ -639,3 +639,23 @@ private fun NotificationsScreenDarkPreview() {
         }
     }
 }
+
+@Preview(name = "Research catalog · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ResearchCatalogScreenDarkPreview() {
+    PreviewApp(darkTheme = true) {
+        NestedPreview {
+            ResearchCatalogScreen(onResearchClick = {})
+        }
+    }
+}
+
+@Preview(name = "Borrowing history · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun BorrowingHistoryScreenDarkPreview() {
+    PreviewApp(darkTheme = true) {
+        NestedPreview {
+            BorrowingHistoryScreen()
+        }
+    }
+}

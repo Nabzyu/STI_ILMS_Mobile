@@ -163,6 +163,7 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
             ),
         )
     }
+    repository.applyPreviewPaging()
     if (repository.librarySchedule == null) {
         repository.applyPreviewSchedule(
             LibrarySchedule(

@@ -1,6 +1,7 @@
 package com.example.stismartlib.network
 
 import com.example.stismartlib.network.dto.ApiEnvelope
+import com.example.stismartlib.network.dto.PaginationDto
 import com.example.stismartlib.session.SessionStore
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -106,6 +107,10 @@ object ApiClient {
         }
         throw ApiException(message, code, fieldErrors, response.code())
     }
+
+    /** Like [unwrap], and also returns `meta.pagination` (catalog and research lists). */
+    fun <T> unwrapPage(response: Response<ApiEnvelope<T>>): Pair<T, PaginationDto?> =
+        unwrap(response) to response.body()?.meta?.pagination
 
     /** Like [unwrap], but a successful reply with `data: null` (nothing to show) returns null. */
     fun <T> unwrapOrNull(response: Response<ApiEnvelope<T>>): T? {

@@ -32,6 +32,9 @@ import com.example.stismartlib.data.models.UserProfile
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
+import com.example.stismartlib.network.dto.ResearchCatalogItemDto
+import com.example.stismartlib.network.dto.BorrowingItemDto
+import com.example.stismartlib.network.dto.BookCatalogItemDto
 import com.example.stismartlib.network.dto.CancelBorrowRequestDto
 import com.example.stismartlib.network.dto.ClearanceRecordDto
 import com.example.stismartlib.network.dto.FineReceiptDto
@@ -103,6 +106,12 @@ class LibraryRepository(
     val borrowingHistory = mutableStateListOf<BorrowingRecord>()
     val fines = mutableStateListOf<FineRecord>()
     val fineReceipts = mutableStateListOf<FineReceipt>()
+    var booksCursor by mutableStateOf(PageCursor())
+        private set
+    var researchCursor by mutableStateOf(PageCursor())
+        private set
+    var historyCursor by mutableStateOf(PageCursor())
+        private set
     var fineReceiptsError by mutableStateOf<String?>(null)
         private set
     var librarySchedule by mutableStateOf<LibrarySchedule?>(null)
@@ -146,6 +155,13 @@ class LibraryRepository(
 
     fun setUserType(userType: UserType) {
         session = session.copy(userType = userType)
+    }
+
+    /** Preview / demo seed: pretend every list has a second page. */
+    fun applyPreviewPaging() {
+        booksCursor = PageCursor(1, 2)
+        researchCursor = PageCursor(1, 2)
+        historyCursor = PageCursor(1, 2)
     }
 
     /** Preview / demo seed; not used by production API flows. */
@@ -457,75 +473,111 @@ class LibraryRepository(
     }
 
     suspend fun loadBooks(query: String? = null) = withContext(Dispatchers.IO) {
-        val items = ApiClient.unwrap(ApiClient.api.books(query = query))
+        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.books(query = query))
         books.clear()
-        books.addAll(items.map { dto ->
-            Book(
-                id = (dto.titleId ?: 0).toString(),
-                title = dto.title.orEmpty(),
-                author = dto.author.orEmpty(),
-                isbn = dto.isbn.orEmpty(),
-                category = dto.categoryName.orEmpty().ifBlank { "General" },
-                yearPublished = dto.publicationYear ?: 0,
-                publisher = dto.publisher.orEmpty().ifBlank { "—" },
-                shelfLocation = dto.shelfLocation.orEmpty().ifBlank { "—" },
-                availableCopies = dto.availableCopiesCount ?: 0,
-                totalCopies = dto.totalCopiesCount ?: 0,
-                description = dto.currentAvailabilityStatus.orEmpty(),
-                callNumber = dto.callNumber.orEmpty(),
-            )
-        })
+        books.addAll(items.map { it.toBook() })
+        booksCursor = PageCursor(1, pagination?.totalPages ?: 1, query)
     }
 
-    suspend fun loadResearch(query: String? = null) = withContext(Dispatchers.IO) {
-        val items = ApiClient.unwrap(ApiClient.api.research(query = query))
-        research.clear()
-        research.addAll(items.map { dto ->
-            Research(
-                id = (dto.titleId ?: 0).toString(),
-                title = dto.title.orEmpty(),
-                author = dto.authors.orEmpty(),
-                category = dto.department.orEmpty().ifBlank { "Research" },
-                yearPublished = dto.publicationYear ?: 0,
-                abstract = dto.abstractText.orEmpty(),
-                shelfLocation = dto.shelfLocation.orEmpty().ifBlank { "—" },
-            )
-        })
+    /** Appends the next catalog page of the current search; no-op on the last page. */
+    suspend fun loadMoreBooks() = withContext(Dispatchers.IO) {
+        val from = booksCursor
+        val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
+        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.books(query = next.query, page = next.page))
+        if (booksCursor != from) return@withContext // a new search replaced the list meanwhile
+        books.addAll(mergePage(books.toList(), items.map { it.toBook() }) { it.id }.drop(books.size))
+        booksCursor = next.copy(totalPages = pagination?.totalPages ?: next.totalPages)
     }
+
+    private fun BookCatalogItemDto.toBook(): Book = Book(
+        id = (titleId ?: 0).toString(),
+        title = title.orEmpty(),
+        author = author.orEmpty(),
+        isbn = isbn.orEmpty(),
+        category = categoryName.orEmpty().ifBlank { "General" },
+        yearPublished = publicationYear ?: 0,
+        publisher = publisher.orEmpty().ifBlank { "—" },
+        shelfLocation = shelfLocation.orEmpty().ifBlank { "—" },
+        availableCopies = availableCopiesCount ?: 0,
+        totalCopies = totalCopiesCount ?: 0,
+        description = currentAvailabilityStatus.orEmpty(),
+        callNumber = callNumber.orEmpty(),
+    )
+
+    suspend fun loadResearch(query: String? = null) = withContext(Dispatchers.IO) {
+        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.research(query = query))
+        research.clear()
+        research.addAll(items.map { it.toResearch() })
+        researchCursor = PageCursor(1, pagination?.totalPages ?: 1, query)
+    }
+
+    /** Appends the next research page of the current search; no-op on the last page. */
+    suspend fun loadMoreResearch() = withContext(Dispatchers.IO) {
+        val from = researchCursor
+        val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
+        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.research(query = next.query, page = next.page))
+        if (researchCursor != from) return@withContext
+        research.addAll(mergePage(research.toList(), items.map { it.toResearch() }) { it.id }.drop(research.size))
+        researchCursor = next.copy(totalPages = pagination?.totalPages ?: next.totalPages)
+    }
+
+    private fun ResearchCatalogItemDto.toResearch(): Research = Research(
+        id = (titleId ?: 0).toString(),
+        title = title.orEmpty(),
+        author = authors.orEmpty(),
+        category = department.orEmpty().ifBlank { "Research" },
+        yearPublished = publicationYear ?: 0,
+        abstract = abstractText.orEmpty(),
+        shelfLocation = shelfLocation.orEmpty().ifBlank { "—" },
+    )
 
     suspend fun loadBorrowingHistory() = withContext(Dispatchers.IO) {
         val data = ApiClient.unwrap(ApiClient.api.borrowingHistory())
         borrowingHistory.clear()
-        borrowingHistory.addAll((data.items ?: emptyList()).map { item ->
-            val status = when (item.status?.lowercase()) {
-                "pending" -> BorrowStatus.PENDING
-                "overdue" -> BorrowStatus.OVERDUE
-                "returned" -> BorrowStatus.RETURNED
-                "cancelled" -> BorrowStatus.CANCELLED
-                else -> BorrowStatus.BORROWED
-            }
-            BorrowingRecord(
-                id = (item.transactionId ?: 0).toString(),
-                book = Book(
-                    id = (item.titleId ?: 0).toString(),
-                    title = item.title.orEmpty(),
-                    author = item.author.orEmpty(),
-                    isbn = "",
-                    category = "",
-                    yearPublished = 0,
-                    publisher = "",
-                    shelfLocation = "",
-                    availableCopies = 0,
-                    totalCopies = 0,
-                    description = "",
-                ),
-                borrowDate = formatDate(item.borrowDate) ?: "—",
-                dueDate = formatDate(item.dueDate) ?: "—",
-                returnDate = formatDate(item.returnDate),
-                borrowStatus = status,
-                fineStatus = FineStatus.NONE,
-            )
-        })
+        borrowingHistory.addAll((data.items ?: emptyList()).map { it.toBorrowingRecord() })
+        historyCursor = PageCursor(1, data.pagination?.totalPages ?: 1)
+    }
+
+    /** Appends the next borrowing-history page; no-op on the last page. */
+    suspend fun loadMoreBorrowingHistory() = withContext(Dispatchers.IO) {
+        val from = historyCursor
+        val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
+        val data = ApiClient.unwrap(ApiClient.api.borrowingHistory(page = next.page))
+        if (historyCursor != from) return@withContext
+        val rows = (data.items ?: emptyList()).map { it.toBorrowingRecord() }
+        borrowingHistory.addAll(mergePage(borrowingHistory.toList(), rows) { it.id }.drop(borrowingHistory.size))
+        historyCursor = next.copy(totalPages = data.pagination?.totalPages ?: next.totalPages)
+    }
+
+    private fun BorrowingItemDto.toBorrowingRecord(): BorrowingRecord {
+        val borrowStatus = when (status?.lowercase()) {
+            "pending" -> BorrowStatus.PENDING
+            "overdue" -> BorrowStatus.OVERDUE
+            "returned" -> BorrowStatus.RETURNED
+            "cancelled" -> BorrowStatus.CANCELLED
+            else -> BorrowStatus.BORROWED
+        }
+        return BorrowingRecord(
+            id = (transactionId ?: 0).toString(),
+            book = Book(
+                id = (titleId ?: 0).toString(),
+                title = title.orEmpty(),
+                author = author.orEmpty(),
+                isbn = "",
+                category = "",
+                yearPublished = 0,
+                publisher = "",
+                shelfLocation = "",
+                availableCopies = 0,
+                totalCopies = 0,
+                description = "",
+            ),
+            borrowDate = formatDate(borrowDate) ?: "—",
+            dueDate = formatDate(dueDate) ?: "—",
+            returnDate = formatDate(returnDate),
+            borrowStatus = borrowStatus,
+            fineStatus = FineStatus.NONE,
+        )
     }
 
     suspend fun loadReservations() = withContext(Dispatchers.IO) {
@@ -1025,6 +1077,9 @@ class LibraryRepository(
         fineReceipts.clear()
         fineReceiptsError = null
         librarySchedule = null
+        booksCursor = PageCursor()
+        researchCursor = PageCursor()
+        historyCursor = PageCursor()
         notifications.clear()
         printHistory.clear()
         printReceipts.clear()

@@ -1,5 +1,6 @@
 package com.example.stismartlib.ui.dashboard.history
 
+import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -320,6 +321,9 @@ fun BorrowingHistoryScreen() {
                         }
                     }
                 }
+            }
+            if (visible.isNotEmpty() && repository.historyCursor.hasMore) {
+                item { LoadMoreFooter { repository.loadMoreBorrowingHistory() } }
             }
         }
     }
