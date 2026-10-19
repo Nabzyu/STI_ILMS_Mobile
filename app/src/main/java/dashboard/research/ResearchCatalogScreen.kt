@@ -1,5 +1,8 @@
 package com.example.stismartlib.ui.dashboard.research
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.stismartlib.data.isLoadedFor
+import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
@@ -64,12 +67,16 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
         viewMode = mode
         viewPrefs.set(CatalogViewPrefs.KEY_RESEARCH, mode)
     }
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var refreshError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
     LaunchedEffect(query, reloadToken) {
+        if (reloadToken == 0 && repository.researchCursor.isLoadedFor(query.ifBlank { null })) {
+            loading = false
+            return@LaunchedEffect
+        }
         loading = true
         loadError = null
         delay(300)
@@ -160,7 +167,7 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                         )
                     }
                 }
-                if (rows.isNotEmpty() && repository.researchCursor.hasMore) {
+                if (shouldOfferLoadMore(repository.research.size, repository.researchCursor)) {
                     item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreResearch() } }
                 }
             }
@@ -219,7 +226,7 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                         ResearchListItem(item, onClick = { onResearchClick(item.id) })
                     }
                 }
-                if (rows.isNotEmpty() && repository.researchCursor.hasMore) {
+                if (shouldOfferLoadMore(repository.research.size, repository.researchCursor)) {
                     item { LoadMoreFooter { repository.loadMoreResearch() } }
                 }
             }

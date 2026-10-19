@@ -590,16 +590,10 @@ class LibraryRepository(
 
     /**
      * Drops cart titles the server already has an active loan or request for; returns how many.
-     * If the check is unavailable (route not deployed, offline) the cart is left as it is.
+     * If the check fails for any reason (route not deployed, offline, bad reply) the cart is left as it is.
      */
     suspend fun syncCartWithServer(): Int = withContext(Dispatchers.IO) {
-        val active = try {
-            ApiClient.unwrap(ApiClient.api.cartState()).activeTitleIds
-        } catch (error: ApiException) {
-            null
-        } catch (error: java.io.IOException) {
-            null
-        }
+        val active = orNullOnFailure { ApiClient.unwrap(ApiClient.api.cartState()).activeTitleIds }
         val drop = cartAfterSync(cart.map { it.book.id }, active)
         if (drop.isNotEmpty()) cart.removeAll { it.book.id in drop }
         drop.size

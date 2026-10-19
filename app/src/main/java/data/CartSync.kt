@@ -8,3 +8,12 @@ fun cartAfterSync(cartTitleIds: List<String>, activeTitleIds: List<Long>?): Set<
     val active = activeTitleIds?.toSet() ?: return emptySet()
     return cartTitleIds.filterTo(HashSet()) { it.toLongOrNull() in active }
 }
+
+/** Runs [block]; any failure except cancellation (bad reply, missing route, offline) becomes null. */
+suspend fun <T> orNullOnFailure(block: suspend () -> T): T? = try {
+    block()
+} catch (cancelled: kotlinx.coroutines.CancellationException) {
+    throw cancelled
+} catch (_: Exception) {
+    null
+}

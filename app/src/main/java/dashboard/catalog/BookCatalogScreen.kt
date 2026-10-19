@@ -1,5 +1,8 @@
 package com.example.stismartlib.ui.dashboard.catalog
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.stismartlib.data.isLoadedFor
+import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
@@ -80,7 +83,7 @@ fun BookCatalogScreen(
         viewMode = mode
         viewPrefs.set(CatalogViewPrefs.KEY_BOOKS, mode)
     }
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     var availabilityFilter by remember { mutableStateOf("All") }
     var category by remember { mutableStateOf("All") }
     var loading by remember { mutableStateOf(true) }
@@ -89,6 +92,11 @@ fun BookCatalogScreen(
     var reloadToken by remember { mutableStateOf(0) }
 
     LaunchedEffect(searchQuery, reloadToken) {
+        // Coming back to the same search keeps the pages already loaded with Load more.
+        if (reloadToken == 0 && repository.booksCursor.isLoadedFor(searchQuery.ifBlank { null })) {
+            loading = false
+            return@LaunchedEffect
+        }
         loading = true
         loadError = null
         delay(300)
@@ -208,7 +216,7 @@ fun BookCatalogScreen(
                             )
                         }
                     }
-                    if (visible.isNotEmpty() && repository.booksCursor.hasMore) {
+                    if (shouldOfferLoadMore(repository.books.size, repository.booksCursor)) {
                         item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreBooks() } }
                     }
                 }
@@ -304,7 +312,7 @@ fun BookCatalogScreen(
                             }
                         }
                     }
-                    if (visible.isNotEmpty() && repository.booksCursor.hasMore) {
+                    if (shouldOfferLoadMore(repository.books.size, repository.booksCursor)) {
                         item { LoadMoreFooter { repository.loadMoreBooks() } }
                     }
                 }

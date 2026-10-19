@@ -1,5 +1,6 @@
 package com.example.stismartlib.ui.dashboard.history
 
+import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
 import com.composables.icons.lucide.*
 
@@ -322,7 +323,7 @@ fun BorrowingHistoryScreen() {
                     }
                 }
             }
-            if (visible.isNotEmpty() && repository.historyCursor.hasMore) {
+            if (shouldOfferLoadMore(repository.borrowingHistory.size, repository.historyCursor)) {
                 item { LoadMoreFooter { repository.loadMoreBorrowingHistory() } }
             }
         }
