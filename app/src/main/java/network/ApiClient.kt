@@ -20,6 +20,7 @@ object ApiClient {
     private val gson = Gson()
 
     val api: LibraryApi by lazy { retrofit.create(LibraryApi::class.java) }
+    val floorPlanApi: FloorPlanApi by lazy { retrofit.create(FloorPlanApi::class.java) }
 
     fun initialize(store: SessionStore) {
         sessionStore = store
@@ -104,6 +105,13 @@ object ApiClient {
             _sessionEnded.value = true
         }
         throw ApiException(message, code, fieldErrors, response.code())
+    }
+
+    /** Like [unwrap], but a successful reply with `data: null` (nothing to show) returns null. */
+    fun <T> unwrapOrNull(response: Response<ApiEnvelope<T>>): T? {
+        val body = response.body()
+        if (response.isSuccessful && body?.success == true && body.data == null) return null
+        return unwrap(response)
     }
 
     private val _sessionEnded = MutableStateFlow(false)

@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.stismartlib.data.LoginChallenge
+import com.example.stismartlib.network.dto.BookLocationDto
+import com.example.stismartlib.network.dto.FloorPlanImageDto
+import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanContent
 import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RecoveryStep
@@ -580,6 +583,49 @@ private fun ProfileScreenDarkPreview() {
     PreviewApp(darkTheme = true) {
         NestedPreview {
             ProfileScreen()
+        }
+    }
+}
+
+private val PreviewFloorPlanImage = FloorPlanImageDto(
+    imageUrl = "android.resource://com.example.stismartlib/drawable/sti_logo",
+    uploadedAt = "2026-10-10T08:15:00.000Z",
+    uploadedBy = "LIB-001",
+)
+
+private val PreviewBookLocation = BookLocationDto(
+    title = "Clean Code",
+    shelfLabel = "Circulation · Shelf A-3",
+    accession = "10042",
+    callNumber = "QA76.76 .M37",
+)
+
+@Preview(name = "Floor plan · Book location", showBackground = true, showSystemUi = true)
+@Composable
+private fun FloorPlanLocationPreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview {
+            FloorPlanContent(true, PreviewFloorPlanImage, PreviewBookLocation, loading = false, error = null, onRefresh = {})
+        }
+    }
+}
+
+@Preview(name = "Floor plan · Book location · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun FloorPlanLocationDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        NestedPreview {
+            FloorPlanContent(true, PreviewFloorPlanImage, PreviewBookLocation, loading = false, error = null, onRefresh = {})
+        }
+    }
+}
+
+@Preview(name = "Floor plan · Empty", showBackground = true, showSystemUi = true)
+@Composable
+private fun FloorPlanEmptyPreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview {
+            FloorPlanContent(false, image = null, location = null, loading = false, error = null, onRefresh = {})
         }
     }
 }

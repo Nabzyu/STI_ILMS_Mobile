@@ -23,4 +23,8 @@ sealed class DashboardRoute(val route: String) {
     object Clearance : DashboardRoute("clearance")
     object Profile : DashboardRoute("profile")
     object Search : DashboardRoute("search")
+    object FloorPlan : DashboardRoute("floor_plan")
+    object BookLocation : DashboardRoute("book_location/{titleId}") {
+        fun create(titleId: String) = "book_location/$titleId"
+    }
 }

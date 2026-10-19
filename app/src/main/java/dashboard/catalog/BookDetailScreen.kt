@@ -1,5 +1,7 @@
 package com.example.stismartlib.ui.dashboard.catalog
 
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.MapPin
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,7 +48,8 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     bookId: String,
     onBack: () -> Unit,
-    onCartClick: () -> Unit
+    onCartClick: () -> Unit,
+    onViewLocation: (titleId: String) -> Unit = {},
 ) {
     val repository = rememberLibraryRepository()
     val context = LocalContext.current
@@ -96,6 +99,14 @@ fun BookDetailScreen(
         item {
             Spacer(modifier = Modifier.height(12.dp))
             PortalButton(text = "Generate APA reference", onClick = { showApaCitation = true }, variant = PortalButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(8.dp))
+            PortalButton(
+                text = "View on floor plan",
+                onClick = { onViewLocation(book.id) },
+                variant = PortalButtonVariant.Secondary,
+                leadingIcon = Lucide.MapPin,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(modifier = Modifier.height(8.dp))
             PortalButton(
                 text = if (inCart) "Already in cart" else "Add to cart",

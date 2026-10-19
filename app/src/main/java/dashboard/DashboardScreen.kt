@@ -74,6 +74,7 @@ import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCartScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCatalogScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookDetailScreen
+import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanScreen
 import com.example.stismartlib.ui.dashboard.history.BorrowingHistoryScreen
 import com.example.stismartlib.ui.dashboard.notifications.NotificationsScreen
 import com.example.stismartlib.ui.dashboard.overview.DashboardOverviewScreen
@@ -616,6 +617,9 @@ fun DashboardScreen(
                             onBack = { dashboardNavController.popBackStack() },
                             onCartClick = {
                                 dashboardNavController.navigate(DashboardRoute.BookCart.route)
+                            },
+                            onViewLocation = { titleId ->
+                                dashboardNavController.navigate(DashboardRoute.BookLocation.create(titleId))
                             }
                         )
                     }
@@ -702,6 +706,15 @@ fun DashboardScreen(
                     composable(DashboardRoute.Profile.route) {
                         ProfileScreen()
                     }
+                    composable(DashboardRoute.FloorPlan.route) {
+                        FloorPlanScreen()
+                    }
+                    composable(
+                        route = DashboardRoute.BookLocation.route,
+                        arguments = listOf(navArgument("titleId") { type = NavType.StringType })
+                    ) { entry ->
+                        FloorPlanScreen(titleId = entry.arguments?.getString("titleId"))
+                    }
                 }
             }
         }
@@ -724,6 +737,7 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
     items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell)
     items += DrawerItem(DashboardRoute.Fines.route, "Fines", Lucide.CircleDollarSign)
     items += DrawerItem(DashboardRoute.Clearance.route, "Clearance status", Lucide.BadgeCheck)
+    items += DrawerItem(DashboardRoute.FloorPlan.route, "Library floor plan", Lucide.Map, "Library guide")
     return items
 }
 
