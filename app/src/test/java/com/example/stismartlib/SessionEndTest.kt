@@ -20,4 +20,13 @@ class SessionEndTest {
             assertFalse(it, ApiClient.isSessionEndCode(it))
         }
     }
+
+    @Test
+    fun onlyTheCurrentTokenEndsTheSession() {
+        assertTrue(ApiClient.shouldEndSession("JWT_REQUIRED", "Bearer fresh", "fresh"))
+        assertFalse("stale token", ApiClient.shouldEndSession("JWT_REQUIRED", "Bearer old", "fresh"))
+        assertFalse("no token sent", ApiClient.shouldEndSession("JWT_REQUIRED", null, "fresh"))
+        assertFalse("already signed out", ApiClient.shouldEndSession("JWT_REQUIRED", "Bearer old", null))
+        assertFalse("not a session code", ApiClient.shouldEndSession("REQUEST_FAILED", "Bearer fresh", "fresh"))
+    }
 }

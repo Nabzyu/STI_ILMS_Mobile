@@ -97,9 +97,9 @@ object ApiClient {
             }
         }
         val fieldErrors = errorEnvelope?.details?.errors ?: body?.details?.errors ?: emptyMap()
-        // Only a request that carried a token can end a session; login/code steps send none.
-        val sentToken = response.raw().request.header("Authorization") != null
-        if (::sessionStore.isInitialized && sentToken && isSessionEndCode(code)) {
+        if (::sessionStore.isInitialized &&
+            shouldEndSession(code, response.raw().request.header("Authorization"), sessionStore.getToken())
+        ) {
             sessionStore.clear()
             _sessionEnded.value = true
         }
@@ -116,6 +116,13 @@ object ApiClient {
     }
 
     fun isSessionEndCode(code: String): Boolean = code in SESSION_END_CODES
+
+    /**
+     * Only a request that carried the current token can end a session; login/code steps send none,
+     * and a late 401 for an older token must not sign out a fresh session.
+     */
+    fun shouldEndSession(code: String, sentAuthorization: String?, currentToken: String?): Boolean =
+        isSessionEndCode(code) && !currentToken.isNullOrBlank() && sentAuthorization == "Bearer $currentToken"
 
     private val SESSION_END_CODES = setOf(
         "SESSION_EXPIRED",
