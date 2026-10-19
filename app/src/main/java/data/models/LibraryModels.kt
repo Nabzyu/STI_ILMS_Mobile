@@ -80,6 +80,19 @@ data class FineRecord(
     val paymentDate: String?,
 )
 
+/** Official receipt for a cash payment of fines or replacement charges. */
+data class FineReceipt(
+    val id: String,
+    val number: String,
+    val amount: Double,
+    val method: String,
+    /** ISO date (yyyy-MM-dd). */
+    val receivedOn: String,
+    val status: String,
+) {
+    val isReversed: Boolean get() = status.equals("Reversed", ignoreCase = true) || status.equals("Void", ignoreCase = true)
+}
+
 data class Reservation(
     val id: String,
     val book: Book,

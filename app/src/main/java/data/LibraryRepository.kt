@@ -15,6 +15,7 @@ import com.example.stismartlib.data.models.ClearanceFineItem
 import com.example.stismartlib.data.models.ClearanceLoanItem
 import com.example.stismartlib.data.models.ClearanceLostBookItem
 import com.example.stismartlib.data.models.ClearanceStanding
+import com.example.stismartlib.data.models.FineReceipt
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.LibrarySession
@@ -33,6 +34,7 @@ import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.CancelBorrowRequestDto
 import com.example.stismartlib.network.dto.ClearanceRecordDto
+import com.example.stismartlib.network.dto.FineReceiptDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendRequest
@@ -62,6 +64,8 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody
+import retrofit2.Response
 
 // shortcut: the hosted API still requires login_as, so each role is tried in turn and a wrong
 // password can use up to 3 server attempts. Drop login_as and the role loop once the
@@ -98,6 +102,9 @@ class LibraryRepository(
     val research = mutableStateListOf<Research>()
     val borrowingHistory = mutableStateListOf<BorrowingRecord>()
     val fines = mutableStateListOf<FineRecord>()
+    val fineReceipts = mutableStateListOf<FineReceipt>()
+    var fineReceiptsError by mutableStateOf<String?>(null)
+        private set
     val notifications = mutableStateListOf<NotificationItem>()
     val printHistory = mutableStateListOf<PrintRequest>()
     val printReceipts = mutableStateListOf<PrintReceipt>()
@@ -557,6 +564,27 @@ class LibraryRepository(
                 paymentDate = null,
             )
         })
+        loadFineReceipts()
+    }
+
+    /** Receipts are secondary to the fine list, so a failure here is shown in their own section. */
+    private suspend fun loadFineReceipts() {
+        try {
+            val rows = ApiClient.unwrap(ApiClient.api.fineReceipts())
+            fineReceipts.clear()
+            fineReceipts.addAll(rows.mapNotNull { it.toFineReceipt() })
+            fineReceiptsError = null
+        } catch (error: ApiException) {
+            fineReceiptsError = userFacingMessage(error, "Receipts could not be loaded.")
+        } catch (error: java.io.IOException) {
+            fineReceiptsError = userFacingMessage(error, "Receipts could not be loaded.")
+        }
+    }
+
+    suspend fun loadFineReceiptPdf(receiptId: String): ByteArray = withContext(Dispatchers.IO) {
+        val id = receiptId.toLongOrNull()
+            ?: throw ApiException("This receipt could not be downloaded.")
+        downloadPdf { ApiClient.api.fineReceiptPdf(id) }
     }
 
     suspend fun loadNotifications() = withContext(Dispatchers.IO) {
@@ -685,20 +713,7 @@ class LibraryRepository(
         val id = receiptId.toIntOrNull()
             ?: throw ApiException("This receipt could not be downloaded.")
         try {
-            val response = ApiClient.api.printReceiptPdf(id)
-            if (!response.isSuccessful) {
-                throw ApiException(
-                    message = when (response.code()) {
-                        404 -> "This feature is not available right now."
-                        401 -> "Sign-in is required."
-                        403 -> "You do not have access to this action."
-                        else -> "Unable to download the receipt."
-                    },
-                    httpStatus = response.code(),
-                )
-            }
-            response.body()?.bytes()
-                ?: throw ApiException("The receipt PDF was empty.")
+            downloadPdf { ApiClient.api.printReceiptPdf(id) }
         } catch (error: ApiException) {
             printActionError = userFacingMessage(error, "Unable to download the receipt.")
             throw error
@@ -994,6 +1009,8 @@ class LibraryRepository(
         research.clear()
         borrowingHistory.clear()
         fines.clear()
+        fineReceipts.clear()
+        fineReceiptsError = null
         notifications.clear()
         printHistory.clear()
         printReceipts.clear()
@@ -1106,6 +1123,23 @@ class LibraryRepository(
 
     private fun Int.toFormBody(): RequestBody = toString().toFormBody()
 
+    private suspend fun downloadPdf(call: suspend () -> Response<ResponseBody>): ByteArray {
+        val response = call()
+        if (!response.isSuccessful) {
+            throw ApiException(
+                message = when (response.code()) {
+                    404 -> "This feature is not available right now."
+                    401 -> "Sign-in is required."
+                    403 -> "You do not have access to this action."
+                    else -> "Unable to download the receipt."
+                },
+                httpStatus = response.code(),
+            )
+        }
+        return response.body()?.bytes()
+            ?: throw ApiException("The receipt PDF was empty.")
+    }
+
     private fun formatDate(value: String?): String? {
         if (value.isNullOrBlank()) return null
         return value.take(10)
@@ -1114,4 +1148,17 @@ class LibraryRepository(
     enum class AddToCartResult {
         Success, AlreadyInCart, LimitReached
     }
+}
+
+/** Null for a row without an id; the PDF link needs one. */
+internal fun FineReceiptDto.toFineReceipt(): FineReceipt? {
+    val id = receiptId?.takeIf { it > 0 } ?: return null
+    return FineReceipt(
+        id = id.toString(),
+        number = receiptNumber?.takeIf { it.isNotBlank() } ?: "Receipt $id",
+        amount = amountReceived ?: 0.0,
+        method = paymentMethod?.takeIf { it.isNotBlank() } ?: "Cash",
+        receivedOn = receivedAt?.take(10).orEmpty(),
+        status = status.orEmpty(),
+    )
 }

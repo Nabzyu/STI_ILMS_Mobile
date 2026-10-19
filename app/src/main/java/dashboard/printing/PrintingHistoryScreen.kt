@@ -1,6 +1,5 @@
 package com.example.stismartlib.ui.dashboard.printing
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import com.example.stismartlib.data.models.PrintReceipt
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.ElmsBanner
@@ -38,8 +36,8 @@ import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.feedback.userFacingMessage
+import com.example.stismartlib.ui.files.sharePdf
 import kotlinx.coroutines.launch
-import java.io.File
 
 @Composable
 fun PrintingHistoryScreen(onBack: () -> Unit) {
@@ -92,19 +90,7 @@ fun PrintingHistoryScreen(onBack: () -> Unit) {
                         scope.launch {
                             try {
                                 val bytes = repository.loadPrintReceiptPdf(target.id)
-                                val file = File(context.cacheDir, "print-receipt-${target.id}.pdf")
-                                file.writeBytes(bytes)
-                                val uri = FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.fileprovider",
-                                    file,
-                                )
-                                val share = Intent(Intent.ACTION_SEND).apply {
-                                    type = "application/pdf"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(share, "Share receipt PDF"))
+                                sharePdf(context, bytes, "print-receipt-${target.id}.pdf", "Share receipt PDF")
                             } catch (error: Exception) {
                                 actionError = userFacingMessage(error, "Unable to download the receipt.")
                             } finally {

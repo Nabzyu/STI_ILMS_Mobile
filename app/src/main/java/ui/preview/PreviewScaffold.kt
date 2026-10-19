@@ -10,6 +10,7 @@ import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
+import com.example.stismartlib.data.models.FineReceipt
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.NotificationCategory
@@ -154,6 +155,18 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 dateIssued = "2026-09-20",
                 paymentStatus = FineStatus.UNPAID,
                 paymentDate = null,
+            ),
+        )
+    }
+    if (repository.fineReceipts.isEmpty()) {
+        repository.fineReceipts.add(
+            FineReceipt(
+                id = "12",
+                number = "OR-20261010-000012",
+                amount = 45.5,
+                method = "Cash",
+                receivedOn = "2026-10-10",
+                status = "Issued",
             ),
         )
     }

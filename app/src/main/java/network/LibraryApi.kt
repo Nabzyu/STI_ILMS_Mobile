@@ -7,6 +7,7 @@ import com.example.stismartlib.network.dto.BorrowRequestReceiptDto
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
 import com.example.stismartlib.network.dto.FineListDto
+import com.example.stismartlib.network.dto.FineReceiptDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendData
@@ -179,6 +180,12 @@ interface LibraryApi {
     suspend fun printReceipt(
         @Path("receiptId") receiptId: Int,
     ): Response<ApiEnvelope<PrintReceiptDto>>
+
+    @GET("api/v1/fines/receipts")
+    suspend fun fineReceipts(): Response<ApiEnvelope<List<FineReceiptDto>>>
+
+    @GET("api/v1/fines/receipts/{receiptId}.pdf")
+    suspend fun fineReceiptPdf(@Path("receiptId") receiptId: Long): Response<ResponseBody>
 
     @GET("api/v1/printing/receipts/{receiptId}/pdf")
     suspend fun printReceiptPdf(

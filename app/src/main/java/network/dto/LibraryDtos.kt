@@ -97,6 +97,16 @@ data class FineObligationDto(
     val occurredAt: String? = null,
 )
 
+/** `GET fines/receipts` row: a cash payment recorded at the library counter. */
+data class FineReceiptDto(
+    val receiptId: Long? = null,
+    val receiptNumber: String? = null,
+    val amountReceived: Double? = null,
+    val paymentMethod: String? = null,
+    val receivedAt: String? = null,
+    val status: String? = null,
+)
+
 data class NotificationListDto(
     val items: List<NotificationItemDto>? = null,
     val unreadCount: Int? = null,
