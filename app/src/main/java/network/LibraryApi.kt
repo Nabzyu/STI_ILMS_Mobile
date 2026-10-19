@@ -26,6 +26,7 @@ import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.network.dto.ReserveResultDto
+import com.example.stismartlib.network.dto.SessionActivityDto
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -51,6 +52,9 @@ interface LibraryApi {
 
     @POST("api/v1/auth/login/resend")
     suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    @POST("api/v1/auth/activity")
+    suspend fun authActivity(): Response<ApiEnvelope<SessionActivityDto>>
 
     @POST("api/v1/auth/register/verify")
     suspend fun registerVerify(@Body body: RegisterVerifyRequest): Response<ApiEnvelope<RegisterData>>

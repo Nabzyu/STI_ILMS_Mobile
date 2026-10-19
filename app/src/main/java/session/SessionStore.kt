@@ -67,6 +67,11 @@ class SessionStore(context: Context) {
             .commit()
     }
 
+    /** Swap in a renewed token; the rest of the stored session stays as it is. */
+    fun updateToken(token: String) {
+        prefs.edit().putString(KEY_TOKEN, token).commit()
+    }
+
     fun clear() {
         prefs.edit().clear().commit()
     }

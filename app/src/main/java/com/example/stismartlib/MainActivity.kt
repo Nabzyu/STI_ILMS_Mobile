@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.stismartlib.data.ProvideLibraryRepository
 import com.example.stismartlib.navigation.AppNavGraph
 import com.example.stismartlib.navigation.Screen
+import com.example.stismartlib.session.SessionKeepAlive
 import com.example.stismartlib.ui.theme.LocalThemeController
 import com.example.stismartlib.ui.theme.STIOrmocLibraryTheme
 import com.example.stismartlib.ui.theme.isAppDarkTheme
@@ -49,7 +50,9 @@ class MainActivity : ComponentActivity() {
                 STIOrmocLibraryTheme(darkTheme = isAppDarkTheme()) {
                     ProvideLibraryRepository {
                         if (destination != null) {
-                            AppNavGraph(startDestination = destination)
+                            SessionKeepAlive(repository) {
+                                AppNavGraph(startDestination = destination)
+                            }
                         }
                     }
                 }

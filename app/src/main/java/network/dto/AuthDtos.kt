@@ -31,6 +31,13 @@ data class LoginResendRequest(
     @SerializedName("challenge_id") val challengeId: String,
 )
 
+/** `POST auth/activity`: a fresh token for the same session plus the idle window. */
+data class SessionActivityDto(
+    val token: String? = null,
+    @SerializedName(value = "idle_seconds", alternate = ["idleSeconds"])
+    val idleSeconds: Int? = null,
+)
+
 data class LoginResendData(
     val message: String? = null,
     @SerializedName(value = "resend_after", alternate = ["resendAfter"])
