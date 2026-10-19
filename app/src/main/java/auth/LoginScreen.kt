@@ -26,6 +26,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,7 +70,7 @@ fun LoginScreen(
     var passwordError by remember { mutableStateOf<String?>(null) }
     var banner by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
-    var challenge by remember { mutableStateOf(initialChallenge) }
+    var challenge by rememberSaveable(stateSaver = LoginChallengeSaver) { mutableStateOf(initialChallenge) }
     var code by remember { mutableStateOf("") }
     var codeError by remember { mutableStateOf<String?>(null) }
     var info by remember { mutableStateOf<String?>(null) }
@@ -316,3 +318,21 @@ fun LoginScreen(
     }
     }
 }
+
+/** Keeps the code step across rotation and process death. Holds no password or token. */
+val LoginChallengeSaver = listSaver<LoginChallenge?, Any?>(
+    save = { challenge ->
+        challenge?.run { listOf(challengeId, schoolId, portal, emailHint, resendAfterSeconds) }.orEmpty()
+    },
+    restore = { saved ->
+        saved.takeIf { it.size == 5 }?.let {
+            LoginChallenge(
+                challengeId = it[0] as String,
+                schoolId = it[1] as String,
+                portal = it[2] as String,
+                emailHint = it[3] as String?,
+                resendAfterSeconds = it[4] as Int,
+            )
+        }
+    },
+)

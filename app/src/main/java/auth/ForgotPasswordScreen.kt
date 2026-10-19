@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -49,9 +50,11 @@ fun ForgotPasswordScreen(
 ) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
-    var step by remember { mutableStateOf(initialStep) }
-    var identifier by remember { mutableStateOf("") }
-    var challengeId by remember { mutableStateOf("") }
+    // Saveable: a re-request within 60 s returns a challengeId the server never stored,
+    // so losing the real one strands the user. The reset token and passwords stay out of the Bundle.
+    var step by rememberSaveable { mutableStateOf(initialStep) }
+    var identifier by rememberSaveable { mutableStateOf("") }
+    var challengeId by rememberSaveable { mutableStateOf("") }
     var resetToken by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -217,6 +220,13 @@ fun ForgotPasswordScreen(
                             fieldError = if (password.length < 8) "Password must contain at least 8 characters." else null
                             confirmError = if (password != confirm) "Password confirmation does not match." else null
                             if (fieldError != null || confirmError != null) return@PortalButton
+                            if (resetToken.isEmpty()) {
+                                // The token is memory-only; it is gone after process death.
+                                isError = true
+                                notice = "This password reset has expired. Request a new code."
+                                step = RecoveryStep.Identify
+                                return@PortalButton
+                            }
                             submit {
                                 val message = repository.resetPassword(challengeId, resetToken, password, confirm)
                                 password = ""
