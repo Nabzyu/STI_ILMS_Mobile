@@ -3,6 +3,7 @@ package com.example.stismartlib.ui.preview
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.stismartlib.data.LoginChallenge
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
@@ -75,6 +76,46 @@ private fun RegisterScreenPreview() {
 private fun RegisterScreenDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         RegisterScreen(navController = rememberNavController())
+    }
+}
+
+private val PreviewLoginChallenge = LoginChallenge(
+    challengeId = "00000000-0000-4000-8000-000000000001",
+    schoolId = "02000123456",
+    portal = "user",
+    emailHint = "an***@ormoc.sti.edu.ph",
+    resendAfterSeconds = 60,
+)
+
+@Preview(name = "Login · Code", showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginCodeStepPreview() {
+    PreviewApp(seedSampleData = false) {
+        LoginScreen(navController = rememberNavController(), initialChallenge = PreviewLoginChallenge)
+    }
+}
+
+@Preview(name = "Login · Code · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginCodeStepDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        LoginScreen(navController = rememberNavController(), initialChallenge = PreviewLoginChallenge)
+    }
+}
+
+@Preview(name = "Register · Verify", showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterVerifyStepPreview() {
+    PreviewApp(seedSampleData = false) {
+        RegisterScreen(navController = rememberNavController(), initialPendingEmail = "ana@ormoc.sti.edu.ph")
+    }
+}
+
+@Preview(name = "Register · Verify · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterVerifyStepDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        RegisterScreen(navController = rememberNavController(), initialPendingEmail = "ana@ormoc.sti.edu.ph")
     }
 }
 

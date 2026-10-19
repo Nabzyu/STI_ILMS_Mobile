@@ -9,6 +9,9 @@ import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
 import com.example.stismartlib.network.dto.FineListDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.LoginResendData
+import com.example.stismartlib.network.dto.LoginResendRequest
+import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
 import com.example.stismartlib.network.dto.PrintRequestDto
@@ -17,6 +20,8 @@ import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
 import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RegisterResendRequest
+import com.example.stismartlib.network.dto.RegisterVerifyRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveRequestDto
@@ -40,6 +45,18 @@ interface LibraryApi {
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>
+
+    @POST("api/v1/auth/login/verify")
+    suspend fun loginVerify(@Body body: LoginVerifyRequest): Response<ApiEnvelope<LoginData>>
+
+    @POST("api/v1/auth/login/resend")
+    suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    @POST("api/v1/auth/register/verify")
+    suspend fun registerVerify(@Body body: RegisterVerifyRequest): Response<ApiEnvelope<RegisterData>>
+
+    @POST("api/v1/auth/register/resend")
+    suspend fun registerResend(@Body body: RegisterResendRequest): Response<ApiEnvelope<RegisterData>>
 
     @GET("api/v1/auth/me")
     suspend fun me(): Response<ApiEnvelope<MeUser>>

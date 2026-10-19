@@ -25,11 +25,17 @@ import com.example.stismartlib.data.models.UserProfile
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
+import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.LoginResendRequest
+import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
+import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RegisterResendRequest
+import com.example.stismartlib.network.dto.RegisterVerifyRequest
 import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
@@ -40,6 +46,15 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+
+/** Pending Student/Faculty sign-in waiting for the 6-digit code sent to the school email. */
+data class LoginChallenge(
+    val challengeId: String,
+    val schoolId: String,
+    val portal: String,
+    val emailHint: String?,
+    val resendAfterSeconds: Int,
+)
 
 class LibraryRepository(
     private val sessionStore: SessionStore,
@@ -121,56 +136,76 @@ class LibraryRepository(
         cart.isNotEmpty() && cart.all { it.isAvailable }
 
     /**
-     * Single sign-in for Student, Faculty, and Librarian/Admin.
-     * The API requires `login_as` (`Student` / `Faculty` / `Admin`). Try the remembered
-     * role first, then the remaining roles on INVALID_CREDENTIALS only.
+     * Single sign-in for Student, Faculty, and Librarian/Admin. The server resolves the role
+     * from the account; `portal` only limits which roles may sign in. Try the remembered portal
+     * first, then the other one on INVALID_CREDENTIALS only.
+     *
+     * Returns a [LoginChallenge] when the server asks for an email code (Student/Faculty);
+     * finish with [verifyLoginCode]. Returns null when the session is already signed in.
      */
-    suspend fun login(schoolId: String, password: String) = withContext(Dispatchers.IO) {
+    suspend fun login(schoolId: String, password: String): LoginChallenge? = withContext(Dispatchers.IO) {
         lastError = null
         val normalizedSchoolId = schoolId.trim().uppercase()
         val preferred = sessionStore.preferredLoginAs(normalizedSchoolId)
-        val loginOrder = buildList {
-            if (preferred != null) add(preferred)
-            for (role in LOGIN_AS_ROLES) {
-                if (role !in this) add(role)
-            }
+        val portals = if (preferred == LOGIN_AS_ADMIN) {
+            listOf(PORTAL_STAFF, PORTAL_USER)
+        } else {
+            listOf(PORTAL_USER, PORTAL_STAFF)
         }
 
         var lastInvalid: ApiException? = null
-        for (loginAs in loginOrder) {
+        for (portal in portals) {
             try {
-                authenticateAs(normalizedSchoolId, password, loginAs)
-                return@withContext
+                return@withContext authenticate(normalizedSchoolId, password, portal)
             } catch (error: ApiException) {
-                when (error.code) {
-                    "INVALID_CREDENTIALS" -> lastInvalid = error
-                    "TOO_MANY_LOGIN_ATTEMPTS", "ACCOUNT_DEACTIVATED" -> throw error
-                    else -> throw error
-                }
+                if (error.code != "INVALID_CREDENTIALS") throw error
+                lastInvalid = error
             }
         }
         throw lastInvalid
             ?: ApiException("Invalid school ID or password.", "INVALID_CREDENTIALS")
     }
 
-    private suspend fun authenticateAs(schoolId: String, password: String, loginAs: String) {
-        require(loginAs in LOGIN_AS_ROLES) { "Unsupported login role." }
+    private suspend fun authenticate(schoolId: String, password: String, portal: String): LoginChallenge? {
         // Drop any previous token so login is not sent with a stale Authorization header.
         sessionStore.clear()
         clearLocalData()
         session = LibrarySession()
 
-        val normalizedSchoolId = schoolId.trim().uppercase()
-        val portal = if (loginAs == LOGIN_AS_ADMIN) PORTAL_STAFF else PORTAL_USER
-        val response = ApiClient.api.login(
-            LoginRequest(
-                schoolId = normalizedSchoolId,
-                password = password,
-                loginAs = loginAs,
-                portal = portal,
-            ),
+        val data = ApiClient.unwrap(
+            ApiClient.api.login(LoginRequest(schoolId = schoolId, password = password, portal = portal)),
         )
-        val data = ApiClient.unwrap(response)
+        if (data.otpRequired == true) {
+            val challengeId = data.challengeId?.takeIf { it.isNotBlank() }
+                ?: throw ApiException("Sign-in could not be completed. Please try again.")
+            return LoginChallenge(
+                challengeId = challengeId,
+                schoolId = schoolId,
+                portal = portal,
+                emailHint = data.emailHint,
+                resendAfterSeconds = data.resendAfter ?: DEFAULT_RESEND_SECONDS,
+            )
+        }
+        completeLogin(data, schoolId, portal)
+        return null
+    }
+
+    suspend fun verifyLoginCode(challenge: LoginChallenge, code: String) = withContext(Dispatchers.IO) {
+        lastError = null
+        val data = ApiClient.unwrap(
+            ApiClient.api.loginVerify(LoginVerifyRequest(challengeId = challenge.challengeId, code = code.trim())),
+        )
+        completeLogin(data, challenge.schoolId, challenge.portal)
+    }
+
+    /** Returns seconds to wait before the next resend. */
+    suspend fun resendLoginCode(challenge: LoginChallenge): Int = withContext(Dispatchers.IO) {
+        lastError = null
+        val data = ApiClient.unwrap(ApiClient.api.loginResend(LoginResendRequest(challenge.challengeId)))
+        data.resendAfter ?: DEFAULT_RESEND_SECONDS
+    }
+
+    private fun completeLogin(data: LoginData, schoolId: String, portal: String) {
         val user = data.user
             ?: throw ApiException("Sign-in could not be completed. Please try again.")
         val token = data.token?.takeIf { it.isNotBlank() }
@@ -181,11 +216,17 @@ class LibraryRepository(
         val accountId = user.accountId ?: user.id
             ?: throw ApiException("Sign-in could not be completed. Please try again.")
         val resolvedRole = user.role.orEmpty()
-        val resolvedSchoolId = user.schoolId ?: normalizedSchoolId
-        val resolvedName = user.fullName?.takeIf { it.isNotBlank() } ?: resolvedSchoolId
+        val resolvedSchoolId = user.schoolId ?: schoolId
+        val composedName = listOf(user.firstName, user.lastName)
+            .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
+            .joinToString(" ")
+            .takeIf { it.isNotEmpty() }
+        val resolvedName = user.fullName?.trim()?.takeIf { it.isNotEmpty() }
+            ?: composedName
+            ?: resolvedSchoolId
         val userType = UserType.fromServerRole(resolvedRole)
 
-        if (loginAs == LOGIN_AS_ADMIN && !userType.isStaff) {
+        if (portal == PORTAL_STAFF && !userType.isStaff) {
             sessionStore.clear()
             throw ApiException(
                 "This sign-in is for Librarian / Admin accounts only.",
@@ -208,35 +249,35 @@ class LibraryRepository(
             accountId = accountId,
             isAuthenticated = true,
         )
-        sessionStore.rememberLoginAs(resolvedSchoolId, loginAs)
+        sessionStore.rememberLoginAs(resolvedSchoolId, roleToStore)
     }
 
     private companion object {
         const val PORTAL_USER = "user"
         const val PORTAL_STAFF = "staff"
-        const val LOGIN_AS_STUDENT = "Student"
-        const val LOGIN_AS_FACULTY = "Faculty"
         const val LOGIN_AS_ADMIN = "Admin"
-        val LOGIN_AS_ROLES = listOf(LOGIN_AS_STUDENT, LOGIN_AS_FACULTY, LOGIN_AS_ADMIN)
+        const val DEFAULT_RESEND_SECONDS = 60
+        const val MAX_PRINT_DOCUMENT_BYTES = 4 * 1024 * 1024
     }
 
+    /** Creates a pending registration request and emails a 6-digit code to [schoolEmail]. */
     suspend fun registerStudent(
         schoolId: String,
         firstName: String,
         lastName: String,
-        email: String,
+        schoolEmail: String,
         programStrand: String,
         yearGradeLevel: String,
         password: String,
         confirmPassword: String,
-    ) = withContext(Dispatchers.IO) {
+    ): RegisterData = withContext(Dispatchers.IO) {
         lastError = null
         val response = ApiClient.api.register(
             RegisterRequest(
                 schoolId = schoolId.trim(),
                 firstName = firstName.trim(),
                 lastName = lastName.trim(),
-                email = email.trim().lowercase(),
+                schoolEmail = schoolEmail.trim().lowercase(),
                 programStrand = programStrand.trim(),
                 yearGradeLevel = yearGradeLevel.trim(),
                 password = password,
@@ -244,6 +285,18 @@ class LibraryRepository(
             ),
         )
         ApiClient.unwrap(response)
+    }
+
+    /** Verifies the registration email code; the request then waits for librarian approval. */
+    suspend fun verifyRegistrationCode(schoolId: String, code: String): RegisterData = withContext(Dispatchers.IO) {
+        lastError = null
+        ApiClient.unwrap(ApiClient.api.registerVerify(RegisterVerifyRequest(schoolId.trim(), code.trim())))
+    }
+
+    suspend fun resendRegistrationCode(schoolId: String) = withContext(Dispatchers.IO) {
+        lastError = null
+        ApiClient.unwrap(ApiClient.api.registerResend(RegisterResendRequest(schoolId.trim())))
+        Unit
     }
 
     suspend fun restoreSession(): Boolean = withContext(Dispatchers.IO) {

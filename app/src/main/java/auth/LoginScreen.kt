@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.stismartlib.data.LoginChallenge
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.navigation.Screen
 import com.example.stismartlib.network.ApiException
@@ -52,7 +54,11 @@ import com.example.stismartlib.ui.theme.EyebrowStyle
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(navController: NavHostController) {
+fun LoginScreen(
+    navController: NavHostController,
+    // Preview hook: start on the email-code step.
+    initialChallenge: LoginChallenge? = null,
+) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
     var schoolId by remember { mutableStateOf("") }
@@ -62,6 +68,25 @@ fun LoginScreen(navController: NavHostController) {
     var passwordError by remember { mutableStateOf<String?>(null) }
     var banner by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var challenge by remember { mutableStateOf(initialChallenge) }
+    var code by remember { mutableStateOf("") }
+    var codeError by remember { mutableStateOf<String?>(null) }
+    var info by remember { mutableStateOf<String?>(null) }
+    var isResending by remember { mutableStateOf(false) }
+    var cooldownKey by remember { mutableIntStateOf(0) }
+    var cooldownSeconds by remember { mutableIntStateOf(60) }
+
+    fun goHome() {
+        password = ""
+        val destination = if (repository.session.userType.isStaff) {
+            Screen.StaffHome.route
+        } else {
+            Screen.Dashboard.create(repository.session.userType)
+        }
+        navController.navigate(destination) {
+            popUpTo(Screen.Login.route) { inclusive = true }
+        }
+    }
 
     PortalScreen {
     Column(
@@ -88,7 +113,67 @@ fun LoginScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(24.dp))
             ElmsBanner(message = banner.orEmpty(), tone = ElmsBannerTone.Error)
         }
+        if (info != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            ElmsBanner(message = info.orEmpty(), tone = ElmsBannerTone.Info)
+        }
         Spacer(modifier = Modifier.height(28.dp))
+        val pending = challenge
+        if (pending != null) {
+            EmailCodeStep(
+                instructions = "Enter the 6-digit code sent to ${pending.emailHint ?: "your school email"}.",
+                code = code,
+                onCodeChange = { code = it; codeError = null },
+                error = codeError,
+                isSubmitting = isSubmitting,
+                isResending = isResending,
+                cooldownKey = cooldownKey,
+                cooldownSeconds = cooldownSeconds,
+                verifyLabel = "Verify and sign in",
+                onVerify = {
+                    if (isSubmitting) return@EmailCodeStep
+                    isSubmitting = true
+                    banner = null
+                    info = null
+                    scope.launch {
+                        try {
+                            repository.verifyLoginCode(pending, code)
+                            goHome()
+                        } catch (error: Exception) {
+                            code = ""
+                            banner = userFacingMessage(error, "The code is incorrect or expired.")
+                        } finally {
+                            isSubmitting = false
+                        }
+                    }
+                },
+                onResend = {
+                    isResending = true
+                    banner = null
+                    scope.launch {
+                        try {
+                            cooldownSeconds = repository.resendLoginCode(pending)
+                            cooldownKey++
+                            code = ""
+                            info = "A new code was sent. Previous codes no longer work."
+                        } catch (error: Exception) {
+                            banner = userFacingMessage(error, "The code could not be sent.")
+                        } finally {
+                            isResending = false
+                        }
+                    }
+                },
+                backLabel = "Use a different account",
+                onBack = {
+                    challenge = null
+                    code = ""
+                    password = ""
+                    banner = null
+                    info = null
+                },
+            )
+            return@Column
+        }
         PortalField(
             label = "Student ID",
             value = schoolId,
@@ -160,17 +245,17 @@ fun LoginScreen(navController: NavHostController) {
                 }
                 isSubmitting = true
                 banner = null
+                info = null
                 scope.launch {
                     try {
-                        repository.login(normalized, password)
-                        password = ""
-                        val destination = if (repository.session.userType.isStaff) {
-                            Screen.StaffHome.route
+                        val next = repository.login(normalized, password)
+                        if (next == null) {
+                            goHome()
                         } else {
-                            Screen.Dashboard.create(repository.session.userType)
-                        }
-                        navController.navigate(destination) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
+                            code = ""
+                            cooldownSeconds = next.resendAfterSeconds
+                            cooldownKey++
+                            challenge = next
                         }
                     } catch (error: ApiException) {
                         banner = userFacingMessage(error, "Invalid school ID or password.")

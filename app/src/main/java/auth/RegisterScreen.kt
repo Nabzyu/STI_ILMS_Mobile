@@ -22,6 +22,7 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,11 +47,15 @@ import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.launch
 
 private val StudentIdPattern = Regex("^\\d{11}$")
-private val StiEmailPattern = Regex("^[A-Za-z0-9._%+-]+@stu\\.sti\\.edu\\.ph$", RegexOption.IGNORE_CASE)
+private val StiEmailPattern = Regex("^[^\\s@]+@ormoc\\.sti\\.edu\\.ph$", RegexOption.IGNORE_CASE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(navController: NavHostController) {
+fun RegisterScreen(
+    navController: NavHostController,
+    // Preview hook: start on the email-code step for this address.
+    initialPendingEmail: String? = null,
+) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
     var schoolId by remember { mutableStateOf("") }
@@ -66,7 +71,14 @@ fun RegisterScreen(navController: NavHostController) {
     var yearMenuOpen by remember { mutableStateOf(false) }
     var errors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var message by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
+    // null = form; set after register = waiting for the email code.
+    var pendingEmail by remember { mutableStateOf(initialPendingEmail) }
+    var verified by remember { mutableStateOf(false) }
+    var code by remember { mutableStateOf("") }
+    var isResending by remember { mutableStateOf(false) }
+    var cooldownKey by remember { mutableIntStateOf(0) }
 
     val yearLevelOptions = yearLevelsForProgram(selectedProgram)
 
@@ -94,7 +106,7 @@ fun RegisterScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(16.dp))
             ElmsBanner(
                 message = message,
-                tone = if (message.contains("correct", ignoreCase = true)) {
+                tone = if (isError || message.contains("correct", ignoreCase = true)) {
                     ElmsBannerTone.Error
                 } else {
                     ElmsBannerTone.Info
@@ -102,6 +114,77 @@ fun RegisterScreen(navController: NavHostController) {
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
+        if (verified) {
+            ElmsBanner(
+                message = "Your school email is verified. The librarian must approve your account before you can sign in.",
+                tone = ElmsBannerTone.Success
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            PortalButton(
+                text = "Back to Login",
+                onClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sizeIn(minHeight = 52.dp)
+            )
+            return@Column
+        }
+        val emailForCode = pendingEmail
+        if (emailForCode != null) {
+            EmailCodeStep(
+                instructions = "Enter the 6-digit code sent to $emailForCode. It expires in 10 minutes.",
+                code = code,
+                onCodeChange = { code = it },
+                error = null,
+                isSubmitting = isSubmitting,
+                isResending = isResending,
+                cooldownKey = cooldownKey,
+                cooldownSeconds = 60,
+                verifyLabel = "Verify email",
+                onVerify = {
+                    if (isSubmitting) return@EmailCodeStep
+                    isSubmitting = true
+                    message = ""
+                    scope.launch {
+                        try {
+                            repository.verifyRegistrationCode(schoolId, code)
+                            verified = true
+                        } catch (error: Exception) {
+                            code = ""
+                            isError = true
+                            message = userFacingMessage(error, "The verification code is incorrect.")
+                        } finally {
+                            isSubmitting = false
+                        }
+                    }
+                },
+                onResend = {
+                    isResending = true
+                    message = ""
+                    scope.launch {
+                        try {
+                            repository.resendRegistrationCode(schoolId)
+                            cooldownKey++
+                            code = ""
+                            isError = false
+                            message = "A new code was sent. Previous codes no longer work."
+                        } catch (error: Exception) {
+                            isError = true
+                            message = userFacingMessage(error, "The code could not be sent.")
+                        } finally {
+                            isResending = false
+                        }
+                    }
+                },
+                backLabel = "Back to Login",
+                onBack = { navController.popBackStack() },
+            )
+            return@Column
+        }
         PortalField(
             label = "Student ID",
             value = schoolId,
@@ -130,12 +213,12 @@ fun RegisterScreen(navController: NavHostController) {
         )
         Spacer(modifier = Modifier.height(14.dp))
         PortalField(
-            label = "STI Email Address",
+            label = "School email",
             value = stiEmail,
             onValueChange = { stiEmail = it },
-            placeholder = "name@stu.sti.edu.ph",
+            placeholder = "name@ormoc.sti.edu.ph",
             leadingIcon = Lucide.Mail,
-            error = errors["email"]
+            error = errors["school_email"]
         )
         Spacer(modifier = Modifier.height(14.dp))
         val programSelected = selectedProgram.isNotEmpty()
@@ -251,9 +334,9 @@ fun RegisterScreen(navController: NavHostController) {
                 else if (!StudentIdPattern.matches(normalized)) next["school_id"] = "Student ID must be exactly 11 digits."
                 if (firstName.isBlank()) next["first_name"] = "First name is required."
                 if (lastName.isBlank()) next["last_name"] = "Last name is required."
-                if (normalizedEmail.isEmpty()) next["email"] = "STI Email Address is required."
+                if (normalizedEmail.isEmpty()) next["school_email"] = "School email is required."
                 else if (!StiEmailPattern.matches(normalizedEmail)) {
-                    next["email"] = "Enter a valid STI email (name@stu.sti.edu.ph)."
+                    next["school_email"] = "Use your @ormoc.sti.edu.ph school email."
                 }
                 if (selectedProgram.isBlank()) next["program_strand"] = "Program or strand is required."
                 if (selectedYearLevel.isBlank()) next["year_grade_level"] = "Year or grade level is required."
@@ -266,13 +349,14 @@ fun RegisterScreen(navController: NavHostController) {
                 }
                 isSubmitting = true
                 message = ""
+                isError = false
                 scope.launch {
                     try {
-                        repository.registerStudent(
+                        val request = repository.registerStudent(
                             schoolId = normalized,
                             firstName = firstName,
                             lastName = lastName,
-                            email = normalizedEmail,
+                            schoolEmail = normalizedEmail,
                             programStrand = selectedProgram,
                             yearGradeLevel = selectedYearLevel,
                             password = password,
@@ -280,13 +364,15 @@ fun RegisterScreen(navController: NavHostController) {
                         )
                         password = ""
                         confirmPassword = ""
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Register.route) { inclusive = true }
-                        }
+                        code = ""
+                        cooldownKey++
+                        pendingEmail = request.email ?: normalizedEmail
                     } catch (error: ApiException) {
                         errors = error.fieldErrors
+                        isError = true
                         message = userFacingMessage(error, "Registration could not be completed. Check your details and try again.")
                     } catch (error: Exception) {
+                        isError = true
                         message = userFacingMessage(error)
                     } finally {
                         isSubmitting = false
