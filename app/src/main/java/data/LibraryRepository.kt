@@ -41,7 +41,7 @@ import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.RegisterResendRequest
 import com.example.stismartlib.network.dto.RegisterVerifyRequest
 import com.example.stismartlib.network.dto.ReserveRequestDto
-import java.io.IOException
+import com.example.stismartlib.session.renewSafely
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.feedback.userFacingMessage
@@ -332,17 +332,15 @@ class LibraryRepository(
     }
 
     /**
-     * Extends the server session and stores the fresh token. False when offline; a 401
+     * Extends the server session and stores the fresh token. False on any failure; a 401
      * goes through [ApiClient.unwrap], which ends the session for the nav graph.
      */
     suspend fun renewSession(): Boolean = withContext(Dispatchers.IO) {
-        try {
+        renewSafely {
             val token = ApiClient.unwrap(ApiClient.api.authActivity()).token
-                ?.takeIf { it.isNotBlank() } ?: return@withContext false
-            sessionStore.updateToken(token)
-            true
-        } catch (_: IOException) {
-            false
+                ?.takeIf { it.isNotBlank() }
+            if (token != null) sessionStore.updateToken(token)
+            token != null
         }
     }
 
