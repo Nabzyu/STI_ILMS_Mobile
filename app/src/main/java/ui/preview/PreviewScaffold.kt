@@ -10,6 +10,10 @@ import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
+import com.example.stismartlib.data.DayHours
+import com.example.stismartlib.data.LibraryClosure
+import com.example.stismartlib.data.LibrarySchedule
+import com.example.stismartlib.data.campusToday
 import com.example.stismartlib.data.models.FineReceipt
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
@@ -28,6 +32,7 @@ import com.example.stismartlib.ui.theme.LocalThemeController
 import com.example.stismartlib.ui.theme.STIOrmocLibraryTheme
 import com.example.stismartlib.ui.theme.ThemeController
 import com.example.stismartlib.ui.theme.ThemeMode
+import java.time.DayOfWeek
 
 /**
  * Wraps screen previews with theme, theme controller, and an in-memory repository.
@@ -156,6 +161,17 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 paymentStatus = FineStatus.UNPAID,
                 paymentDate = null,
             ),
+        )
+    }
+    if (repository.librarySchedule == null) {
+        repository.applyPreviewSchedule(
+            LibrarySchedule(
+                weekly = DayOfWeek.entries.map { day ->
+                    val weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY
+                    DayHours(day, isOpen = !weekend, opensAt = "08:00:00", closesAt = "17:00:00")
+                },
+                closures = listOf(LibraryClosure(campusToday().plusDays(12), "All Saints' Day")),
+            )
         )
     }
     if (repository.fineReceipts.isEmpty()) {

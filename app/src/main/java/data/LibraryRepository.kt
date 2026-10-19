@@ -105,6 +105,8 @@ class LibraryRepository(
     val fineReceipts = mutableStateListOf<FineReceipt>()
     var fineReceiptsError by mutableStateOf<String?>(null)
         private set
+    var librarySchedule by mutableStateOf<LibrarySchedule?>(null)
+        private set
     val notifications = mutableStateListOf<NotificationItem>()
     val printHistory = mutableStateListOf<PrintRequest>()
     val printReceipts = mutableStateListOf<PrintReceipt>()
@@ -144,6 +146,11 @@ class LibraryRepository(
 
     fun setUserType(userType: UserType) {
         session = session.copy(userType = userType)
+    }
+
+    /** Preview / demo seed; not used by production API flows. */
+    fun applyPreviewSchedule(schedule: LibrarySchedule) {
+        librarySchedule = schedule
     }
 
     /** Preview / demo seed; not used by production API flows. */
@@ -439,6 +446,7 @@ class LibraryRepository(
             loadNotifications()
             loadPrintHistory()
             runCatching { loadPrintReceipts() }
+            runCatching { loadLibrarySchedule() }
             loadAttendancePass()
         } catch (error: ApiException) {
             lastError = userFacingMessage(error, "Unable to refresh your library data.")
@@ -606,6 +614,11 @@ class LibraryRepository(
                 isRead = item.isRead == true,
             )
         })
+    }
+
+    /** Opening hours and closures; screens hide the schedule while this is null. */
+    suspend fun loadLibrarySchedule() = withContext(Dispatchers.IO) {
+        librarySchedule = ApiClient.unwrap(ApiClient.api.librarySchedule()).toSchedule()
     }
 
     suspend fun markNotificationRead(notificationId: String) = withContext(Dispatchers.IO) {
@@ -1011,6 +1024,7 @@ class LibraryRepository(
         fines.clear()
         fineReceipts.clear()
         fineReceiptsError = null
+        librarySchedule = null
         notifications.clear()
         printHistory.clear()
         printReceipts.clear()

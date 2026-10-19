@@ -36,10 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stismartlib.data.LibrarySchedule
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.PrintStatus
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.dashboard.schedule.LibraryHoursCard
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.ElmsBanner
 import com.example.stismartlib.ui.components.ElmsBannerTone
@@ -68,11 +70,12 @@ fun DashboardOverviewScreen(
     onNavigateToPrintingService: () -> Unit,
     onNavigateToQrLogin: () -> Unit,
     onNavigateToNotifications: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToFloorPlan: () -> Unit = {},
 ) {
     val repository = rememberLibraryRepository()
     if (repository.session.userType == UserType.FACULTY) {
-        FacultyOverview()
+        FacultyOverview(schedule = repository.librarySchedule, onViewMap = onNavigateToFloorPlan)
         return
     }
 
@@ -97,6 +100,7 @@ fun DashboardOverviewScreen(
             repository.loadReservations()
             repository.loadPrintHistory()
             repository.loadBooks()
+            runCatching { repository.loadLibrarySchedule() }
         },
         onRefreshError = { refreshError = it },
     ) {
@@ -324,7 +328,7 @@ fun DashboardOverviewScreen(
                 if (reservation == null) {
                     Text("No active reservation.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    Text(reservation.book.title, fontWeight = FontWeight.SemiBold)
+                    Text(reservation.book.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text(
                         "Queue #${reservation.queuePosition}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -348,7 +352,7 @@ fun DashboardOverviewScreen(
                 if (latestNotification == null) {
                     Text("You are all caught up.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
-                    Text(latestNotification.title, fontWeight = FontWeight.SemiBold)
+                    Text(latestNotification.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         latestNotification.message,
@@ -359,6 +363,10 @@ fun DashboardOverviewScreen(
                     )
                 }
             }
+        }
+
+        repository.librarySchedule?.let { schedule ->
+            item { LibraryHoursCard(schedule = schedule, onViewMap = onNavigateToFloorPlan) }
         }
 
         item {
@@ -465,8 +473,8 @@ private fun QuickStat(
 }
 
 @Composable
-private fun FacultyOverview() {
-    Column(modifier = Modifier.padding(16.dp)) {
+private fun FacultyOverview(schedule: LibrarySchedule?, onViewMap: () -> Unit) {
+    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ElmsSectionCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Lucide.ShieldCheck, contentDescription = null, tint = ElmsCyan, modifier = Modifier.size(28.dp))
@@ -493,6 +501,9 @@ private fun FacultyOverview() {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+        if (schedule != null) {
+            LibraryHoursCard(schedule = schedule, onViewMap = onViewMap)
         }
     }
 }

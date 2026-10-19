@@ -629,3 +629,13 @@ private fun FloorPlanEmptyPreview() {
         }
     }
 }
+
+@Preview(name = "Notifications · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun NotificationsScreenDarkPreview() {
+    PreviewApp(darkTheme = true) {
+        NestedPreview {
+            NotificationsScreen(onBack = NoOp)
+        }
+    }
+}

@@ -598,7 +598,10 @@ fun DashboardScreen(
                             onNavigateToNotifications = {
                                 dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
                             },
-                            onLogout = { showLogoutConfirm = true }
+                            onLogout = { showLogoutConfirm = true },
+                            onNavigateToFloorPlan = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.FloorPlan.route)
+                            }
                         )
                     }
                     composable(DashboardRoute.BookCatalog.route) {

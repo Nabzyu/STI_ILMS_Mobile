@@ -49,6 +49,7 @@ import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.ElmsCyanSoft
+import com.example.stismartlib.ui.dashboard.schedule.LibraryScheduleSection
 import kotlinx.coroutines.launch
 
 @Composable
@@ -125,7 +126,10 @@ fun NotificationsScreen(onBack: () -> Unit) {
     }
 
     ElmsPullRefresh(
-        onRefresh = { repository.loadNotifications() },
+        onRefresh = {
+            repository.loadNotifications()
+            runCatching { repository.loadLibrarySchedule() }
+        },
         onRefreshError = { refreshError = it },
     ) {
         LazyColumn(
@@ -237,6 +241,9 @@ fun NotificationsScreen(onBack: () -> Unit) {
                         onDelete = { pendingDelete = item },
                     )
                 }
+            }
+            repository.librarySchedule?.let { schedule ->
+                item { LibraryScheduleSection(schedule) }
             }
             item {
                 PortalButton(

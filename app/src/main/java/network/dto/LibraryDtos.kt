@@ -107,6 +107,25 @@ data class FineReceiptDto(
     val status: String? = null,
 )
 
+/** `GET notifications/schedule`. Days are 1 = Monday … 7 = Sunday; times look like "08:00:00". */
+data class LibraryScheduleDto(
+    val timezone: String? = null,
+    val weekly: List<WeeklyHoursDto>? = null,
+    val upcomingClosures: List<LibraryClosureDto>? = null,
+)
+
+data class WeeklyHoursDto(
+    val dayOfWeek: Int? = null,
+    val isOpen: Boolean? = null,
+    val opensAt: String? = null,
+    val closesAt: String? = null,
+)
+
+data class LibraryClosureDto(
+    val date: String? = null,
+    val reason: String? = null,
+)
+
 data class NotificationListDto(
     val items: List<NotificationItemDto>? = null,
     val unreadCount: Int? = null,
