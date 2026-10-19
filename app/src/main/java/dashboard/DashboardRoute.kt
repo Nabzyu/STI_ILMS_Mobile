@@ -1,7 +1,7 @@
 package com.example.stismartlib.ui.dashboard
 
 sealed class DashboardRoute(val route: String) {
-    object Overview : DashboardRoute("overview")
+    object Overview : DashboardRoute("Dashboard")
     object BookCatalog : DashboardRoute("book_catalog")
     object BookDetail : DashboardRoute("book_detail/{bookId}") {
         fun create(bookId: String) = "book_detail/$bookId"
@@ -13,7 +13,6 @@ sealed class DashboardRoute(val route: String) {
     }
     object BorrowingHistory : DashboardRoute("borrowing_history")
     object BorrowProcess : DashboardRoute("borrow_process")
-    object ReturnBook : DashboardRoute("return_book")
     object ReserveBook : DashboardRoute("reserve_book")
     object Notifications : DashboardRoute("notifications")
     object QrLogin : DashboardRoute("qr_login")

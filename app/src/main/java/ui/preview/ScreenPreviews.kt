@@ -31,7 +31,6 @@ import com.example.stismartlib.ui.dashboard.qr.QrLoginScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
 import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
-import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
 import com.example.stismartlib.ui.dashboard.search.GlobalSearchScreen
 import com.example.stismartlib.ui.dashboard.staff.StaffHomeScreen
 import com.example.stismartlib.ui.splash.SplashScreen
@@ -231,7 +230,7 @@ private fun DashboardScreenDarkPreview() {
     }
 }
 
-@Preview(name = "Overview · Student", showBackground = true, showSystemUi = true)
+@Preview(name = "Dashboard · Student", showBackground = true, showSystemUi = true)
 @Composable
 private fun DashboardOverviewStudentPreview() {
     PreviewApp(userType = UserType.STUDENT) {
@@ -241,7 +240,6 @@ private fun DashboardOverviewStudentPreview() {
                 onNavigateToResearchCatalog = NoOp,
                 onNavigateToBorrowingHistory = NoOp,
                 onNavigateToBorrowProcess = NoOp,
-                onNavigateToReturnBook = NoOp,
                 onNavigateToReserveBook = NoOp,
                 onNavigateToPrintingService = NoOp,
                 onNavigateToQrLogin = NoOp,
@@ -252,7 +250,7 @@ private fun DashboardOverviewStudentPreview() {
     }
 }
 
-@Preview(name = "Overview · Student · Dark", showBackground = true, showSystemUi = true)
+@Preview(name = "Dashboard · Student · Dark", showBackground = true, showSystemUi = true)
 @Composable
 private fun DashboardOverviewStudentDarkPreview() {
     PreviewApp(userType = UserType.STUDENT, darkTheme = true) {
@@ -262,7 +260,6 @@ private fun DashboardOverviewStudentDarkPreview() {
                 onNavigateToResearchCatalog = NoOp,
                 onNavigateToBorrowingHistory = NoOp,
                 onNavigateToBorrowProcess = NoOp,
-                onNavigateToReturnBook = NoOp,
                 onNavigateToReserveBook = NoOp,
                 onNavigateToPrintingService = NoOp,
                 onNavigateToQrLogin = NoOp,
@@ -273,7 +270,7 @@ private fun DashboardOverviewStudentDarkPreview() {
     }
 }
 
-@Preview(name = "Overview · Faculty", showBackground = true, showSystemUi = true)
+@Preview(name = "Dashboard · Faculty", showBackground = true, showSystemUi = true)
 @Composable
 private fun DashboardOverviewFacultyPreview() {
     PreviewApp(userType = UserType.FACULTY) {
@@ -283,7 +280,6 @@ private fun DashboardOverviewFacultyPreview() {
                 onNavigateToResearchCatalog = NoOp,
                 onNavigateToBorrowingHistory = NoOp,
                 onNavigateToBorrowProcess = NoOp,
-                onNavigateToReturnBook = NoOp,
                 onNavigateToReserveBook = NoOp,
                 onNavigateToPrintingService = NoOp,
                 onNavigateToQrLogin = NoOp,
@@ -331,6 +327,20 @@ private fun BookDetailScreenPreview() {
         NestedPreview {
             BookDetailScreen(
                 bookId = "preview-book-1",
+                onBack = NoOp,
+                onCartClick = NoOp,
+            )
+        }
+    }
+}
+
+@Preview(name = "Book detail unavailable", showBackground = true, showSystemUi = true)
+@Composable
+private fun BookDetailUnavailablePreview() {
+    PreviewApp {
+        NestedPreview {
+            BookDetailScreen(
+                bookId = "preview-book-unavailable",
                 onBack = NoOp,
                 onCartClick = NoOp,
             )
@@ -388,16 +398,6 @@ private fun BorrowProcessScreenPreview() {
                 onBrowseCatalog = NoOp,
                 onOpenCart = NoOp,
             )
-        }
-    }
-}
-
-@Preview(name = "Return book", showBackground = true, showSystemUi = true)
-@Composable
-private fun ReturnBookScreenPreview() {
-    PreviewApp {
-        NestedPreview {
-            ReturnBookScreen(onBack = NoOp)
         }
     }
 }

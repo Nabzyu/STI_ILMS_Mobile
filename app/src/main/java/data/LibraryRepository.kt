@@ -11,11 +11,17 @@ import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
 import com.example.stismartlib.data.models.CartItem
+import com.example.stismartlib.data.models.ClearanceFineItem
+import com.example.stismartlib.data.models.ClearanceLoanItem
+import com.example.stismartlib.data.models.ClearanceLostBookItem
+import com.example.stismartlib.data.models.ClearanceStanding
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.LibrarySession
 import com.example.stismartlib.data.models.NotificationCategory
 import com.example.stismartlib.data.models.NotificationItem
+import com.example.stismartlib.data.models.PrintQuote
+import com.example.stismartlib.data.models.PrintReceipt
 import com.example.stismartlib.data.models.PrintRequest
 import com.example.stismartlib.data.models.PrintStatus
 import com.example.stismartlib.data.models.ProfileAvatar
@@ -25,10 +31,14 @@ import com.example.stismartlib.data.models.UserProfile
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
+import com.example.stismartlib.network.dto.CancelBorrowRequestDto
+import com.example.stismartlib.network.dto.ClearanceRecordDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
+import com.example.stismartlib.network.dto.PrintReceiptDto
+import com.example.stismartlib.network.dto.PrintRequestDto
 import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
@@ -50,6 +60,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 // shortcut: the hosted API still requires login_as, so each role is tried in turn and a wrong
@@ -89,6 +100,7 @@ class LibraryRepository(
     val fines = mutableStateListOf<FineRecord>()
     val notifications = mutableStateListOf<NotificationItem>()
     val printHistory = mutableStateListOf<PrintRequest>()
+    val printReceipts = mutableStateListOf<PrintReceipt>()
     val reservations = mutableStateListOf<Reservation>()
 
     var attendancePass by mutableStateOf<AttendancePass?>(null)
@@ -103,6 +115,24 @@ class LibraryRepository(
     var isAvatarUploading by mutableStateOf(false)
         private set
     var profileActionError by mutableStateOf<String?>(null)
+        private set
+
+    var printServiceAccepting by mutableStateOf(true)
+        private set
+    var printUnavailableReason by mutableStateOf<String?>(null)
+        private set
+    var printDocxAutoCountAvailable by mutableStateOf(true)
+        private set
+    var isPrintSubmitting by mutableStateOf(false)
+        private set
+    var printActionError by mutableStateOf<String?>(null)
+        private set
+
+    var clearance by mutableStateOf<ClearanceStanding?>(null)
+        private set
+    var isClearanceLoading by mutableStateOf(false)
+        private set
+    var clearanceError by mutableStateOf<String?>(null)
         private set
 
     fun setUserType(userType: UserType) {
@@ -401,6 +431,7 @@ class LibraryRepository(
             loadFines()
             loadNotifications()
             loadPrintHistory()
+            runCatching { loadPrintReceipts() }
             loadAttendancePass()
         } catch (error: ApiException) {
             lastError = userFacingMessage(error, "Unable to refresh your library data.")
@@ -426,6 +457,7 @@ class LibraryRepository(
                 availableCopies = dto.availableCopiesCount ?: 0,
                 totalCopies = dto.totalCopiesCount ?: 0,
                 description = dto.currentAvailabilityStatus.orEmpty(),
+                callNumber = dto.callNumber.orEmpty(),
             )
         })
     }
@@ -503,6 +535,7 @@ class LibraryRepository(
                 queuePosition = item.queuePosition ?: 0,
                 dateReserved = formatDate(item.reservedAt) ?: "—",
                 status = item.status.orEmpty(),
+                pickupDeadline = formatDate(item.pickupDeadline),
             )
         })
     }
@@ -547,31 +580,239 @@ class LibraryRepository(
         })
     }
 
+    suspend fun markNotificationRead(notificationId: String) = withContext(Dispatchers.IO) {
+        val id = notificationId.toIntOrNull()
+            ?: throw ApiException("This notification could not be updated.")
+        try {
+            ApiClient.unwrap(ApiClient.api.markNotificationRead(id))
+            val index = notifications.indexOfFirst { it.id == notificationId }
+            if (index >= 0) {
+                notifications[index] = notifications[index].copy(isRead = true)
+            }
+        } catch (error: ApiException) {
+            lastError = userFacingMessage(error, "Unable to mark the notification as read.")
+            throw error
+        }
+    }
+
+    suspend fun markAllNotificationsRead() = withContext(Dispatchers.IO) {
+        try {
+            ApiClient.unwrap(ApiClient.api.markAllNotificationsRead())
+            for (index in notifications.indices) {
+                if (!notifications[index].isRead) {
+                    notifications[index] = notifications[index].copy(isRead = true)
+                }
+            }
+        } catch (error: ApiException) {
+            lastError = userFacingMessage(error, "Unable to mark notifications as read.")
+            throw error
+        }
+    }
+
+    suspend fun deleteNotification(notificationId: String) = withContext(Dispatchers.IO) {
+        val id = notificationId.toIntOrNull()
+            ?: throw ApiException("This notification could not be deleted.")
+        try {
+            ApiClient.unwrap(ApiClient.api.deleteNotification(id))
+            notifications.removeAll { it.id == notificationId }
+        } catch (error: ApiException) {
+            lastError = userFacingMessage(error, "Unable to delete the notification.")
+            throw error
+        }
+    }
+
+    suspend fun clearAllNotifications() = withContext(Dispatchers.IO) {
+        try {
+            ApiClient.unwrap(ApiClient.api.deleteAllNotifications())
+            notifications.clear()
+        } catch (error: ApiException) {
+            lastError = userFacingMessage(error, "Unable to clear notifications.")
+            throw error
+        }
+    }
+
+    suspend fun cancelBorrowRequest(transactionId: String, reason: String? = null) =
+        withContext(Dispatchers.IO) {
+            val id = transactionId.toIntOrNull()
+                ?: throw ApiException("This borrow request could not be cancelled.")
+            try {
+                ApiClient.unwrap(
+                    ApiClient.api.cancelBorrowRequest(
+                        id,
+                        CancelBorrowRequestDto(reason = reason?.trim()?.takeIf { it.isNotEmpty() }),
+                    ),
+                )
+                loadBorrowingHistory()
+            } catch (error: ApiException) {
+                lastError = userFacingMessage(error, "Unable to cancel the borrow request.")
+                throw error
+            }
+        }
+
+    suspend fun reportLostBook(transactionId: String) = withContext(Dispatchers.IO) {
+        val id = transactionId.toIntOrNull()
+            ?: throw ApiException("This loan could not be reported as lost.")
+        try {
+            ApiClient.unwrap(ApiClient.api.reportLostBook(id))
+            loadBorrowingHistory()
+            runCatching { loadClearance() }
+        } catch (error: ApiException) {
+            lastError = userFacingMessage(error, "Unable to report the lost book.")
+            throw error
+        }
+    }
+
+    suspend fun loadPrintServiceStatus() = withContext(Dispatchers.IO) {
+        val status = ApiClient.unwrap(ApiClient.api.printServiceStatus())
+        printServiceAccepting = status.isAccepting()
+        printUnavailableReason = status.unavailableReason
+        printDocxAutoCountAvailable = status.docxAutoCountAvailable != false
+    }
+
     suspend fun loadPrintHistory() = withContext(Dispatchers.IO) {
         val items = ApiClient.unwrap(ApiClient.api.printRequests())
         printHistory.clear()
-        printHistory.addAll(items.map { item ->
-            val status = when (item.jobStatus?.lowercase()) {
-                "printing" -> PrintStatus.PRINTING
-                "ready for pickup" -> PrintStatus.READY
-                "completed" -> PrintStatus.COMPLETED
-                "cancelled" -> PrintStatus.CANCELLED
-                else -> PrintStatus.PENDING
+        printHistory.addAll(items.map { it.toPrintRequest() })
+    }
+
+    suspend fun loadPrintReceipts() = withContext(Dispatchers.IO) {
+        val items = ApiClient.unwrap(ApiClient.api.printReceipts())
+        printReceipts.clear()
+        printReceipts.addAll(items.map { it.toPrintReceipt() })
+    }
+
+    suspend fun loadPrintReceiptPdf(receiptId: String): ByteArray = withContext(Dispatchers.IO) {
+        val id = receiptId.toIntOrNull()
+            ?: throw ApiException("This receipt could not be downloaded.")
+        try {
+            val response = ApiClient.api.printReceiptPdf(id)
+            if (!response.isSuccessful) {
+                throw ApiException(
+                    message = when (response.code()) {
+                        404 -> "This feature is not available right now."
+                        401 -> "Sign-in is required."
+                        403 -> "You do not have access to this action."
+                        else -> "Unable to download the receipt."
+                    },
+                    httpStatus = response.code(),
+                )
             }
-            val cost = item.calculatedCost ?: 0.0
-            PrintRequest(
-                id = (item.requestId ?: 0).toString(),
-                fileName = item.fileName.orEmpty(),
-                copies = item.numberOfCopies ?: 1,
-                printType = item.printType.orEmpty(),
-                isColored = item.printType?.contains("color", ignoreCase = true) == true,
-                note = item.paperSize.orEmpty(),
-                totalCost = cost,
-                amountPaid = if (item.paymentStatus.equals("Paid", ignoreCase = true)) cost else 0.0,
-                status = status,
-                dateSubmitted = formatDate(item.createdAt) ?: "—",
+            response.body()?.bytes()
+                ?: throw ApiException("The receipt PDF was empty.")
+        } catch (error: ApiException) {
+            printActionError = userFacingMessage(error, "Unable to download the receipt.")
+            throw error
+        }
+    }
+
+    suspend fun quotePrint(
+        fileBytes: ByteArray,
+        fileName: String,
+        mimeType: String,
+        copies: Int,
+        printType: String,
+        paperSize: String,
+    ): PrintQuote = withContext(Dispatchers.IO) {
+        if (fileBytes.size > MAX_PRINT_DOCUMENT_BYTES) {
+            throw ApiException("The document must not exceed 4 MB.")
+        }
+        if (copies !in 1..50) {
+            throw ApiException("Enter 1–50 copies.")
+        }
+        val document = fileBytes.toDocumentPart(fileName, mimeType)
+        val quote = ApiClient.unwrap(
+            ApiClient.api.quotePrint(
+                document = document,
+                numberOfCopies = copies.toFormBody(),
+                printType = printType.toFormBody(),
+                paperSize = paperSize.toFormBody(),
+            ),
+        )
+        val pageCount = quote.pageCount ?: throw ApiException("Unable to read the document page count.")
+        val sha = quote.documentSha256?.takeIf { it.isNotBlank() }
+            ?: throw ApiException("Unable to verify the document for quoting.")
+        PrintQuote(
+            pageCount = pageCount,
+            totalSheets = quote.totalSheets ?: (pageCount * copies),
+            calculatedCost = quote.calculatedCost ?: 0.0,
+            documentSha256 = sha,
+            printableFileName = quote.printableFileName,
+        )
+    }
+
+    suspend fun submitPrint(
+        fileBytes: ByteArray,
+        fileName: String,
+        mimeType: String,
+        copies: Int,
+        printType: String,
+        paperSize: String,
+        quote: PrintQuote,
+        notes: String,
+    ) = withContext(Dispatchers.IO) {
+        isPrintSubmitting = true
+        printActionError = null
+        try {
+            if (!printServiceAccepting) {
+                throw ApiException(
+                    printUnavailableReason?.takeIf { it.isNotBlank() }
+                        ?: "The printing service is not accepting requests right now.",
+                )
+            }
+            if (fileBytes.size > MAX_PRINT_DOCUMENT_BYTES) {
+                throw ApiException("The document must not exceed 4 MB.")
+            }
+            val document = fileBytes.toDocumentPart(fileName, mimeType)
+            val notesBody = notes.trim().takeIf { it.isNotEmpty() }?.toFormBody()
+            ApiClient.unwrap(
+                ApiClient.api.submitPrintRequest(
+                    document = document,
+                    numberOfCopies = copies.toFormBody(),
+                    pageCount = quote.pageCount.toFormBody(),
+                    documentSha256 = quote.documentSha256.toFormBody(),
+                    quotedCost = quote.calculatedCost.toString().toFormBody(),
+                    printType = printType.toFormBody(),
+                    paperSize = paperSize.toFormBody(),
+                    optionalNotes = notesBody,
+                ),
             )
-        })
+            loadPrintHistory()
+        } catch (error: ApiException) {
+            printActionError = userFacingMessage(error, "Unable to submit the print request.")
+            throw error
+        } catch (error: Exception) {
+            printActionError = userFacingMessage(error, "Unable to submit the print request.")
+            throw error
+        } finally {
+            isPrintSubmitting = false
+        }
+    }
+
+    suspend fun cancelPrint(requestId: String) = withContext(Dispatchers.IO) {
+        printActionError = null
+        val id = requestId.toIntOrNull()
+            ?: throw ApiException("This print request could not be cancelled.")
+        try {
+            ApiClient.unwrap(ApiClient.api.cancelPrintRequest(id))
+            loadPrintHistory()
+        } catch (error: ApiException) {
+            printActionError = userFacingMessage(error, "Unable to cancel the print request.")
+            throw error
+        }
+    }
+
+    suspend fun loadClearance() = withContext(Dispatchers.IO) {
+        isClearanceLoading = true
+        clearanceError = null
+        try {
+            val dto = ApiClient.unwrap(ApiClient.api.clearanceMe())
+            clearance = dto.toClearanceStanding()
+        } catch (error: ApiException) {
+            clearanceError = userFacingMessage(error, "Unable to load your clearance status.")
+            throw error
+        } finally {
+            isClearanceLoading = false
+        }
     }
 
     suspend fun loadAttendancePass() = withContext(Dispatchers.IO) {
@@ -604,12 +845,13 @@ class LibraryRepository(
             ?: "Your borrow request was submitted. Claim the books at the library desk."
     }
 
-    suspend fun reserveBook(book: Book) = withContext(Dispatchers.IO) {
-        val titleId = book.id.toIntOrNull()
-            ?: throw ApiException("This book could not be reserved.")
-        ApiClient.unwrap(ApiClient.api.reserveBook(ReserveRequestDto(bookTitleId = titleId)))
-        loadReservations()
-    }
+    suspend fun reserveBook(book: Book) =
+        withContext(Dispatchers.IO) {
+            val titleId = book.id.toIntOrNull()
+                ?: throw ApiException("This book could not be reserved.")
+            ApiClient.unwrap(ApiClient.api.reserveBook(ReserveRequestDto(bookTitleId = titleId)))
+            loadReservations()
+        }
 
     suspend fun cancelReservation(reservationId: String) = withContext(Dispatchers.IO) {
         val id = reservationId.toIntOrNull()
@@ -754,6 +996,7 @@ class LibraryRepository(
         fines.clear()
         notifications.clear()
         printHistory.clear()
+        printReceipts.clear()
         reservations.clear()
         attendancePass = null
         profile = null
@@ -761,8 +1004,107 @@ class LibraryRepository(
         isProfileSaving = false
         isAvatarUploading = false
         profileActionError = null
+        printActionError = null
+        printServiceAccepting = true
+        printUnavailableReason = null
+        clearance = null
+        clearanceError = null
         lastError = null
     }
+
+    private fun PrintReceiptDto.toPrintReceipt(): PrintReceipt {
+        return PrintReceipt(
+            id = (printReceiptId ?: 0).toString(),
+            receiptNumber = receiptNumber.orEmpty(),
+            verificationCode = verificationCode.orEmpty(),
+            fileName = fileName.orEmpty().ifBlank { "Print receipt" },
+            amountReceived = amountReceived ?: 0.0,
+            printType = printType.orEmpty(),
+            paperSize = paperSize.orEmpty(),
+            copies = numberOfCopies ?: 1,
+            pageCount = pageCount ?: 0,
+            receivedAt = formatDate(receivedAt) ?: "—",
+            receivedBy = receivedBy.orEmpty(),
+            status = receiptStatus.orEmpty(),
+        )
+    }
+
+    private fun PrintRequestDto.toPrintRequest(): PrintRequest {
+        val status = when (jobStatus?.lowercase()) {
+            "printing" -> PrintStatus.PRINTING
+            "ready for pickup" -> PrintStatus.READY
+            "completed" -> PrintStatus.COMPLETED
+            "cancelled" -> PrintStatus.CANCELLED
+            else -> PrintStatus.PENDING
+        }
+        val cost = calculatedCost ?: 0.0
+        return PrintRequest(
+            id = (requestId ?: 0).toString(),
+            fileName = fileName.orEmpty(),
+            copies = numberOfCopies ?: 1,
+            printType = printType.orEmpty(),
+            isColored = printType?.contains("color", ignoreCase = true) == true,
+            note = paperSize.orEmpty(),
+            totalCost = cost,
+            amountPaid = if (paymentStatus.equals("Paid", ignoreCase = true)) cost else 0.0,
+            status = status,
+            dateSubmitted = formatDate(createdAt) ?: "—",
+            paymentStatus = paymentStatus.orEmpty(),
+            pageCount = pageCount ?: 0,
+        )
+    }
+
+    private fun ClearanceRecordDto.toClearanceStanding(): ClearanceStanding {
+        val statusText = (status ?: computedStatus).orEmpty()
+        val cleared = statusText.equals("Cleared", ignoreCase = true)
+        return ClearanceStanding(
+            isCleared = cleared,
+            statusLabel = if (cleared) "Cleared" else "Not Cleared",
+            reason = reason.orEmpty(),
+            checkedAt = checkedAt,
+            activeLoans = summary?.activeLoans ?: loans.orEmpty().size,
+            unpaidOverdueFines = summary?.unpaidOverdueFines ?: fines.orEmpty().size,
+            unpaidReplacementCharges = summary?.unpaidReplacementCharges ?: 0.0,
+            totalOutstanding = summary?.totalOutstanding
+                ?: ((fines.orEmpty().sumOf { it.amount ?: 0.0 }) +
+                    (lostBooks.orEmpty().sumOf { it.replacementCharge ?: 0.0 })),
+            loans = loans.orEmpty().map { loan ->
+                ClearanceLoanItem(
+                    title = loan.title.orEmpty().ifBlank { "Untitled" },
+                    status = loan.status.orEmpty(),
+                    dueAt = formatDate(loan.dueAt),
+                    currentFine = loan.currentFine ?: 0.0,
+                )
+            },
+            fines = fines.orEmpty().map { fine ->
+                ClearanceFineItem(
+                    title = fine.title.orEmpty().ifBlank { "Fine" },
+                    amount = fine.amount ?: 0.0,
+                    basis = fine.basis,
+                )
+            },
+            lostBooks = lostBooks.orEmpty().map { lost ->
+                ClearanceLostBookItem(
+                    title = lost.title.orEmpty().ifBlank { "Lost item" },
+                    status = lost.status.orEmpty(),
+                    replacementCharge = lost.replacementCharge ?: 0.0,
+                    paymentStatus = lost.paymentStatus.orEmpty(),
+                )
+            },
+            activeOverrideReason = activeOverride?.reason,
+        )
+    }
+
+    private fun ByteArray.toDocumentPart(fileName: String, mimeType: String): MultipartBody.Part {
+        val mediaType = mimeType.toMediaTypeOrNull() ?: "application/pdf".toMediaType()
+        val body = toRequestBody(mediaType)
+        return MultipartBody.Part.createFormData("document", fileName, body)
+    }
+
+    private fun String.toFormBody(): RequestBody =
+        toRequestBody("text/plain".toMediaType())
+
+    private fun Int.toFormBody(): RequestBody = toString().toFormBody()
 
     private fun formatDate(value: String?): String? {
         if (value.isNullOrBlank()) return null

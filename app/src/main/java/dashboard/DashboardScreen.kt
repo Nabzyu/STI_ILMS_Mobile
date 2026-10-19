@@ -84,7 +84,6 @@ import com.example.stismartlib.ui.dashboard.qr.AttendanceScreen
 import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
-import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
 import com.example.stismartlib.ui.dashboard.search.GlobalSearchScreen
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.LocalThemeController
@@ -110,7 +109,7 @@ private data class BottomDest(
 
 /**
  * Bottom-bar / drawer navigation that does not get stuck on stacked screens
- * (e.g. Notifications on top of Overview). Prefer popping back to an existing
+ * (e.g. Notifications on top of Dashboard). Prefer popping back to an existing
  * destination before using restoreState navigate.
  */
 private fun NavController.navigateDashboardRoute(route: String) {
@@ -178,8 +177,7 @@ fun DashboardScreen(
             currentRoute?.startsWith("research_detail") == true -> DashboardRoute.ResearchCatalog.route
         currentRoute == DashboardRoute.BorrowingHistory.route ||
             currentRoute == DashboardRoute.ReserveBook.route ||
-            currentRoute == DashboardRoute.BorrowProcess.route ||
-            currentRoute == DashboardRoute.ReturnBook.route -> DashboardRoute.BorrowingHistory.route
+            currentRoute == DashboardRoute.BorrowProcess.route -> DashboardRoute.BorrowingHistory.route
         else -> null
     }
 
@@ -217,20 +215,10 @@ fun DashboardScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        HeaderIconButton(
-                            onClick = {
-                                dashboardNavController.openStackedRoute(DashboardRoute.Search.route)
-                                scope.launch { drawerState.close() }
-                            },
-                            contentDescription = "Search"
-                        ) {
-                            Icon(
-                                Lucide.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        StiMarkTile(
+                            size = 40.dp,
+                            contentDescription = stringResource(R.string.system_full_name),
+                        )
                         Spacer(modifier = Modifier.weight(1f))
                         HeaderIconButton(
                             onClick = { scope.launch { drawerState.close() } },
@@ -280,7 +268,6 @@ fun DashboardScreen(
                                             DashboardRoute.Profile.route,
                                             DashboardRoute.ReserveBook.route,
                                             DashboardRoute.BorrowProcess.route,
-                                            DashboardRoute.ReturnBook.route,
                                             DashboardRoute.PrintingService.route,
                                             DashboardRoute.QrLogin.route,
                                             DashboardRoute.Search.route,
@@ -429,79 +416,98 @@ fun DashboardScreen(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .height(56.dp)
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 8.dp)
                 ) {
-                    HeaderIconButton(
-                        onClick = { scope.launch { drawerState.open() } },
-                        contentDescription = "Open navigation"
-                    ) {
-                        Icon(
-                            Lucide.Menu,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
+                    Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                        HeaderIconButton(
+                            onClick = { scope.launch { drawerState.open() } },
+                            contentDescription = "Open navigation"
+                        ) {
+                            Icon(
+                                Lucide.Menu,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    Box(modifier = Modifier.align(Alignment.Center)) {
+                        StiMarkTile(
+                            size = 36.dp,
+                            contentDescription = stringResource(R.string.system_full_name),
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    StiMarkTile(
-                        size = 36.dp,
-                        contentDescription = stringResource(R.string.system_full_name),
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    HeaderIconButton(
-                        onClick = {
-                            dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
-                        },
-                        contentDescription = "Notifications"
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box {
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Search.route)
+                            },
+                            contentDescription = "Search"
+                        ) {
                             Icon(
-                                Lucide.Bell,
+                                Lucide.Search,
                                 contentDescription = null,
                                 tint = ElmsCyan,
                                 modifier = Modifier.size(24.dp)
                             )
-                            ElmsCountBadge(
-                                count = unreadCount,
-                                modifier = Modifier.align(Alignment.TopEnd)
-                            )
                         }
-                    }
-                    HeaderIconButton(
-                        onClick = {
-                            dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
-                        },
-                        contentDescription = "My profile"
-                    ) {
-                        val initials = repository.session.userName
-                            .trim()
-                            .split(Regex("\\s+"))
-                            .filter { it.isNotEmpty() }
-                            .take(2)
-                            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
-                            .joinToString("")
-                            .ifBlank { userType.displayName.take(2).uppercase() }
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(StiYellow)
-                                .border(1.dp, ElmsCyan.copy(alpha = 0.25f), CircleShape),
-                            contentAlignment = Alignment.Center
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
+                            },
+                            contentDescription = "Notifications"
                         ) {
-                            Text(
-                                text = initials,
-                                color = StiMarkBlue,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 11.sp,
-                            )
+                            Box {
+                                Icon(
+                                    Lucide.Bell,
+                                    contentDescription = null,
+                                    tint = ElmsCyan,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                ElmsCountBadge(
+                                    count = unreadCount,
+                                    modifier = Modifier.align(Alignment.TopEnd)
+                                )
+                            }
+                        }
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
+                            },
+                            contentDescription = "My profile"
+                        ) {
+                            val initials = repository.session.userName
+                                .trim()
+                                .split(Regex("\\s+"))
+                                .filter { it.isNotEmpty() }
+                                .take(2)
+                                .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+                                .joinToString("")
+                                .ifBlank { userType.displayName.take(2).uppercase() }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(StiYellow)
+                                    .border(1.dp, ElmsCyan.copy(alpha = 0.25f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = initials,
+                                    color = StiMarkBlue,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 11.sp,
+                                )
+                            }
                         }
                     }
                 }
@@ -580,9 +586,6 @@ fun DashboardScreen(
                             onNavigateToBorrowProcess = {
                                 dashboardNavController.navigate(DashboardRoute.BorrowProcess.route)
                             },
-                            onNavigateToReturnBook = {
-                                dashboardNavController.navigate(DashboardRoute.ReturnBook.route)
-                            },
                             onNavigateToReserveBook = {
                                 dashboardNavController.navigate(DashboardRoute.ReserveBook.route)
                             },
@@ -636,9 +639,6 @@ fun DashboardScreen(
                                 dashboardNavController.navigate(DashboardRoute.BookCart.route)
                             }
                         )
-                    }
-                    composable(DashboardRoute.ReturnBook.route) {
-                        ReturnBookScreen(onBack = { dashboardNavController.popBackStack() })
                     }
                     composable(DashboardRoute.ReserveBook.route) {
                         ReserveBookScreen(
@@ -723,7 +723,7 @@ fun DashboardScreen(
 
 private fun drawerItems(userType: UserType): List<DrawerItem> {
     val items = mutableListOf(
-        DrawerItem(DashboardRoute.Overview.route, "Overview", Lucide.LayoutDashboard, "My library"),
+        DrawerItem(DashboardRoute.Overview.route, "Dashboard", Lucide.LayoutDashboard, "My library"),
         DrawerItem(DashboardRoute.BookCatalog.route, "Book catalog", Lucide.BookOpen),
         DrawerItem(DashboardRoute.BookCart.route, "Book cart", Lucide.ShoppingCart),
         DrawerItem(DashboardRoute.ResearchCatalog.route, "Research & thesis", Lucide.FileText),

@@ -51,6 +51,7 @@ import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.ElmsListRow
 import com.example.stismartlib.ui.components.ElmsLoadingBlock
 import com.example.stismartlib.ui.components.ElmsPillTab
+import com.example.stismartlib.ui.components.ElmsPullRefresh
 import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -83,6 +84,7 @@ fun BookCatalogScreen(
     var category by remember { mutableStateOf("All") }
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    var refreshError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
 
     LaunchedEffect(searchQuery, reloadToken) {
@@ -115,66 +117,155 @@ fun BookCatalogScreen(
     val listSpacing = 8.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (viewMode == CatalogViewMode.GRID_2) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = listContentPadding,
-                horizontalArrangement = Arrangement.spacedBy(listSpacing),
-                verticalArrangement = Arrangement.spacedBy(listSpacing)
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    BookCatalogHeader()
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    PortalField(
-                        label = "",
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = "Search title, author, or ISBN...",
-                        leadingIcon = Lucide.Search
-                    )
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    BookCatalogAvailabilityFilters(
-                        availabilityFilter = availabilityFilter,
-                        onAvailabilityChange = { availabilityFilter = it },
-                        totalCount = repository.books.size
-                    )
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    BookCatalogCategoryFilters(
-                        categories = categories,
-                        selected = category,
-                        onCategoryChange = { category = it }
-                    )
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    BookCatalogResultsBar(
-                        count = visible.size,
-                        viewMode = viewMode,
-                        onViewModeChange = ::setViewMode
-                    )
-                }
-                if (loadError != null) {
+        ElmsPullRefresh(
+            onRefresh = {
+                repository.loadBooks(searchQuery.ifBlank { null })
+            },
+            onRefreshError = { refreshError = it },
+        ) {
+            if (viewMode == CatalogViewMode.GRID_2) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = listContentPadding,
+                    horizontalArrangement = Arrangement.spacedBy(listSpacing),
+                    verticalArrangement = Arrangement.spacedBy(listSpacing)
+                ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                        BookCatalogHeader()
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        PortalButton(
-                            text = "Try again",
-                            onClick = { reloadToken += 1 },
-                            variant = PortalButtonVariant.Secondary
+                        PortalField(
+                            label = "",
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = "Search title, author, or ISBN...",
+                            leadingIcon = Lucide.Search
                         )
                     }
-                }
-                when {
-                    loading && repository.books.isEmpty() -> {
-                        item(span = { GridItemSpan(maxLineSpan) }) { ElmsLoadingBlock() }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        BookCatalogAvailabilityFilters(
+                            availabilityFilter = availabilityFilter,
+                            onAvailabilityChange = { availabilityFilter = it },
+                            totalCount = repository.books.size
+                        )
                     }
-                    loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
-                    visible.isEmpty() -> {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        BookCatalogCategoryFilters(
+                            categories = categories,
+                            selected = category,
+                            onCategoryChange = { category = it }
+                        )
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        BookCatalogResultsBar(
+                            count = visible.size,
+                            viewMode = viewMode,
+                            onViewModeChange = ::setViewMode
+                        )
+                    }
+                    if (loadError != null) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
+                            ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                        }
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            PortalButton(
+                                text = "Try again",
+                                onClick = { reloadToken += 1 },
+                                variant = PortalButtonVariant.Secondary
+                            )
+                        }
+                    }
+                    if (refreshError != null) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ElmsBanner(message = refreshError.orEmpty(), tone = ElmsBannerTone.Error)
+                        }
+                    }
+                    when {
+                        loading && repository.books.isEmpty() -> {
+                            item(span = { GridItemSpan(maxLineSpan) }) { ElmsLoadingBlock() }
+                        }
+                        loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
+                        visible.isEmpty() -> {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                ElmsEmptyState(
+                                    title = "No books found",
+                                    description = "Try another search or category.",
+                                    actionLabel = "Clear filters",
+                                    onAction = {
+                                        searchQuery = ""
+                                        category = "All"
+                                        availabilityFilter = "All"
+                                    }
+                                )
+                            }
+                        }
+                        else -> items(visible, key = { it.id }) { book ->
+                            BookCatalogGridTile(
+                                book = book,
+                                onClick = { onBookClick(book.id) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = listContentPadding,
+                    verticalArrangement = Arrangement.spacedBy(listSpacing)
+                ) {
+                    item { BookCatalogHeader() }
+                    item {
+                        PortalField(
+                            label = "",
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = "Search title, author, or ISBN...",
+                            leadingIcon = Lucide.Search
+                        )
+                    }
+                    item {
+                        BookCatalogAvailabilityFilters(
+                            availabilityFilter = availabilityFilter,
+                            onAvailabilityChange = { availabilityFilter = it },
+                            totalCount = repository.books.size
+                        )
+                    }
+                    item {
+                        BookCatalogCategoryFilters(
+                            categories = categories,
+                            selected = category,
+                            onCategoryChange = { category = it }
+                        )
+                    }
+                    item {
+                        BookCatalogResultsBar(
+                            count = visible.size,
+                            viewMode = viewMode,
+                            onViewModeChange = ::setViewMode
+                        )
+                    }
+                    if (loadError != null) {
+                        item {
+                            ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                        }
+                        item {
+                            PortalButton(
+                                text = "Try again",
+                                onClick = { reloadToken += 1 },
+                                variant = PortalButtonVariant.Secondary
+                            )
+                        }
+                    }
+                    if (refreshError != null) {
+                        item {
+                            ElmsBanner(message = refreshError.orEmpty(), tone = ElmsBannerTone.Error)
+                        }
+                    }
+                    when {
+                        loading && repository.books.isEmpty() -> item { ElmsLoadingBlock() }
+                        loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
+                        visible.isEmpty() -> item {
                             ElmsEmptyState(
                                 title = "No books found",
                                 description = "Try another search or category.",
@@ -186,99 +277,27 @@ fun BookCatalogScreen(
                                 }
                             )
                         }
-                    }
-                    else -> items(visible, key = { it.id }) { book ->
-                        BookCatalogGridTile(
-                            book = book,
-                            onClick = { onBookClick(book.id) }
-                        )
-                    }
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = listContentPadding,
-                verticalArrangement = Arrangement.spacedBy(listSpacing)
-            ) {
-                item { BookCatalogHeader() }
-                item {
-                    PortalField(
-                        label = "",
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = "Search title, author, or ISBN...",
-                        leadingIcon = Lucide.Search
-                    )
-                }
-                item {
-                    BookCatalogAvailabilityFilters(
-                        availabilityFilter = availabilityFilter,
-                        onAvailabilityChange = { availabilityFilter = it },
-                        totalCount = repository.books.size
-                    )
-                }
-                item {
-                    BookCatalogCategoryFilters(
-                        categories = categories,
-                        selected = category,
-                        onCategoryChange = { category = it }
-                    )
-                }
-                item {
-                    BookCatalogResultsBar(
-                        count = visible.size,
-                        viewMode = viewMode,
-                        onViewModeChange = ::setViewMode
-                    )
-                }
-                if (loadError != null) {
-                    item {
-                        ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
-                    }
-                    item {
-                        PortalButton(
-                            text = "Try again",
-                            onClick = { reloadToken += 1 },
-                            variant = PortalButtonVariant.Secondary
-                        )
-                    }
-                }
-                when {
-                    loading && repository.books.isEmpty() -> item { ElmsLoadingBlock() }
-                    loadError != null && repository.books.isEmpty() -> { /* banner + retry above */ }
-                    visible.isEmpty() -> item {
-                        ElmsEmptyState(
-                            title = "No books found",
-                            description = "Try another search or category.",
-                            actionLabel = "Clear filters",
-                            onAction = {
-                                searchQuery = ""
-                                category = "All"
-                                availabilityFilter = "All"
+                        else -> items(visible, key = { it.id }) { book ->
+                            ElmsSectionCard(contentPadding = 8.dp) {
+                                ElmsListRow(
+                                    title = book.title,
+                                    subtitle = "${book.author} · ${book.availabilityLabel()}",
+                                    onClick = { onBookClick(book.id) },
+                                    leading = {
+                                        BookCoverPlaceholder(
+                                            title = book.title,
+                                            color = Color(book.coverColor),
+                                            modifier = Modifier.size(52.dp)
+                                        )
+                                    },
+                                    trailing = {
+                                        StatusBadge(
+                                            label = if (book.availableCopies > 0) "Available" else "Reserved",
+                                            warning = book.availableCopies == 0
+                                        )
+                                    }
+                                )
                             }
-                        )
-                    }
-                    else -> items(visible, key = { it.id }) { book ->
-                        ElmsSectionCard(contentPadding = 8.dp) {
-                            ElmsListRow(
-                                title = book.title,
-                                subtitle = "${book.author} · ${book.availabilityLabel()}",
-                                onClick = { onBookClick(book.id) },
-                                leading = {
-                                    BookCoverPlaceholder(
-                                        title = book.title,
-                                        color = Color(book.coverColor),
-                                        modifier = Modifier.size(52.dp)
-                                    )
-                                },
-                                trailing = {
-                                    StatusBadge(
-                                        label = if (book.availableCopies > 0) "Available" else "Reserved",
-                                        warning = book.availableCopies == 0
-                                    )
-                                }
-                            )
                         }
                     }
                 }

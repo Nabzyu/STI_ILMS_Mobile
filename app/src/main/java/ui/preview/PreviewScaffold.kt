@@ -14,6 +14,7 @@ import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.NotificationCategory
 import com.example.stismartlib.data.models.NotificationItem
+import com.example.stismartlib.data.models.PrintReceipt
 import com.example.stismartlib.data.models.PrintRequest
 import com.example.stismartlib.data.models.PrintStatus
 import com.example.stismartlib.data.models.ProfileAvatar
@@ -71,6 +72,7 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
         availableCopies = 2,
         totalCopies = 4,
         description = "Sample catalog entry for Compose previews.",
+        callNumber = "QA76.6 .C662 2009",
     )
     val sampleResearch = Research(
         id = "preview-research-1",
@@ -81,8 +83,17 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
         abstract = "Sample research abstract for Compose previews.",
         shelfLocation = "RES-AI-014",
     )
+    val unavailableBook = sampleBook.copy(
+        id = "preview-book-unavailable",
+        title = "Design Patterns",
+        availableCopies = 0,
+        totalCopies = 3,
+    )
     if (repository.books.none { it.id == sampleBook.id }) {
         repository.books.add(sampleBook)
+    }
+    if (repository.books.none { it.id == unavailableBook.id }) {
+        repository.books.add(unavailableBook)
     }
     if (repository.research.none { it.id == sampleResearch.id }) {
         repository.research.add(sampleResearch)
@@ -99,6 +110,17 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 fineStatus = FineStatus.NONE,
             ),
         )
+        repository.borrowingHistory.add(
+            BorrowingRecord(
+                id = "42",
+                book = sampleBook.copy(id = "preview-book-2", title = "Clean Code"),
+                borrowDate = "2026-10-12",
+                dueDate = "2026-10-26",
+                returnDate = null,
+                borrowStatus = BorrowStatus.PENDING,
+                fineStatus = FineStatus.NONE,
+            ),
+        )
     }
     if (repository.reservations.isEmpty()) {
         repository.reservations.add(
@@ -108,6 +130,17 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 queuePosition = 1,
                 dateReserved = "2026-10-01",
                 status = "pending",
+                pickupDeadline = null,
+            ),
+        )
+        repository.reservations.add(
+            Reservation(
+                id = "preview-res-2",
+                book = sampleBook.copy(id = "preview-book-ready", title = "Clean Code"),
+                queuePosition = 1,
+                dateReserved = "2026-10-05",
+                status = "ready_for_pickup",
+                pickupDeadline = "2026-10-16",
             ),
         )
     }
@@ -149,6 +182,25 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
                 amountPaid = 0.0,
                 status = PrintStatus.PENDING,
                 dateSubmitted = "2026-10-10",
+                paymentStatus = "Unpaid",
+            ),
+        )
+    }
+    if (repository.printReceipts.isEmpty()) {
+        repository.printReceipts.add(
+            PrintReceipt(
+                id = "7",
+                receiptNumber = "PR-2026-0007",
+                verificationCode = "AB12CD",
+                fileName = "lab-report.pdf",
+                amountReceived = 15.0,
+                printType = "Monochrome",
+                paperSize = "A4",
+                copies = 2,
+                pageCount = 6,
+                receivedAt = "2026-10-11",
+                receivedBy = "Desk Staff",
+                status = "Issued",
             ),
         )
     }

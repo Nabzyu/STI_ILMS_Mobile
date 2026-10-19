@@ -92,6 +92,9 @@ fun BookDetailScreen(
                 InfoLine("Year", book.yearPublished.toString())
                 InfoLine("Publisher", book.publisher)
                 InfoLine("Shelf", book.shelfLocation)
+                if (book.callNumber.isNotBlank()) {
+                    InfoLine("Call number", book.callNumber)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(book.description, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
             }

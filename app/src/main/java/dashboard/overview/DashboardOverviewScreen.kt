@@ -24,6 +24,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +41,11 @@ import com.example.stismartlib.data.models.FineStatus
 import com.example.stismartlib.data.models.PrintStatus
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.UserType
+import com.example.stismartlib.ui.components.ElmsBanner
+import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsListRow
 import com.example.stismartlib.ui.components.ElmsPillTab
+import com.example.stismartlib.ui.components.ElmsPullRefresh
 import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -57,7 +64,6 @@ fun DashboardOverviewScreen(
     onNavigateToResearchCatalog: () -> Unit,
     onNavigateToBorrowingHistory: () -> Unit,
     onNavigateToBorrowProcess: () -> Unit,
-    onNavigateToReturnBook: () -> Unit,
     onNavigateToReserveBook: () -> Unit,
     onNavigateToPrintingService: () -> Unit,
     onNavigateToQrLogin: () -> Unit,
@@ -81,12 +87,30 @@ fun DashboardOverviewScreen(
     val latestNotification = repository.notifications.firstOrNull()
     val reservation = repository.reservations.firstOrNull()
     val recommendedBooks = repository.books.take(5)
+    var refreshError by remember { mutableStateOf<String?>(null) }
 
+    ElmsPullRefresh(
+        onRefresh = {
+            repository.loadBorrowingHistory()
+            repository.loadNotifications()
+            repository.loadFines()
+            repository.loadReservations()
+            repository.loadPrintHistory()
+            repository.loadBooks()
+        },
+        onRefreshError = { refreshError = it },
+    ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (refreshError != null) {
+            item {
+                ElmsBanner(message = refreshError.orEmpty(), tone = ElmsBannerTone.Error)
+            }
+        }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ElmsPillTab(label = "Dashboard", selected = true, onClick = {})
@@ -210,11 +234,10 @@ fun DashboardOverviewScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            PortalButton(
-                                text = "Return",
-                                onClick = onNavigateToReturnBook,
-                                variant = PortalButtonVariant.Secondary,
-                                modifier = Modifier.fillMaxWidth()
+                            Text(
+                                "Bring this book to the library counter to return it. Your account updates after staff process the return.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -363,6 +386,7 @@ fun DashboardOverviewScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
     }
 }
 

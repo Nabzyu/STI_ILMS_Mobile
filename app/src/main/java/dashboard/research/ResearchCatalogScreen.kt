@@ -39,6 +39,7 @@ import com.example.stismartlib.ui.components.ElmsBannerTone
 import com.example.stismartlib.ui.components.ElmsEmptyState
 import com.example.stismartlib.ui.components.ElmsListRow
 import com.example.stismartlib.ui.components.ElmsLoadingBlock
+import com.example.stismartlib.ui.components.ElmsPullRefresh
 import com.example.stismartlib.ui.components.ElmsSectionCard
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -65,6 +66,7 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    var refreshError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
     LaunchedEffect(query, reloadToken) {
         loading = true
@@ -85,52 +87,123 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
     val listContentPadding = PaddingValues(16.dp)
     val listSpacing = 8.dp
 
-    if (viewMode == CatalogViewMode.GRID_2) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = listContentPadding,
-            horizontalArrangement = Arrangement.spacedBy(listSpacing),
-            verticalArrangement = Arrangement.spacedBy(listSpacing)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                ResearchCatalogHeader()
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                PortalField(
-                    label = "",
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = "Search research...",
-                    leadingIcon = Lucide.Search
-                )
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                ResearchCatalogResultsBar(
-                    count = rows.size,
-                    viewMode = viewMode,
-                    onViewModeChange = ::setViewMode
-                )
-            }
-            if (loadError != null) {
+    ElmsPullRefresh(
+        onRefresh = {
+            repository.loadResearch(query.ifBlank { null })
+        },
+        onRefreshError = { refreshError = it },
+    ) {
+        if (viewMode == CatalogViewMode.GRID_2) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = listContentPadding,
+                horizontalArrangement = Arrangement.spacedBy(listSpacing),
+                verticalArrangement = Arrangement.spacedBy(listSpacing)
+            ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                    ResearchCatalogHeader()
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    PortalButton(
-                        text = "Try again",
-                        onClick = { reloadToken += 1 },
-                        variant = PortalButtonVariant.Secondary
+                    PortalField(
+                        label = "",
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = "Search research...",
+                        leadingIcon = Lucide.Search
                     )
                 }
-            }
-            when {
-                loading && repository.research.isEmpty() -> {
-                    item(span = { GridItemSpan(maxLineSpan) }) { ElmsLoadingBlock() }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ResearchCatalogResultsBar(
+                        count = rows.size,
+                        viewMode = viewMode,
+                        onViewModeChange = ::setViewMode
+                    )
                 }
-                loadError != null && repository.research.isEmpty() -> { /* banner + retry above */ }
-                rows.isEmpty() -> {
+                if (loadError != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
+                        ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PortalButton(
+                            text = "Try again",
+                            onClick = { reloadToken += 1 },
+                            variant = PortalButtonVariant.Secondary
+                        )
+                    }
+                }
+                if (refreshError != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        ElmsBanner(message = refreshError.orEmpty(), tone = ElmsBannerTone.Error)
+                    }
+                }
+                when {
+                    loading && repository.research.isEmpty() -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) { ElmsLoadingBlock() }
+                    }
+                    loadError != null && repository.research.isEmpty() -> { /* banner + retry above */ }
+                    rows.isEmpty() -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            ElmsEmptyState(
+                                title = "No research found",
+                                description = "Try a different search term.",
+                                actionLabel = "Clear search",
+                                onAction = { query = "" }
+                            )
+                        }
+                    }
+                    else -> items(rows, key = { it.id }) { item ->
+                        ResearchCatalogGridTile(
+                            item = item,
+                            onClick = { onResearchClick(item.id) }
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = listContentPadding,
+                verticalArrangement = Arrangement.spacedBy(listSpacing)
+            ) {
+                item { ResearchCatalogHeader() }
+                item {
+                    PortalField(
+                        label = "",
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = "Search research...",
+                        leadingIcon = Lucide.Search
+                    )
+                }
+                item {
+                    ResearchCatalogResultsBar(
+                        count = rows.size,
+                        viewMode = viewMode,
+                        onViewModeChange = ::setViewMode
+                    )
+                }
+                if (loadError != null) {
+                    item {
+                        ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
+                    }
+                    item {
+                        PortalButton(
+                            text = "Try again",
+                            onClick = { reloadToken += 1 },
+                            variant = PortalButtonVariant.Secondary
+                        )
+                    }
+                }
+                if (refreshError != null) {
+                    item {
+                        ElmsBanner(message = refreshError.orEmpty(), tone = ElmsBannerTone.Error)
+                    }
+                }
+                when {
+                    loading && repository.research.isEmpty() -> item { ElmsLoadingBlock() }
+                    loadError != null && repository.research.isEmpty() -> { /* banner + retry above */ }
+                    rows.isEmpty() -> item {
                         ElmsEmptyState(
                             title = "No research found",
                             description = "Try a different search term.",
@@ -138,63 +211,9 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                             onAction = { query = "" }
                         )
                     }
-                }
-                else -> items(rows, key = { it.id }) { item ->
-                    ResearchCatalogGridTile(
-                        item = item,
-                        onClick = { onResearchClick(item.id) }
-                    )
-                }
-            }
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = listContentPadding,
-            verticalArrangement = Arrangement.spacedBy(listSpacing)
-        ) {
-            item { ResearchCatalogHeader() }
-            item {
-                PortalField(
-                    label = "",
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = "Search research...",
-                    leadingIcon = Lucide.Search
-                )
-            }
-            item {
-                ResearchCatalogResultsBar(
-                    count = rows.size,
-                    viewMode = viewMode,
-                    onViewModeChange = ::setViewMode
-                )
-            }
-            if (loadError != null) {
-                item {
-                    ElmsBanner(message = loadError.orEmpty(), tone = ElmsBannerTone.Error)
-                }
-                item {
-                    PortalButton(
-                        text = "Try again",
-                        onClick = { reloadToken += 1 },
-                        variant = PortalButtonVariant.Secondary
-                    )
-                }
-            }
-            when {
-                loading && repository.research.isEmpty() -> item { ElmsLoadingBlock() }
-                loadError != null && repository.research.isEmpty() -> { /* banner + retry above */ }
-                rows.isEmpty() -> item {
-                    ElmsEmptyState(
-                        title = "No research found",
-                        description = "Try a different search term.",
-                        actionLabel = "Clear search",
-                        onAction = { query = "" }
-                    )
-                }
-                else -> items(rows, key = { it.id }) { item ->
-                    ResearchListItem(item, onClick = { onResearchClick(item.id) })
+                    else -> items(rows, key = { it.id }) { item ->
+                        ResearchListItem(item, onClick = { onResearchClick(item.id) })
+                    }
                 }
             }
         }

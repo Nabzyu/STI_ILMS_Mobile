@@ -14,7 +14,12 @@ import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
+import com.example.stismartlib.network.dto.CancelBorrowRequestDto
+import com.example.stismartlib.network.dto.ClearanceRecordDto
+import com.example.stismartlib.network.dto.PrintQuoteDto
+import com.example.stismartlib.network.dto.PrintReceiptDto
 import com.example.stismartlib.network.dto.PrintRequestDto
+import com.example.stismartlib.network.dto.PrintServiceStatusDto
 import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
@@ -34,9 +39,11 @@ import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.network.dto.ReserveResultDto
 import com.example.stismartlib.network.dto.SessionActivityDto
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -109,6 +116,12 @@ interface LibraryApi {
     @POST("api/v1/borrow/submit-request")
     suspend fun submitBorrowRequest(@Body body: BorrowSubmitRequest): Response<ApiEnvelope<BorrowRequestReceiptDto>>
 
+    @PUT("api/v1/circulation/requests/{transactionId}/cancel")
+    suspend fun cancelBorrowRequest(
+        @Path("transactionId") transactionId: Int,
+        @Body body: CancelBorrowRequestDto = CancelBorrowRequestDto(),
+    ): Response<ApiEnvelope<Any>>
+
     @GET("api/v1/reservations")
     suspend fun reservations(): Response<ApiEnvelope<List<ReservationItemDto>>>
 
@@ -141,8 +154,71 @@ interface LibraryApi {
     @GET("api/v1/notifications")
     suspend fun notifications(@Query("limit") limit: Int = 100): Response<ApiEnvelope<NotificationListDto>>
 
+    @PATCH("api/v1/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: Int): Response<ApiEnvelope<Any>>
+
+    @PATCH("api/v1/notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<ApiEnvelope<Any>>
+
+    @DELETE("api/v1/notifications/{id}")
+    suspend fun deleteNotification(@Path("id") id: Int): Response<ApiEnvelope<Any>>
+
+    @DELETE("api/v1/notifications")
+    suspend fun deleteAllNotifications(): Response<ApiEnvelope<Any>>
+
+    @GET("api/v1/printing/service-status")
+    suspend fun printServiceStatus(): Response<ApiEnvelope<PrintServiceStatusDto>>
+
     @GET("api/v1/printing/requests")
     suspend fun printRequests(): Response<ApiEnvelope<List<PrintRequestDto>>>
+
+    @GET("api/v1/printing/receipts")
+    suspend fun printReceipts(): Response<ApiEnvelope<List<PrintReceiptDto>>>
+
+    @GET("api/v1/printing/receipts/{receiptId}")
+    suspend fun printReceipt(
+        @Path("receiptId") receiptId: Int,
+    ): Response<ApiEnvelope<PrintReceiptDto>>
+
+    @GET("api/v1/printing/receipts/{receiptId}/pdf")
+    suspend fun printReceiptPdf(
+        @Path("receiptId") receiptId: Int,
+    ): Response<ResponseBody>
+
+    @Multipart
+    @POST("api/v1/printing/quote")
+    suspend fun quotePrint(
+        @Part document: MultipartBody.Part,
+        @Part("number_of_copies") numberOfCopies: RequestBody,
+        @Part("print_type") printType: RequestBody,
+        @Part("paper_size") paperSize: RequestBody,
+    ): Response<ApiEnvelope<PrintQuoteDto>>
+
+    @Multipart
+    @POST("api/v1/printing/requests")
+    suspend fun submitPrintRequest(
+        @Part document: MultipartBody.Part,
+        @Part("number_of_copies") numberOfCopies: RequestBody,
+        @Part("page_count") pageCount: RequestBody,
+        @Part("document_sha256") documentSha256: RequestBody,
+        @Part("quoted_cost") quotedCost: RequestBody,
+        @Part("print_type") printType: RequestBody,
+        @Part("paper_size") paperSize: RequestBody,
+        @Part("optional_notes") optionalNotes: RequestBody?,
+    ): Response<ApiEnvelope<PrintRequestDto>>
+
+    @PUT("api/v1/printing/requests/{requestId}/cancel")
+    suspend fun cancelPrintRequest(
+        @Path("requestId") requestId: Int,
+    ): Response<ApiEnvelope<Any>>
+
+    @GET("api/v1/clearance/me")
+    suspend fun clearanceMe(): Response<ApiEnvelope<ClearanceRecordDto>>
+
+    @POST("api/v1/clearance/lost-books/{transactionId}/report")
+    suspend fun reportLostBook(
+        @Path("transactionId") transactionId: Int,
+    ): Response<ApiEnvelope<Any>>
 
     @GET("api/v1/attendance/pass")
     suspend fun attendancePass(): Response<ApiEnvelope<AttendancePassDto>>
