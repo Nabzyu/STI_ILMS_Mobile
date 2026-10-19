@@ -5,6 +5,8 @@ import com.example.stismartlib.session.SessionStore
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -95,17 +97,34 @@ object ApiClient {
             }
         }
         val fieldErrors = errorEnvelope?.details?.errors ?: body?.details?.errors ?: emptyMap()
-        if (::sessionStore.isInitialized && code != "INVALID_CREDENTIALS") {
-            val shouldClear = code in setOf(
-                "ACCOUNT_DEACTIVATED",
-                "ACCOUNT_ACCESS_REVOKED",
-                "JWT_REQUIRED",
-                "JWT_INVALID",
-            )
-            if (shouldClear) sessionStore.clear()
+        // Only a request that carried a token can end a session; login/code steps send none.
+        val sentToken = response.raw().request.header("Authorization") != null
+        if (::sessionStore.isInitialized && sentToken && isSessionEndCode(code)) {
+            sessionStore.clear()
+            _sessionEnded.value = true
         }
         throw ApiException(message, code, fieldErrors, response.code())
     }
+
+    private val _sessionEnded = MutableStateFlow(false)
+
+    /** True after a signed-in request was rejected because the session is over. */
+    val sessionEnded: StateFlow<Boolean> = _sessionEnded
+
+    fun acknowledgeSessionEnded() {
+        _sessionEnded.value = false
+    }
+
+    fun isSessionEndCode(code: String): Boolean = code in SESSION_END_CODES
+
+    private val SESSION_END_CODES = setOf(
+        "SESSION_EXPIRED",
+        "SESSION_UPGRADE_REQUIRED",
+        "JWT_REQUIRED",
+        "JWT_INVALID",
+        "ACCOUNT_ACCESS_REVOKED",
+        "ACCOUNT_DEACTIVATED",
+    )
 
     private fun parseError(response: Response<*>): ApiEnvelope<Any?>? {
         val raw = response.errorBody()?.string().orEmpty()

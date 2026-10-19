@@ -31,7 +31,8 @@ private fun mapApiException(error: ApiException, fallback: String): String {
             return "Too many login attempts. Please wait 15 minutes and try again."
         "ADMIN_ROLE_REQUIRED" ->
             return "This sign-in is for Librarian / Admin accounts only."
-        "JWT_REQUIRED", "JWT_INVALID", "ACCOUNT_ACCESS_REVOKED" -> return SESSION_EXPIRED
+        "JWT_REQUIRED", "JWT_INVALID", "ACCOUNT_ACCESS_REVOKED",
+        "SESSION_EXPIRED", "SESSION_UPGRADE_REQUIRED" -> return SESSION_EXPIRED
         "JWT_ROLE_FORBIDDEN" -> return "You do not have access to this action."
         "AUTH_VALIDATION_FAILED" -> return "Please check the highlighted fields."
         "INVALID_TOKEN_RESPONSE" -> return SIGN_IN_INCOMPLETE
