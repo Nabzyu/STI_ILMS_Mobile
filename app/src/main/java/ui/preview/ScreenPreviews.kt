@@ -109,7 +109,11 @@ private fun LoginCodeStepDarkPreview() {
 @Composable
 private fun RegisterVerifyStepPreview() {
     PreviewApp(seedSampleData = false) {
-        RegisterScreen(navController = rememberNavController(), initialPendingEmail = "ana@ormoc.sti.edu.ph")
+        RegisterScreen(
+            navController = rememberNavController(),
+            initialVerifySchoolId = "02000123456",
+            initialPendingEmail = "ana@ormoc.sti.edu.ph",
+        )
     }
 }
 
@@ -117,7 +121,27 @@ private fun RegisterVerifyStepPreview() {
 @Composable
 private fun RegisterVerifyStepDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
-        RegisterScreen(navController = rememberNavController(), initialPendingEmail = "ana@ormoc.sti.edu.ph")
+        RegisterScreen(
+            navController = rememberNavController(),
+            initialVerifySchoolId = "02000123456",
+            initialPendingEmail = "ana@ormoc.sti.edu.ph",
+        )
+    }
+}
+
+@Preview(name = "Register · Resume from login", showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterResumeStepPreview() {
+    PreviewApp(seedSampleData = false) {
+        RegisterScreen(navController = rememberNavController(), initialVerifySchoolId = "02000123456")
+    }
+}
+
+@Preview(name = "Register · Resume from login · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun RegisterResumeStepDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        RegisterScreen(navController = rememberNavController(), initialVerifySchoolId = "02000123456")
     }
 }
 

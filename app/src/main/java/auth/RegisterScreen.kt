@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +54,9 @@ private val StiEmailPattern = Regex("^[^\\s@]+@ormoc\\.sti\\.edu\\.ph$", RegexOp
 @Composable
 fun RegisterScreen(
     navController: NavHostController,
-    // Preview hook: start on the email-code step for this address.
+    // Set when login found an unverified registration; opens the code step for this School ID.
+    initialVerifySchoolId: String? = null,
+    // Preview hook: the address shown on the code step.
     initialPendingEmail: String? = null,
 ) {
     val repository = rememberLibraryRepository()
@@ -73,9 +76,15 @@ fun RegisterScreen(
     var message by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
-    // null = form; set after register = waiting for the email code.
-    var pendingEmail by remember { mutableStateOf(initialPendingEmail) }
-    var verified by remember { mutableStateOf(false) }
+    // null = form; set after register (or from login) = waiting for the email code.
+    // Saveable so leaving the step (rotation, process death) cannot strand the request.
+    var pendingSchoolId by rememberSaveable { mutableStateOf(initialVerifySchoolId) }
+    var pendingEmail by rememberSaveable { mutableStateOf(initialPendingEmail) }
+    var verified by rememberSaveable { mutableStateOf(false) }
+    // Resumed from login (no email known): the code may be dead, so resend is open right away.
+    var resendWaitSeconds by rememberSaveable {
+        mutableIntStateOf(if (initialVerifySchoolId != null && initialPendingEmail == null) 0 else 60)
+    }
     var code by remember { mutableStateOf("") }
     var isResending by remember { mutableStateOf(false) }
     var cooldownKey by remember { mutableIntStateOf(0) }
@@ -133,17 +142,19 @@ fun RegisterScreen(
             )
             return@Column
         }
-        val emailForCode = pendingEmail
-        if (emailForCode != null) {
+        val schoolIdForCode = pendingSchoolId
+        if (schoolIdForCode != null) {
             EmailCodeStep(
-                instructions = "Enter the 6-digit code sent to $emailForCode. It expires in 10 minutes.",
+                instructions = pendingEmail
+                    ?.let { "Enter the 6-digit code sent to $it. It expires in 10 minutes." }
+                    ?: "Enter the 6-digit code from your school email, or request a new one.",
                 code = code,
                 onCodeChange = { code = it },
                 error = null,
                 isSubmitting = isSubmitting,
                 isResending = isResending,
                 cooldownKey = cooldownKey,
-                cooldownSeconds = 60,
+                cooldownSeconds = resendWaitSeconds,
                 verifyLabel = "Verify email",
                 onVerify = {
                     if (isSubmitting) return@EmailCodeStep
@@ -151,7 +162,7 @@ fun RegisterScreen(
                     message = ""
                     scope.launch {
                         try {
-                            repository.verifyRegistrationCode(schoolId, code)
+                            repository.verifyRegistrationCode(schoolIdForCode, code)
                             verified = true
                         } catch (error: Exception) {
                             code = ""
@@ -167,7 +178,8 @@ fun RegisterScreen(
                     message = ""
                     scope.launch {
                         try {
-                            repository.resendRegistrationCode(schoolId)
+                            repository.resendRegistrationCode(schoolIdForCode)
+                            resendWaitSeconds = 60
                             cooldownKey++
                             code = ""
                             isError = false
@@ -367,6 +379,7 @@ fun RegisterScreen(
                         code = ""
                         cooldownKey++
                         pendingEmail = request.email ?: normalizedEmail
+                        pendingSchoolId = normalized
                     } catch (error: ApiException) {
                         errors = error.fieldErrors
                         isError = true
@@ -394,3 +407,7 @@ fun RegisterScreen(
     }
     }
 }
+
+/** Login hit a registration still waiting for its email code: reopen that step instead of a dead end. */
+fun registrationResumeRoute(error: ApiException, schoolId: String): String? =
+    if (error.code == "EMAIL_VERIFICATION_REQUIRED") Screen.Register.create(verifySchoolId = schoolId) else null

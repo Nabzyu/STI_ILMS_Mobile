@@ -268,6 +268,12 @@ fun LoginScreen(
                             challenge = next
                         }
                     } catch (error: ApiException) {
+                        val resume = registrationResumeRoute(error, normalized.uppercase())
+                        if (resume != null) {
+                            password = ""
+                            navController.navigate(resume)
+                            return@launch
+                        }
                         banner = userFacingMessage(error, "Invalid school ID or password.")
                         schoolIdError = error.fieldErrors["school_id"]
                         passwordError = error.fieldErrors["password"]
@@ -303,7 +309,7 @@ fun LoginScreen(
                 fontSize = 14.sp,
                 modifier = Modifier
                     .sizeIn(minHeight = 48.dp)
-                    .clickable { navController.navigate(Screen.Register.route) }
+                    .clickable { navController.navigate(Screen.Register.create()) }
                     .padding(vertical = 12.dp)
             )
         }

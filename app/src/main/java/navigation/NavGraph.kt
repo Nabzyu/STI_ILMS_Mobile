@@ -57,8 +57,20 @@ fun AppNavGraph(startDestination: String = Screen.Login.route) {
             )
         }
 
-        composable(Screen.Register.route) {
-            RegisterScreen(navController)
+        composable(
+            route = Screen.Register.route,
+            arguments = listOf(
+                navArgument("verifySchoolId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            RegisterScreen(
+                navController,
+                initialVerifySchoolId = backStackEntry.arguments?.getString("verifySchoolId"),
+            )
         }
 
         composable(Screen.ForgotPassword.route) {
