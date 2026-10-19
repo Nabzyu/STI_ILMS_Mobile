@@ -177,6 +177,9 @@ data class ClearanceStanding(
     val fines: List<ClearanceFineItem> = emptyList(),
     val lostBooks: List<ClearanceLostBookItem> = emptyList(),
     val activeOverrideReason: String? = null,
+    /** Clearance deadline wording (see clearanceScheduleLine); null only for preview data. */
+    val scheduleLine: String? = null,
+    val pastDeadline: Boolean = false,
 )
 
 data class ClearanceLoanItem(

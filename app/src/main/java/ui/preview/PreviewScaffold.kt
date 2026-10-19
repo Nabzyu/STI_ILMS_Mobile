@@ -14,6 +14,7 @@ import com.example.stismartlib.data.DayHours
 import com.example.stismartlib.data.LibraryClosure
 import com.example.stismartlib.data.LibrarySchedule
 import com.example.stismartlib.data.campusToday
+import com.example.stismartlib.data.models.ClearanceStanding
 import com.example.stismartlib.data.models.FineReceipt
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
@@ -164,6 +165,21 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
         )
     }
     repository.applyPreviewPaging()
+    if (repository.clearance == null) {
+        repository.applyPreviewClearance(
+            ClearanceStanding(
+                isCleared = false,
+                statusLabel = "Not Cleared",
+                reason = "Return 1 borrowed book before clearance.",
+                checkedAt = "2026-10-20",
+                activeLoans = 1,
+                unpaidOverdueFines = 0,
+                unpaidReplacementCharges = 0.0,
+                totalOutstanding = 0.0,
+                scheduleLine = "Clearance deadline: October 30, 2026 at 5:00 PM (Philippine time)",
+            )
+        )
+    }
     if (repository.librarySchedule == null) {
         repository.applyPreviewSchedule(
             LibrarySchedule(

@@ -160,6 +160,11 @@ class LibraryRepository(
         session = session.copy(userType = userType)
     }
 
+    /** Preview / demo seed; not used by production API flows. */
+    fun applyPreviewClearance(standing: ClearanceStanding) {
+        clearance = standing
+    }
+
     /** Preview / demo seed: pretend every list has a second page. */
     fun applyPreviewPaging() {
         booksCursor = PageCursor(1, 2)
@@ -1183,6 +1188,8 @@ class LibraryRepository(
             isCleared = cleared,
             statusLabel = if (cleared) "Cleared" else "Not Cleared",
             reason = reason.orEmpty(),
+            scheduleLine = clearanceScheduleLine(schedule),
+            pastDeadline = isPastClearanceDeadline(schedule, java.time.Instant.now()),
             checkedAt = checkedAt,
             activeLoans = summary?.activeLoans ?: loans.orEmpty().size,
             unpaidOverdueFines = summary?.unpaidOverdueFines ?: fines.orEmpty().size,

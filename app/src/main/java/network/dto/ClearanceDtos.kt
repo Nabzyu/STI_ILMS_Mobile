@@ -15,6 +15,8 @@ data class ClearanceRecordDto(
     val fines: List<ClearanceFineDto>? = null,
     @SerializedName(value = "lost_books", alternate = ["lostBooks"])
     val lostBooks: List<ClearanceLostBookDto>? = null,
+    /** Absent on servers before the library revision; null when no schedule is set. */
+    val schedule: ClearanceScheduleDto? = null,
     @SerializedName(value = "active_override", alternate = ["activeOverride"])
     val activeOverride: ClearanceOverrideDto? = null,
 )
@@ -100,4 +102,12 @@ data class ClearanceOverrideDto(
     val expiresAt: String? = null,
     @SerializedName(value = "applied_by", alternate = ["appliedBy"])
     val appliedBy: String? = null,
+)
+
+/** `clearance/me.schedule`: the term's clearance deadline (ISO instant) set by the librarian. */
+data class ClearanceScheduleDto(
+    val termId: Long? = null,
+    val academicYear: String? = null,
+    val termName: String? = null,
+    val deadlineAt: String? = null,
 )

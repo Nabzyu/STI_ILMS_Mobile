@@ -72,6 +72,14 @@ fun ClearanceScreen() {
                 description = "Official standing from the library clearance service.",
             )
         }
+        standing?.scheduleLine?.let { line ->
+            item {
+                ElmsBanner(
+                    message = line,
+                    tone = if (standing.pastDeadline && !standing.isCleared) ElmsBannerTone.Error else ElmsBannerTone.Info,
+                )
+            }
+        }
         if (refreshError != null) {
             item {
                 ElmsBanner(
