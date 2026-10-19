@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +49,11 @@ import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.launch
 
 @Composable
-fun BookCartScreen(onBack: () -> Unit) {
+fun BookCartScreen(
+    onBack: () -> Unit,
+    // Preview hook: show the sync notice without a server.
+    initialSyncNotice: String? = null,
+) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
     var showBorrowDialog by remember { mutableStateOf(false) }
@@ -56,7 +61,14 @@ fun BookCartScreen(onBack: () -> Unit) {
     var dialogMessage by remember { mutableStateOf("Your cart is ready to claim at the library desk.") }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var syncNotice by remember { mutableStateOf(initialSyncNotice) }
     val cartItems = repository.cart
+
+    LaunchedEffect(Unit) {
+        if (cartItems.isNotEmpty() && repository.syncCartWithServer() > 0) {
+            syncNotice = "Removed books already requested or checked out. You can find them in My books or Borrowing history."
+        }
+    }
     val allAvailable = repository.allCartItemsAvailable()
     val cartLimitText = if (repository.session.userType == UserType.STUDENT) {
         "Student cart limit: maximum of 2 books"
@@ -69,6 +81,10 @@ fun BookCartScreen(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         if (errorMessage != null) {
             ElmsBanner(message = errorMessage.orEmpty(), tone = ElmsBannerTone.Error)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        syncNotice?.let {
+            ElmsBanner(message = it, tone = ElmsBannerTone.Info)
             Spacer(modifier = Modifier.height(8.dp))
         }
         if (cartItems.isEmpty()) {

@@ -6,6 +6,7 @@ import com.example.stismartlib.network.dto.BookCatalogItemDto
 import com.example.stismartlib.network.dto.BorrowRequestReceiptDto
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
+import com.example.stismartlib.network.dto.CartStateDto
 import com.example.stismartlib.network.dto.FineListDto
 import com.example.stismartlib.network.dto.FineReceiptDto
 import com.example.stismartlib.network.dto.LibraryScheduleDto
@@ -182,6 +183,9 @@ interface LibraryApi {
     suspend fun printReceipt(
         @Path("receiptId") receiptId: Int,
     ): Response<ApiEnvelope<PrintReceiptDto>>
+
+    @GET("api/v1/borrow/cart-state")
+    suspend fun cartState(): Response<ApiEnvelope<CartStateDto>>
 
     @GET("api/v1/borrowing/my-books")
     suspend fun myBooks(): Response<ApiEnvelope<MyBooksDto>>

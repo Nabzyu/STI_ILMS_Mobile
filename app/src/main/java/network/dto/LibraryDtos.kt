@@ -50,6 +50,9 @@ data class BorrowingSummaryDto(
     val activeReservations: Int? = null,
 )
 
+/** `GET borrow/cart-state`: titles with an active loan or request. */
+data class CartStateDto(val activeTitleIds: List<Long>? = null)
+
 /** `GET borrowing/my-books`: the same row shape as borrowing history. */
 data class MyBooksDto(val items: List<BorrowingItemDto>? = null)
 

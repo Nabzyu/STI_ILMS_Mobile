@@ -697,3 +697,26 @@ private fun MyBooksUnavailablePreview() {
         }
     }
 }
+
+private const val PreviewCartSyncNotice =
+    "Removed books already requested or checked out. You can find them in My books or Borrowing history."
+
+@Preview(name = "Book cart · Sync notice", showBackground = true, showSystemUi = true)
+@Composable
+private fun BookCartSyncNoticePreview() {
+    PreviewApp {
+        NestedPreview {
+            BookCartScreen(onBack = NoOp, initialSyncNotice = PreviewCartSyncNotice)
+        }
+    }
+}
+
+@Preview(name = "Book cart · Sync notice · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun BookCartSyncNoticeDarkPreview() {
+    PreviewApp(darkTheme = true) {
+        NestedPreview {
+            BookCartScreen(onBack = NoOp, initialSyncNotice = PreviewCartSyncNotice)
+        }
+    }
+}

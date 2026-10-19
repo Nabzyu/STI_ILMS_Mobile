@@ -583,6 +583,23 @@ class LibraryRepository(
         )
     }
 
+    /**
+     * Drops cart titles the server already has an active loan or request for; returns how many.
+     * If the check is unavailable (route not deployed, offline) the cart is left as it is.
+     */
+    suspend fun syncCartWithServer(): Int = withContext(Dispatchers.IO) {
+        val active = try {
+            ApiClient.unwrap(ApiClient.api.cartState()).activeTitleIds
+        } catch (error: ApiException) {
+            null
+        } catch (error: java.io.IOException) {
+            null
+        }
+        val drop = cartAfterSync(cart.map { it.book.id }, active)
+        if (drop.isNotEmpty()) cart.removeAll { it.book.id in drop }
+        drop.size
+    }
+
     /** The borrowed collection; the endpoint is new, so a missing route shows as an error state. */
     suspend fun loadMyBooks() = withContext(Dispatchers.IO) {
         try {
