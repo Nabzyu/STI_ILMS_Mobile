@@ -20,6 +20,8 @@ data class LoginRequest(
     val password: String,
     /** "user" for Student/Faculty, "staff" for Librarian/Admin. The server resolves the role. */
     val portal: String,
+    /** "Student", "Faculty", or "Admin". The hosted API still requires it; newer ones ignore it when portal is set. */
+    @SerializedName("login_as") val loginAs: String,
 )
 
 data class LoginVerifyRequest(

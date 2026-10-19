@@ -52,6 +52,15 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
+// shortcut: the hosted API still requires login_as, so each role is tried in turn and a wrong
+// password can use up to 3 server attempts. Drop login_as and the role loop once the
+// library-revision API is deployed (it reads portal only).
+/** Sign-in tries as (login_as, portal) pairs, remembered role first. */
+internal fun loginAttempts(preferredLoginAs: String?): List<Pair<String, String>> =
+    (listOfNotNull(preferredLoginAs) + listOf("Student", "Faculty", "Admin"))
+        .distinct()
+        .map { role -> role to if (role == "Admin") "staff" else "user" }
+
 /** Pending Student/Faculty sign-in waiting for the 6-digit code sent to the school email. */
 data class LoginChallenge(
     val challengeId: String,
@@ -142,8 +151,8 @@ class LibraryRepository(
 
     /**
      * Single sign-in for Student, Faculty, and Librarian/Admin. The server resolves the role
-     * from the account; `portal` only limits which roles may sign in. Try the remembered portal
-     * first, then the other one on INVALID_CREDENTIALS only.
+     * from the account; `portal` only limits which roles may sign in. Try the remembered role
+     * first, then the others ([loginAttempts]) on INVALID_CREDENTIALS only.
      *
      * Returns a [LoginChallenge] when the server asks for an email code (Student/Faculty);
      * finish with [verifyLoginCode]. Returns null when the session is already signed in.
@@ -151,17 +160,10 @@ class LibraryRepository(
     suspend fun login(schoolId: String, password: String): LoginChallenge? = withContext(Dispatchers.IO) {
         lastError = null
         val normalizedSchoolId = schoolId.trim().uppercase()
-        val preferred = sessionStore.preferredLoginAs(normalizedSchoolId)
-        val portals = if (preferred == LOGIN_AS_ADMIN) {
-            listOf(PORTAL_STAFF, PORTAL_USER)
-        } else {
-            listOf(PORTAL_USER, PORTAL_STAFF)
-        }
-
         var lastInvalid: ApiException? = null
-        for (portal in portals) {
+        for ((loginAs, portal) in loginAttempts(sessionStore.preferredLoginAs(normalizedSchoolId))) {
             try {
-                return@withContext authenticate(normalizedSchoolId, password, portal)
+                return@withContext authenticate(normalizedSchoolId, password, loginAs, portal)
             } catch (error: ApiException) {
                 if (error.code != "INVALID_CREDENTIALS") throw error
                 lastInvalid = error
@@ -171,14 +173,21 @@ class LibraryRepository(
             ?: ApiException("Invalid school ID or password.", "INVALID_CREDENTIALS")
     }
 
-    private suspend fun authenticate(schoolId: String, password: String, portal: String): LoginChallenge? {
+    private suspend fun authenticate(
+        schoolId: String,
+        password: String,
+        loginAs: String,
+        portal: String,
+    ): LoginChallenge? {
         // Drop any previous token so login is not sent with a stale Authorization header.
         sessionStore.clear()
         clearLocalData()
         session = LibrarySession()
 
         val data = ApiClient.unwrap(
-            ApiClient.api.login(LoginRequest(schoolId = schoolId, password = password, portal = portal)),
+            ApiClient.api.login(
+                LoginRequest(schoolId = schoolId, password = password, portal = portal, loginAs = loginAs),
+            ),
         )
         if (data.otpRequired == true) {
             val challengeId = data.challengeId?.takeIf { it.isNotBlank() }
@@ -258,9 +267,7 @@ class LibraryRepository(
     }
 
     private companion object {
-        const val PORTAL_USER = "user"
         const val PORTAL_STAFF = "staff"
-        const val LOGIN_AS_ADMIN = "Admin"
         const val DEFAULT_RESEND_SECONDS = 60
         const val MAX_PRINT_DOCUMENT_BYTES = 4 * 1024 * 1024
     }
