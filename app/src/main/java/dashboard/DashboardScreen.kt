@@ -76,6 +76,7 @@ import com.example.stismartlib.ui.dashboard.catalog.BookCatalogScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookDetailScreen
 import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanScreen
 import com.example.stismartlib.ui.dashboard.history.BorrowingHistoryScreen
+import com.example.stismartlib.ui.dashboard.mybooks.MyBooksScreen
 import com.example.stismartlib.ui.dashboard.notifications.NotificationsScreen
 import com.example.stismartlib.ui.dashboard.overview.DashboardOverviewScreen
 import com.example.stismartlib.ui.dashboard.printing.PrintingHistoryScreen
@@ -271,6 +272,7 @@ fun DashboardScreen(
                                             DashboardRoute.PrintingService.route,
                                             DashboardRoute.QrLogin.route,
                                             DashboardRoute.Search.route,
+                                            DashboardRoute.MyBooks.route,
                                         )
                                         if (stacksOverTabs) {
                                             dashboardNavController.openStackedRoute(item.route)
@@ -709,6 +711,9 @@ fun DashboardScreen(
                     composable(DashboardRoute.Profile.route) {
                         ProfileScreen()
                     }
+                    composable(DashboardRoute.MyBooks.route) {
+                        MyBooksScreen()
+                    }
                     composable(DashboardRoute.FloorPlan.route) {
                         FloorPlanScreen()
                     }
@@ -731,7 +736,8 @@ private fun drawerItems(userType: UserType): List<DrawerItem> {
         DrawerItem(DashboardRoute.BookCart.route, "Book cart", Lucide.ShoppingCart),
         DrawerItem(DashboardRoute.ResearchCatalog.route, "Research & thesis", Lucide.FileText),
         DrawerItem(DashboardRoute.BorrowingHistory.route, "Borrowing history", Lucide.CalendarClock, "My activity"),
-        DrawerItem(DashboardRoute.ReserveBook.route, "Reservations", Lucide.BookMarked)
+        DrawerItem(DashboardRoute.ReserveBook.route, "Reservations", Lucide.BookMarked),
+        DrawerItem(DashboardRoute.MyBooks.route, "My books", Lucide.LibraryBig),
     )
     if (userType == UserType.STUDENT) {
         items += DrawerItem(DashboardRoute.PrintingService.route, "Printing service", Lucide.Printer)

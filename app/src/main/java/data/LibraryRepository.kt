@@ -106,6 +106,9 @@ class LibraryRepository(
     val borrowingHistory = mutableStateListOf<BorrowingRecord>()
     val fines = mutableStateListOf<FineRecord>()
     val fineReceipts = mutableStateListOf<FineReceipt>()
+    val myBooks = mutableStateListOf<MyBook>()
+    var myBooksError by mutableStateOf<String?>(null)
+        private set
     var booksCursor by mutableStateOf(PageCursor())
         private set
     var researchCursor by mutableStateOf(PageCursor())
@@ -578,6 +581,20 @@ class LibraryRepository(
             borrowStatus = borrowStatus,
             fineStatus = FineStatus.NONE,
         )
+    }
+
+    /** The borrowed collection; the endpoint is new, so a missing route shows as an error state. */
+    suspend fun loadMyBooks() = withContext(Dispatchers.IO) {
+        try {
+            val rows = ApiClient.unwrap(ApiClient.api.myBooks()).items.orEmpty()
+            myBooks.clear()
+            myBooks.addAll(myBooksCollection(rows))
+            myBooksError = null
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            myBooksError = userFacingMessage(error, "Your book collection could not be loaded.")
+            throw error
+        }
     }
 
     suspend fun loadReservations() = withContext(Dispatchers.IO) {
@@ -1077,6 +1094,8 @@ class LibraryRepository(
         fineReceipts.clear()
         fineReceiptsError = null
         librarySchedule = null
+        myBooks.clear()
+        myBooksError = null
         booksCursor = PageCursor()
         researchCursor = PageCursor()
         historyCursor = PageCursor()

@@ -4,9 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.stismartlib.data.LoginChallenge
+import com.example.stismartlib.data.MyBook
 import com.example.stismartlib.network.dto.BookLocationDto
 import com.example.stismartlib.network.dto.FloorPlanImageDto
 import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanContent
+import com.example.stismartlib.ui.dashboard.mybooks.MyBooksContent
 import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RecoveryStep
@@ -656,6 +658,42 @@ private fun BorrowingHistoryScreenDarkPreview() {
     PreviewApp(darkTheme = true) {
         NestedPreview {
             BorrowingHistoryScreen()
+        }
+    }
+}
+
+private val PreviewMyBooks = listOf(
+    MyBook("7", "Clean Code", "Robert C. Martin", "Borrowed", "2026-10-05", "2026-10-19", null),
+    MyBook("2", "Introduction to Algorithms", "Cormen et al.", "Overdue", "2026-09-20", "2026-10-04", null),
+    MyBook("4", "Design Patterns", "Gamma et al.", "Returned", "2026-08-12", "2026-08-26", "2026-08-25"),
+)
+
+@Preview(name = "My books", showBackground = true, showSystemUi = true)
+@Composable
+private fun MyBooksScreenPreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview {
+            MyBooksContent(PreviewMyBooks, loading = false, error = null, query = "", onQueryChange = {}, onRetry = {})
+        }
+    }
+}
+
+@Preview(name = "My books · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun MyBooksScreenDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        NestedPreview {
+            MyBooksContent(PreviewMyBooks, loading = false, error = null, query = "", onQueryChange = {}, onRetry = {})
+        }
+    }
+}
+
+@Preview(name = "My books · Unavailable", showBackground = true, showSystemUi = true)
+@Composable
+private fun MyBooksUnavailablePreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview {
+            MyBooksContent(emptyList(), loading = false, error = "This feature is not available right now.", query = "", onQueryChange = {}, onRetry = {})
         }
     }
 }

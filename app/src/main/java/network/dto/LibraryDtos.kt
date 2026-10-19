@@ -50,6 +50,9 @@ data class BorrowingSummaryDto(
     val activeReservations: Int? = null,
 )
 
+/** `GET borrowing/my-books`: the same row shape as borrowing history. */
+data class MyBooksDto(val items: List<BorrowingItemDto>? = null)
+
 data class BorrowingItemDto(
     val transactionId: Int? = null,
     val titleId: Int? = null,
