@@ -18,6 +18,12 @@ import com.example.stismartlib.network.dto.PrintRequestDto
 import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
+import com.example.stismartlib.network.dto.RecoveryDoneDto
+import com.example.stismartlib.network.dto.RecoveryRequest
+import com.example.stismartlib.network.dto.RecoveryResetRequest
+import com.example.stismartlib.network.dto.RecoveryStartDto
+import com.example.stismartlib.network.dto.RecoveryVerifyDto
+import com.example.stismartlib.network.dto.RecoveryVerifyRequest
 import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.RegisterResendRequest
@@ -52,6 +58,15 @@ interface LibraryApi {
 
     @POST("api/v1/auth/login/resend")
     suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    @POST("api/v1/auth/password-recovery/request")
+    suspend fun recoveryRequest(@Body body: RecoveryRequest): Response<ApiEnvelope<RecoveryStartDto>>
+
+    @POST("api/v1/auth/password-recovery/verify")
+    suspend fun recoveryVerify(@Body body: RecoveryVerifyRequest): Response<ApiEnvelope<RecoveryVerifyDto>>
+
+    @POST("api/v1/auth/password-recovery/reset")
+    suspend fun recoveryReset(@Body body: RecoveryResetRequest): Response<ApiEnvelope<RecoveryDoneDto>>
 
     @POST("api/v1/auth/activity")
     suspend fun authActivity(): Response<ApiEnvelope<SessionActivityDto>>

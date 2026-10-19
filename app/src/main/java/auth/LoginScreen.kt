@@ -231,6 +231,16 @@ fun LoginScreen(
                 fontSize = 14.sp
             )
         }
+        Text(
+            text = "Forgot password?",
+            color = ElmsCyan,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .sizeIn(minHeight = 48.dp)
+                .clickable { navController.navigate(Screen.ForgotPassword.route) }
+                .padding(vertical = 12.dp)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         PortalButton(
             text = if (isSubmitting) "Signing in..." else "Sign in",

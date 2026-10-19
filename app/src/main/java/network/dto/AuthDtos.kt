@@ -111,6 +111,39 @@ data class RegisterResendRequest(
     @SerializedName("school_id") val schoolId: String,
 )
 
+/** Password recovery: `identifier` is a School ID or school email. */
+data class RecoveryRequest(
+    val identifier: String,
+)
+
+/** Always neutral: returned even when no account matches. */
+data class RecoveryStartDto(
+    @SerializedName(value = "challenge_id", alternate = ["challengeId"])
+    val challengeId: String? = null,
+    val message: String? = null,
+)
+
+data class RecoveryVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class RecoveryVerifyDto(
+    @SerializedName(value = "reset_token", alternate = ["resetToken"])
+    val resetToken: String? = null,
+)
+
+data class RecoveryResetRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    @SerializedName("reset_token") val resetToken: String,
+    val password: String,
+    @SerializedName("confirm_password") val confirmPassword: String,
+)
+
+data class RecoveryDoneDto(
+    val message: String? = null,
+)
+
 data class MeUser(
     val id: Int? = null,
     @SerializedName(value = "account_id", alternate = ["accountId"])

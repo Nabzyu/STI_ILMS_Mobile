@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.network.ApiClient
+import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
@@ -58,6 +59,10 @@ fun AppNavGraph(startDestination: String = Screen.Login.route) {
 
         composable(Screen.Register.route) {
             RegisterScreen(navController)
+        }
+
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(navController)
         }
 
         composable(

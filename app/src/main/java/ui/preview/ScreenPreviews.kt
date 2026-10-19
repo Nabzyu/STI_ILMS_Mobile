@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.stismartlib.data.LoginChallenge
+import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
+import com.example.stismartlib.ui.auth.RecoveryStep
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.PortalScreen
@@ -116,6 +118,65 @@ private fun RegisterVerifyStepPreview() {
 private fun RegisterVerifyStepDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         RegisterScreen(navController = rememberNavController(), initialPendingEmail = "ana@ormoc.sti.edu.ph")
+    }
+}
+
+@Preview(name = "Forgot password", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordPreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(navController = rememberNavController())
+    }
+}
+
+@Preview(name = "Forgot password · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        ForgotPasswordScreen(navController = rememberNavController())
+    }
+}
+
+private const val PreviewRecoveryNotice =
+    "If an active student account matches, a six-digit code will be sent to its school email. Check your inbox and junk folder."
+
+@Preview(name = "Forgot password · Code", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordCodePreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(rememberNavController(), RecoveryStep.Code, PreviewRecoveryNotice)
+    }
+}
+
+@Preview(name = "Forgot password · Code · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordCodeDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        ForgotPasswordScreen(rememberNavController(), RecoveryStep.Code, PreviewRecoveryNotice)
+    }
+}
+
+@Preview(name = "Forgot password · New", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordNewPreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(rememberNavController(), RecoveryStep.NewPassword)
+    }
+}
+
+@Preview(name = "Forgot password · New · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordNewDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        ForgotPasswordScreen(rememberNavController(), RecoveryStep.NewPassword)
+    }
+}
+
+@Preview(name = "Forgot password · Done", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordDonePreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(rememberNavController(), RecoveryStep.Done, "Password updated. Sign in with your new password.")
     }
 }
 

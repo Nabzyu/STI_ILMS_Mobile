@@ -32,6 +32,10 @@ import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.ProfileAvatarDto
 import com.example.stismartlib.network.dto.ProfileMeDto
 import com.example.stismartlib.network.dto.ProfileUpdateRequest
+import com.example.stismartlib.network.dto.RecoveryRequest
+import com.example.stismartlib.network.dto.RecoveryResetRequest
+import com.example.stismartlib.network.dto.RecoveryStartDto
+import com.example.stismartlib.network.dto.RecoveryVerifyRequest
 import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.RegisterResendRequest
@@ -298,6 +302,33 @@ class LibraryRepository(
         lastError = null
         ApiClient.unwrap(ApiClient.api.registerResend(RegisterResendRequest(schoolId.trim())))
         Unit
+    }
+
+    /** Emails a 6-digit reset code. The reply is neutral whether or not the account exists. */
+    suspend fun startPasswordRecovery(identifier: String): RecoveryStartDto = withContext(Dispatchers.IO) {
+        lastError = null
+        ApiClient.unwrap(ApiClient.api.recoveryRequest(RecoveryRequest(identifier.trim())))
+    }
+
+    /** Returns the one-time reset token for [resetPassword]. */
+    suspend fun verifyRecoveryCode(challengeId: String, code: String): String = withContext(Dispatchers.IO) {
+        lastError = null
+        ApiClient.unwrap(ApiClient.api.recoveryVerify(RecoveryVerifyRequest(challengeId, code.trim())))
+            .resetToken?.takeIf { it.isNotBlank() }
+            ?: throw ApiException("This password reset has expired or already been used. Start again.")
+    }
+
+    /** Returns the server's confirmation message. */
+    suspend fun resetPassword(
+        challengeId: String,
+        resetToken: String,
+        password: String,
+        confirm: String,
+    ): String = withContext(Dispatchers.IO) {
+        lastError = null
+        ApiClient.unwrap(
+            ApiClient.api.recoveryReset(RecoveryResetRequest(challengeId, resetToken, password, confirm)),
+        ).message ?: "Password updated. Sign in with your new password."
     }
 
     /**
