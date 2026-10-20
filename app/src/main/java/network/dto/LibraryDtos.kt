@@ -50,6 +50,22 @@ data class BorrowingSummaryDto(
     val activeReservations: Int? = null,
 )
 
+/** `GET dashboard` (Student/Faculty); only the fields the app shows. */
+data class UserDashboardDto(
+    val occupancy: OccupancyDto? = null,
+    val announcement: AnnouncementDto? = null,
+)
+
+data class OccupancyDto(val current: Int? = null, val capacity: Int? = null)
+
+data class AnnouncementDto(
+    val id: Long? = null,
+    val title: String? = null,
+    val message: String? = null,
+    val priority: String? = null,
+    val publishedAt: String? = null,
+)
+
 /** `GET borrow/cart-state`: titles with an active loan or request. */
 data class CartStateDto(val activeTitleIds: List<Long>? = null)
 

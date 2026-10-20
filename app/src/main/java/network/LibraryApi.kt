@@ -38,6 +38,7 @@ import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.RegisterResendRequest
 import com.example.stismartlib.network.dto.RegisterVerifyRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
+import com.example.stismartlib.network.dto.UserDashboardDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveRequestDto
 import com.example.stismartlib.network.dto.ReserveResultDto
@@ -183,6 +184,9 @@ interface LibraryApi {
     suspend fun printReceipt(
         @Path("receiptId") receiptId: Int,
     ): Response<ApiEnvelope<PrintReceiptDto>>
+
+    @GET("api/v1/dashboard")
+    suspend fun userDashboard(): Response<ApiEnvelope<UserDashboardDto>>
 
     @GET("api/v1/borrow/cart-state")
     suspend fun cartState(): Response<ApiEnvelope<CartStateDto>>

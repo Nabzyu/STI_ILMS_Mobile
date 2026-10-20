@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stismartlib.data.DashboardSummary
 import com.example.stismartlib.data.LibrarySchedule
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.FineStatus
@@ -75,7 +76,11 @@ fun DashboardOverviewScreen(
 ) {
     val repository = rememberLibraryRepository()
     if (repository.session.userType == UserType.FACULTY) {
-        FacultyOverview(schedule = repository.librarySchedule, onViewMap = onNavigateToFloorPlan)
+        FacultyOverview(
+            schedule = repository.librarySchedule,
+            summary = repository.dashboardSummary,
+            onViewMap = onNavigateToFloorPlan,
+        )
         return
     }
 
@@ -101,6 +106,7 @@ fun DashboardOverviewScreen(
             repository.loadPrintHistory()
             repository.loadBooks()
             runCatching { repository.loadLibrarySchedule() }
+            runCatching { repository.loadDashboardSummary() }
         },
         onRefreshError = { refreshError = it },
     ) {
@@ -125,6 +131,10 @@ fun DashboardOverviewScreen(
                     count = unread.takeIf { it > 0 }
                 )
             }
+        }
+
+        repository.dashboardSummary?.let { summary ->
+            item { LibraryPulseCards(summary) }
         }
 
         item {
@@ -473,7 +483,7 @@ private fun QuickStat(
 }
 
 @Composable
-private fun FacultyOverview(schedule: LibrarySchedule?, onViewMap: () -> Unit) {
+private fun FacultyOverview(schedule: LibrarySchedule?, summary: DashboardSummary?, onViewMap: () -> Unit) {
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ElmsSectionCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -501,6 +511,9 @@ private fun FacultyOverview(schedule: LibrarySchedule?, onViewMap: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+        if (summary != null) {
+            LibraryPulseCards(summary)
         }
         if (schedule != null) {
             LibraryHoursCard(schedule = schedule, onViewMap = onViewMap)

@@ -10,7 +10,9 @@ import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
+import com.example.stismartlib.data.DashboardSummary
 import com.example.stismartlib.data.DayHours
+import com.example.stismartlib.data.LibraryAnnouncement
 import com.example.stismartlib.data.LibraryClosure
 import com.example.stismartlib.data.LibrarySchedule
 import com.example.stismartlib.data.campusToday
@@ -165,6 +167,20 @@ private fun seedPreviewLibraryData(repository: LibraryRepository) {
         )
     }
     repository.applyPreviewPaging()
+    if (repository.dashboardSummary == null) {
+        repository.applyPreviewDashboardSummary(
+            DashboardSummary(
+                occupancyCurrent = 42,
+                occupancyCapacity = 80,
+                announcement = LibraryAnnouncement(
+                    title = "Inventory week",
+                    message = "The library closes at 3:00 PM on Friday for inventory.",
+                    priority = "Important",
+                    publishedAt = "2026-10-20 09:15 AM",
+                ),
+            )
+        )
+    }
     if (repository.clearance == null) {
         repository.applyPreviewClearance(
             ClearanceStanding(

@@ -119,6 +119,8 @@ class LibraryRepository(
         private set
     var librarySchedule by mutableStateOf<LibrarySchedule?>(null)
         private set
+    var dashboardSummary by mutableStateOf<DashboardSummary?>(null)
+        private set
     val notifications = mutableStateListOf<NotificationItem>()
     val printHistory = mutableStateListOf<PrintRequest>()
     val printReceipts = mutableStateListOf<PrintReceipt>()
@@ -158,6 +160,11 @@ class LibraryRepository(
 
     fun setUserType(userType: UserType) {
         session = session.copy(userType = userType)
+    }
+
+    /** Preview / demo seed; not used by production API flows. */
+    fun applyPreviewDashboardSummary(summary: DashboardSummary) {
+        dashboardSummary = summary
     }
 
     /** Preview / demo seed; not used by production API flows. */
@@ -471,6 +478,7 @@ class LibraryRepository(
             loadPrintHistory()
             runCatching { loadPrintReceipts() }
             runCatching { loadLibrarySchedule() }
+            runCatching { loadDashboardSummary() }
             loadAttendancePass()
         } catch (error: ApiException) {
             lastError = userFacingMessage(error, "Unable to refresh your library data.")
@@ -703,6 +711,11 @@ class LibraryRepository(
                 isRead = item.isRead == true,
             )
         })
+    }
+
+    /** Occupancy and the current announcement; the dashboard hides them while this is null. */
+    suspend fun loadDashboardSummary() = withContext(Dispatchers.IO) {
+        dashboardSummary = ApiClient.unwrap(ApiClient.api.userDashboard()).toSummary()
     }
 
     /** Opening hours and closures; screens hide the schedule while this is null. */
@@ -1114,6 +1127,7 @@ class LibraryRepository(
         fineReceipts.clear()
         fineReceiptsError = null
         librarySchedule = null
+        dashboardSummary = null
         myBooks.clear()
         myBooksError = null
         booksCursor = PageCursor()
