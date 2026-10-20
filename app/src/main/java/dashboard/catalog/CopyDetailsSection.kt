@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -92,7 +93,7 @@ private fun CopyFacts(copy: CatalogCopyDto) {
         CopyFact("Book location", displayValue(copy.shelfLocation))
         CopyFact("Current condition", displayValue(copy.conditionStatus))
         CopyFact("Accession", displayValue(copy.accessionNumber))
-        val svg = svgBytesFromDataUri(copy.barcodeImageData)
+        val svg = remember(copy.barcodeImageData) { svgBytesFromDataUri(copy.barcodeImageData) }
         if (svg != null) {
             Spacer(modifier = Modifier.height(10.dp))
             // Barcodes need a light background to scan, so this stays white in dark mode too.
@@ -108,7 +109,7 @@ private fun CopyFacts(copy: CatalogCopyDto) {
                         .data(svg)
                         .decoderFactory(SvgDecoder.Factory())
                         .build(),
-                    contentDescription = "Barcode ${copy.barcode.orEmpty()}",
+                    contentDescription = null, // the barcode text below is read instead
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -132,7 +133,7 @@ private fun CopyFacts(copy: CatalogCopyDto) {
 
 @Composable
 private fun CopyFact(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column(modifier = Modifier.padding(vertical = 4.dp).semantics(mergeDescendants = true) {}) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
         Text(value, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
     }

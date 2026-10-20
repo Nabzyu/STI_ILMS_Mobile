@@ -77,11 +77,16 @@ fun DashboardOverviewScreen(
 ) {
     val repository = rememberLibraryRepository()
     if (repository.session.userType == UserType.FACULTY) {
-        FacultyOverview(
-            schedule = repository.librarySchedule,
-            summary = repository.dashboardSummary,
-            onViewMap = onNavigateToFloorPlan,
-        )
+        ElmsPullRefresh(
+            onRefresh = { runCatching { repository.loadDashboardSummary() } },
+            onRefreshError = {},
+        ) {
+            FacultyOverview(
+                schedule = repository.librarySchedule,
+                summary = repository.dashboardSummary,
+                onViewMap = onNavigateToFloorPlan,
+            )
+        }
         return
     }
 
