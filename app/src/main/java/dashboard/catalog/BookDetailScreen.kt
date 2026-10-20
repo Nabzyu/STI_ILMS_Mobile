@@ -99,6 +99,12 @@ fun BookDetailScreen(
                 Text(book.description, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
             }
         }
+        book.previewBarcode?.let { barcode ->
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                CopyDetailsSection(barcode)
+            }
+        }
         item {
             Spacer(modifier = Modifier.height(12.dp))
             PortalButton(text = "Generate APA reference", onClick = { showApaCitation = true }, variant = PortalButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())

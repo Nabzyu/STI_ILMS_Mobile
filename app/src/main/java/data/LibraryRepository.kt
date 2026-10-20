@@ -518,6 +518,7 @@ class LibraryRepository(
         totalCopies = totalCopiesCount ?: 0,
         description = currentAvailabilityStatus.orEmpty(),
         callNumber = callNumber.orEmpty(),
+        previewBarcode = previewBarcode?.takeIf { it.isNotBlank() },
     )
 
     suspend fun loadResearch(query: String? = null) = withContext(Dispatchers.IO) {

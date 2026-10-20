@@ -50,6 +50,15 @@ data class BorrowingSummaryDto(
     val activeReservations: Int? = null,
 )
 
+/** `GET catalog/copies/{barcode}`: one physical copy; `barcodeImageData` is an SVG data URI. */
+data class CatalogCopyDto(
+    val accessionNumber: String? = null,
+    val barcode: String? = null,
+    val shelfLocation: String? = null,
+    val conditionStatus: String? = null,
+    val barcodeImageData: String? = null,
+)
+
 /** `GET dashboard` (Student/Faculty); only the fields the app shows. */
 data class UserDashboardDto(
     val occupancy: OccupancyDto? = null,

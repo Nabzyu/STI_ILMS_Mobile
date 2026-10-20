@@ -17,6 +17,8 @@ data class Book(
     val description: String,
     val coverColor: Long = 0xFF0B5EA2,
     val callNumber: String = "",
+    /** A physical copy's barcode for copy details; null when the title has no copy. */
+    val previewBarcode: String? = null,
 )
 
 data class PrintReceipt(

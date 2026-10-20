@@ -7,6 +7,8 @@ import com.example.stismartlib.data.LoginChallenge
 import com.example.stismartlib.data.MyBook
 import com.example.stismartlib.network.dto.BookLocationDto
 import com.example.stismartlib.network.dto.FloorPlanImageDto
+import com.example.stismartlib.ui.dashboard.catalog.CopyDetailsContent
+import com.example.stismartlib.network.dto.CatalogCopyDto
 import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanContent
 import com.example.stismartlib.ui.dashboard.mybooks.MyBooksContent
 import com.example.stismartlib.ui.auth.ForgotPasswordScreen
@@ -718,5 +720,37 @@ private fun BookCartSyncNoticeDarkPreview() {
         NestedPreview {
             BookCartScreen(onBack = NoOp, initialSyncNotice = PreviewCartSyncNotice)
         }
+    }
+}
+
+private val PreviewCopy = CatalogCopyDto(
+    accessionNumber = "10042",
+    barcode = "STI-000123",
+    shelfLocation = "Circulation · Shelf A-3",
+    conditionStatus = "Good",
+    barcodeImageData = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScyMjAnIGhlaWdodD0nNjAnPjxyZWN0IHg9JzQnIHk9JzAnIHdpZHRoPSczJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzEwJyB5PScwJyB3aWR0aD0nMicgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxNScgeT0nMCcgd2lkdGg9JzQnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMjInIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzI3JyB5PScwJyB3aWR0aD0nMycgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PSczMycgeT0nMCcgd2lkdGg9JzUnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nNDEnIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzQ2JyB5PScwJyB3aWR0aD0nMycgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PSc1MicgeT0nMCcgd2lkdGg9JzInIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nNTcnIHk9JzAnIHdpZHRoPSc0JyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzY0JyB5PScwJyB3aWR0aD0nMycgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PSc3MCcgeT0nMCcgd2lkdGg9JzInIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nNzUnIHk9JzAnIHdpZHRoPSc1JyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzgzJyB5PScwJyB3aWR0aD0nMicgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PSc4OCcgeT0nMCcgd2lkdGg9JzMnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nOTQnIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9Jzk5JyB5PScwJyB3aWR0aD0nNCcgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxMDYnIHk9JzAnIHdpZHRoPSczJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzExMicgeT0nMCcgd2lkdGg9JzInIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMTE3JyB5PScwJyB3aWR0aD0nNScgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxMjUnIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzEzMCcgeT0nMCcgd2lkdGg9JzMnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMTM2JyB5PScwJyB3aWR0aD0nMicgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxNDEnIHk9JzAnIHdpZHRoPSc0JyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzE0OCcgeT0nMCcgd2lkdGg9JzMnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMTU0JyB5PScwJyB3aWR0aD0nMicgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxNTknIHk9JzAnIHdpZHRoPSc1JyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzE2NycgeT0nMCcgd2lkdGg9JzInIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMTcyJyB5PScwJyB3aWR0aD0nMycgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxNzgnIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzE4MycgeT0nMCcgd2lkdGg9JzQnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMTkwJyB5PScwJyB3aWR0aD0nMycgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScxOTYnIHk9JzAnIHdpZHRoPScyJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjxyZWN0IHg9JzIwMScgeT0nMCcgd2lkdGg9JzUnIGhlaWdodD0nNjAnIGZpbGw9J2JsYWNrJy8+PHJlY3QgeD0nMjA5JyB5PScwJyB3aWR0aD0nMicgaGVpZ2h0PSc2MCcgZmlsbD0nYmxhY2snLz48cmVjdCB4PScyMTQnIHk9JzAnIHdpZHRoPSczJyBoZWlnaHQ9JzYwJyBmaWxsPSdibGFjaycvPjwvc3ZnPg==",
+)
+
+@Preview(name = "Copy details", showBackground = true, showSystemUi = true)
+@Composable
+private fun CopyDetailsPreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview { CopyDetailsContent(PreviewCopy, loading = false, failed = false) }
+    }
+}
+
+@Preview(name = "Copy details · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun CopyDetailsDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        NestedPreview { CopyDetailsContent(PreviewCopy, loading = false, failed = false) }
+    }
+}
+
+@Preview(name = "Copy details · Unavailable", showBackground = true, showSystemUi = true)
+@Composable
+private fun CopyDetailsUnavailablePreview() {
+    PreviewApp(seedSampleData = false) {
+        NestedPreview { CopyDetailsContent(null, loading = false, failed = true) }
     }
 }
