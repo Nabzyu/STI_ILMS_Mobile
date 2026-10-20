@@ -2,6 +2,7 @@ package com.example.stismartlib.ui.dashboard.history
 
 import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
+import com.example.stismartlib.ui.components.rememberLoadMoreState
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +57,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BorrowingHistoryScreen() {
     val repository = rememberLibraryRepository()
+    val loadMore = rememberLoadMoreState()
     val records = repository.borrowingHistory
     val scope = rememberCoroutineScope()
     val loading = repository.isLoading && records.isEmpty()
@@ -324,7 +326,7 @@ fun BorrowingHistoryScreen() {
                 }
             }
             if (shouldOfferLoadMore(repository.borrowingHistory.size, repository.historyCursor)) {
-                item { LoadMoreFooter { repository.loadMoreBorrowingHistory() } }
+                item { LoadMoreFooter(loadMore) { repository.loadMoreBorrowingHistory() } }
             }
         }
     }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.stismartlib.data.isLoadedFor
 import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
+import com.example.stismartlib.ui.components.rememberLoadMoreState
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
     val repository = rememberLibraryRepository()
+    val loadMore = rememberLoadMoreState()
     val context = LocalContext.current
     val viewPrefs = remember { CatalogViewPrefs(context) }
     var viewMode by remember { mutableStateOf(viewPrefs.get(CatalogViewPrefs.KEY_RESEARCH)) }
@@ -168,7 +170,7 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                     }
                 }
                 if (shouldOfferLoadMore(repository.research.size, repository.researchCursor)) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreResearch() } }
+                    item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter(loadMore) { repository.loadMoreResearch() } }
                 }
             }
         } else {
@@ -227,7 +229,7 @@ fun ResearchCatalogScreen(onResearchClick: (String) -> Unit) {
                     }
                 }
                 if (shouldOfferLoadMore(repository.research.size, repository.researchCursor)) {
-                    item { LoadMoreFooter { repository.loadMoreResearch() } }
+                    item { LoadMoreFooter(loadMore) { repository.loadMoreResearch() } }
                 }
             }
         }

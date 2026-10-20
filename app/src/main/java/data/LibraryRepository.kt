@@ -493,7 +493,7 @@ class LibraryRepository(
         val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
         val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.books(query = next.query, page = next.page))
         if (booksCursor != from) return@withContext // a new search replaced the list meanwhile
-        books.addAll(mergePage(books.toList(), items.map { it.toBook() }) { it.id }.drop(books.size))
+        books.addAll(newItems(books, items.map { it.toBook() }) { it.id })
         booksCursor = next.copy(totalPages = pagination?.totalPages ?: next.totalPages)
     }
 
@@ -525,7 +525,7 @@ class LibraryRepository(
         val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
         val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.research(query = next.query, page = next.page))
         if (researchCursor != from) return@withContext
-        research.addAll(mergePage(research.toList(), items.map { it.toResearch() }) { it.id }.drop(research.size))
+        research.addAll(newItems(research, items.map { it.toResearch() }) { it.id })
         researchCursor = next.copy(totalPages = pagination?.totalPages ?: next.totalPages)
     }
 
@@ -539,11 +539,15 @@ class LibraryRepository(
         shelfLocation = shelfLocation.orEmpty().ifBlank { "—" },
     )
 
-    suspend fun loadBorrowingHistory() = withContext(Dispatchers.IO) {
-        val data = ApiClient.unwrap(ApiClient.api.borrowingHistory())
+    /** Loads borrowing history pages 1..[pages], so a refresh after an action keeps the user's place. */
+    suspend fun loadBorrowingHistory(pages: Int = 1) = withContext(Dispatchers.IO) {
+        val (rows, cursor) = fetchPages(upTo = pages, key = { record: BorrowingRecord -> record.id }) { page ->
+            val data = ApiClient.unwrap(ApiClient.api.borrowingHistory(page = page))
+            (data.items ?: emptyList()).map { it.toBorrowingRecord() } to (data.pagination?.totalPages ?: 1)
+        }
         borrowingHistory.clear()
-        borrowingHistory.addAll((data.items ?: emptyList()).map { it.toBorrowingRecord() })
-        historyCursor = PageCursor(1, data.pagination?.totalPages ?: 1)
+        borrowingHistory.addAll(rows)
+        historyCursor = cursor
     }
 
     /** Appends the next borrowing-history page; no-op on the last page. */
@@ -553,7 +557,7 @@ class LibraryRepository(
         val data = ApiClient.unwrap(ApiClient.api.borrowingHistory(page = next.page))
         if (historyCursor != from) return@withContext
         val rows = (data.items ?: emptyList()).map { it.toBorrowingRecord() }
-        borrowingHistory.addAll(mergePage(borrowingHistory.toList(), rows) { it.id }.drop(borrowingHistory.size))
+        borrowingHistory.addAll(newItems(borrowingHistory, rows) { it.id })
         historyCursor = next.copy(totalPages = data.pagination?.totalPages ?: next.totalPages)
     }
 
@@ -768,7 +772,7 @@ class LibraryRepository(
                         CancelBorrowRequestDto(reason = reason?.trim()?.takeIf { it.isNotEmpty() }),
                     ),
                 )
-                loadBorrowingHistory()
+                loadBorrowingHistory(pages = historyCursor.page)
             } catch (error: ApiException) {
                 lastError = userFacingMessage(error, "Unable to cancel the borrow request.")
                 throw error
@@ -780,7 +784,7 @@ class LibraryRepository(
             ?: throw ApiException("This loan could not be reported as lost.")
         try {
             ApiClient.unwrap(ApiClient.api.reportLostBook(id))
-            loadBorrowingHistory()
+            loadBorrowingHistory(pages = historyCursor.page)
             runCatching { loadClearance() }
         } catch (error: ApiException) {
             lastError = userFacingMessage(error, "Unable to report the lost book.")

@@ -4,6 +4,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.stismartlib.data.isLoadedFor
 import com.example.stismartlib.data.shouldOfferLoadMore
 import com.example.stismartlib.ui.components.LoadMoreFooter
+import com.example.stismartlib.ui.components.rememberLoadMoreState
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.horizontalScroll
@@ -76,6 +77,7 @@ fun BookCatalogScreen(
     onCartClick: () -> Unit
 ) {
     val repository = rememberLibraryRepository()
+    val loadMore = rememberLoadMoreState()
     val context = LocalContext.current
     val viewPrefs = remember { CatalogViewPrefs(context) }
     var viewMode by remember { mutableStateOf(viewPrefs.get(CatalogViewPrefs.KEY_BOOKS)) }
@@ -217,7 +219,7 @@ fun BookCatalogScreen(
                         }
                     }
                     if (shouldOfferLoadMore(repository.books.size, repository.booksCursor)) {
-                        item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter { repository.loadMoreBooks() } }
+                        item(span = { GridItemSpan(maxLineSpan) }) { LoadMoreFooter(loadMore) { repository.loadMoreBooks() } }
                     }
                 }
             } else {
@@ -313,7 +315,7 @@ fun BookCatalogScreen(
                         }
                     }
                     if (shouldOfferLoadMore(repository.books.size, repository.booksCursor)) {
-                        item { LoadMoreFooter { repository.loadMoreBooks() } }
+                        item { LoadMoreFooter(loadMore) { repository.loadMoreBooks() } }
                     }
                 }
             }

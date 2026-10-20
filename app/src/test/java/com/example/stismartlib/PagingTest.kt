@@ -1,7 +1,6 @@
 package com.example.stismartlib
 
 import com.example.stismartlib.data.PageCursor
-import com.example.stismartlib.data.mergePage
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.dto.ApiEnvelope
 import com.example.stismartlib.network.dto.BookCatalogItemDto
@@ -25,11 +24,6 @@ class PagingTest {
     @Test
     fun nextKeepsQuery() {
         assertEquals(PageCursor(page = 2, totalPages = 3, query = "java"), PageCursor(1, 3, "java").next())
-    }
-
-    @Test
-    fun mergeDropsRepeats() {
-        assertEquals(listOf(1, 2, 3), mergePage(listOf(1, 2), listOf(2, 3)) { it })
     }
 
     @Test

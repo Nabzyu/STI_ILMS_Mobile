@@ -8,10 +8,30 @@ data class PageCursor(val page: Int = 0, val totalPages: Int = 0, val query: Str
     fun next(): PageCursor = copy(page = page + 1)
 }
 
-/** Appends [next] to [existing], skipping items already present (rows can shift between pages). */
-fun <T, K> mergePage(existing: List<T>, next: List<T>, key: (T) -> K): List<T> {
+/** The items of [next] not already in [existing] (and not repeated within [next]). */
+fun <T, K> newItems(existing: List<T>, next: List<T>, key: (T) -> K): List<T> {
     val seen = existing.mapTo(HashSet(), key)
-    return existing + next.filter { seen.add(key(it)) }
+    return next.filter { seen.add(key(it)) }
+}
+
+/**
+ * Fetches pages 1..[upTo] into one list, stopping early at the server's last page.
+ * [fetch] returns a page's items and the server's total page count.
+ */
+suspend fun <T, K> fetchPages(
+    upTo: Int,
+    key: (T) -> K,
+    fetch: suspend (page: Int) -> Pair<List<T>, Int>,
+): Pair<List<T>, PageCursor> {
+    val rows = mutableListOf<T>()
+    var cursor = PageCursor()
+    do {
+        val page = cursor.page + 1
+        val (items, totalPages) = fetch(page)
+        rows += newItems(rows, items, key)
+        cursor = PageCursor(page, totalPages)
+    } while (cursor.page < upTo && cursor.hasMore)
+    return rows to cursor
 }
 
 /** True when this cursor already holds results for [query], so a screen can skip reloading page 1. */
