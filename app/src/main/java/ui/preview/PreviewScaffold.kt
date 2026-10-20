@@ -52,10 +52,11 @@ fun PreviewApp(
     val themeController = remember { ThemeController(if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT) }
     val repository = remember(userType, seedSampleData) {
         LibraryRepository(SessionStore(context.applicationContext)).also { repo ->
-            repo.setUserType(userType)
             if (seedSampleData) {
                 seedPreviewLibraryData(repo)
             }
+            // After seeding: the sample profile's role would otherwise reset the user type.
+            repo.setUserType(userType)
         }
     }
     CompositionLocalProvider(
