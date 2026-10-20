@@ -51,7 +51,9 @@ private fun OccupancyCard(current: Int, capacity: Int) {
         Spacer(modifier = Modifier.height(10.dp))
         LinearProgressIndicator(
             progress = { occupancyPercent(current, capacity) / 100f },
-            color = MaterialTheme.colorScheme.primary,
+            // The M3 default track (secondaryContainer) is near-invisible in this theme.
+            color = MaterialTheme.colorScheme.onSurface,
+            trackColor = MaterialTheme.colorScheme.outline,
             modifier = Modifier.fillMaxWidth(),
         )
     }

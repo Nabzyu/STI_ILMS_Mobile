@@ -41,4 +41,11 @@ class DashboardSummaryTest {
         assertEquals(0, occupancyPercent(-3, 80))
         assertEquals(0, occupancyPercent(5, 0))
     }
+
+    @Test
+    fun serverNullDateIsBlankNotTheWordNull() {
+        val s = parse("""{"success":true,"data":{"occupancy":{"current":1,"capacity":80},
+            "announcement":{"id":5,"title":"Holiday","message":"Closed.","priority":"Normal","publishedAt":"null"}}}""").toSummary()!!
+        assertEquals("", s.announcement!!.publishedAt)
+    }
 }

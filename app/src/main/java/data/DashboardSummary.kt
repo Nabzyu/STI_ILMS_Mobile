@@ -29,7 +29,8 @@ fun UserDashboardDto.toSummary(): DashboardSummary? {
                 title = it.title.orEmpty(),
                 message = it.message.orEmpty(),
                 priority = it.priority?.takeIf(String::isNotBlank) ?: "Normal",
-                publishedAt = it.publishedAt.orEmpty(),
+                // The server stringifies a missing date as "null".
+                publishedAt = it.publishedAt?.takeUnless { date -> date == "null" }.orEmpty(),
             )
         },
     )

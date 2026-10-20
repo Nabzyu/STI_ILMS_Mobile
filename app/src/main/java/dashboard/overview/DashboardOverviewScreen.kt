@@ -1,5 +1,6 @@
 package com.example.stismartlib.ui.dashboard.overview
 
+import androidx.compose.foundation.verticalScroll
 import com.composables.icons.lucide.*
 
 import androidx.compose.foundation.background
@@ -484,7 +485,12 @@ private fun QuickStat(
 
 @Composable
 private fun FacultyOverview(schedule: LibrarySchedule?, summary: DashboardSummary?, onViewMap: () -> Unit) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         ElmsSectionCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Lucide.ShieldCheck, contentDescription = null, tint = ElmsCyan, modifier = Modifier.size(28.dp))
