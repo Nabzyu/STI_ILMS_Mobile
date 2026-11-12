@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.stismartlib.data.LoginChallenge
-import com.example.stismartlib.ui.auth.AppLockScreen
 import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.PasswordResetStage
@@ -84,36 +83,6 @@ private fun LoginCodeScreenPreview() {
 private fun LoginCodeScreenDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         LoginScreen(navController = rememberNavController(), previewChallenge = PreviewLoginChallenge)
-    }
-}
-
-@Preview(name = "App lock", showBackground = true, showSystemUi = true)
-@Composable
-private fun AppLockScreenPreview() {
-    PreviewApp(seedSampleData = false) {
-        AppLockScreen("Juan Dela Cruz", "02000123456", errorMessage = null, onUnlock = {}, onUsePassword = {})
-    }
-}
-
-@Preview(name = "App lock · Dark", showBackground = true, showSystemUi = true)
-@Composable
-private fun AppLockScreenDarkPreview() {
-    PreviewApp(seedSampleData = false, darkTheme = true) {
-        AppLockScreen("Juan Dela Cruz", "02000123456", errorMessage = null, onUnlock = {}, onUsePassword = {})
-    }
-}
-
-@Preview(name = "App lock · Error", showBackground = true, showSystemUi = true)
-@Composable
-private fun AppLockScreenErrorPreview() {
-    PreviewApp(seedSampleData = false) {
-        AppLockScreen(
-            "Juan Dela Cruz",
-            "02000123456",
-            errorMessage = "Too many attempts. Try again later, or sign in with your password.",
-            onUnlock = {},
-            onUsePassword = {},
-        )
     }
 }
 

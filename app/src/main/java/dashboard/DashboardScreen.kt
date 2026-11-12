@@ -49,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,9 +63,6 @@ import androidx.navigation.navArgument
 import com.example.stismartlib.R
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.auth.UserType
-import com.example.stismartlib.ui.auth.canUseDeviceUnlock
-import com.example.stismartlib.ui.auth.findFragmentActivity
-import com.example.stismartlib.ui.auth.requestDeviceUnlock
 import com.example.stismartlib.ui.components.ElmsCountBadge
 import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.components.StiMarkTile
@@ -136,10 +132,6 @@ fun DashboardScreen(
     val themeController = LocalThemeController.current
     val darkTheme = isAppDarkTheme()
     var showLogoutConfirm by remember { mutableStateOf(false) }
-    val activity = LocalContext.current.findFragmentActivity()
-    // Students/faculty with a 30-day key on a phone with a fingerprint or screen lock.
-    val showAppLockSwitch = repository.session.isAuthenticated && repository.canUseAppLock() &&
-        activity != null && canUseDeviceUnlock(activity)
 
     val bottomItems = listOf(
         BottomDest(DashboardRoute.Overview.route, "Home", Lucide.LayoutDashboard),
@@ -300,47 +292,6 @@ fun DashboardScreen(
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Column(modifier = Modifier.padding(12.dp)) {
-                        if (showAppLockSwitch) {
-                            val lockOn = repository.isAppLockTurnedOn
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(ShapeXl)
-                                    .clickable(onClickLabel = if (lockOn) "Turn off" else "Turn on") {
-                                        if (lockOn) {
-                                            repository.setAppLockEnabled(false)
-                                        } else {
-                                            // Turning it on needs one successful check first.
-                                            activity?.requestDeviceUnlock(
-                                                onSuccess = { repository.setAppLockEnabled(true) },
-                                                onError = {},
-                                            )
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Lucide.FingerprintPattern,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    "Fingerprint unlock",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 15.sp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    if (lockOn) "On" else "Off",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -33,7 +33,6 @@ import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
 import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.RefreshTokenRequest
 import com.example.stismartlib.network.dto.RegisterRequest
-import com.example.stismartlib.session.AppLock
 import com.example.stismartlib.session.SessionActivityTracker
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
@@ -60,19 +59,6 @@ class LibraryRepository(
         private set
 
     private val activityTracker = SessionActivityTracker()
-    private val appLock = AppLock()
-
-    /** True while the fingerprint lock screen covers the app. */
-    var isAppLocked by mutableStateOf(false)
-        private set
-
-    /** Set after a Student/Faculty sign-in that hasn't answered "Use fingerprint to unlock?" yet. */
-    var appLockOfferPending by mutableStateOf(false)
-        private set
-
-    /** Turned on for the signed-in account (needs the 30-day key). */
-    var isAppLockTurnedOn by mutableStateOf(false)
-        private set
     private val backgroundScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, _ -> })
     private var activityJob: Job? = null
@@ -224,52 +210,6 @@ class LibraryRepository(
         )
         sessionEndReason = null
         activityTracker.start(clock())
-        appLock.onSignedIn()
-        // The UI also checks that the phone has a fingerprint or screen lock before asking.
-        appLockOfferPending = staysSignedIn() && sessionStore.appLockChoice(step.schoolId) == null
-        syncAppLock()
-    }
-
-    /** Student/Faculty phone with a 30-day key: fingerprint unlock can be offered. */
-    fun canUseAppLock(): Boolean = session.isAuthenticated && staysSignedIn()
-
-    /** Records the user's answer (or the drawer switch) for this account. */
-    fun setAppLockEnabled(enabled: Boolean) {
-        if (!session.isAuthenticated) return
-        sessionStore.setAppLockChoice(session.schoolId, enabled)
-        appLockOfferPending = false
-        // The user just proved it's them; time spent on the system PIN screen doesn't count as away.
-        appLock.unlock()
-        syncAppLock()
-    }
-
-    /** Hides the offer for now without recording an answer (e.g. the check was cancelled). */
-    fun dismissAppLockOffer() {
-        appLockOfferPending = false
-    }
-
-    fun unlockApp() {
-        appLock.unlock()
-        syncAppLock()
-    }
-
-    /** `MainActivity.onStop`. */
-    fun onAppBackground() {
-        appLock.onBackground(clock())
-    }
-
-    /** `MainActivity.onStart`: locks again after a minute or more away. */
-    fun onAppForeground() {
-        appLock.onForeground(clock(), appLockApplies())
-        syncAppLock()
-    }
-
-    private fun appLockApplies(): Boolean =
-        canUseAppLock() && sessionStore.appLockChoice(session.schoolId) == true
-
-    private fun syncAppLock() {
-        isAppLockTurnedOn = appLockApplies()
-        isAppLocked = appLock.isLocked
     }
 
     /** Called by [ApiClient] after a session-ending error code (stored token already cleared). */
@@ -339,9 +279,6 @@ class LibraryRepository(
         sessionStore.clear()
         clearLocalData()
         session = LibrarySession()
-        appLock.reset()
-        appLockOfferPending = false
-        syncAppLock()
     }
 
     private companion object {
@@ -405,8 +342,6 @@ class LibraryRepository(
                 isAuthenticated = true,
             )
             activityTracker.start(clock())
-            appLock.onSessionRestored(appLockApplies())
-            syncAppLock()
             // `/auth/me` does not count as activity on the server; renew the idle window now.
             sendActivity()
             session.isAuthenticated
@@ -428,8 +363,6 @@ class LibraryRepository(
                 isAuthenticated = true,
             )
             activityTracker.start(clock())
-            appLock.onSessionRestored(appLockApplies())
-            syncAppLock()
             true
         }
     }

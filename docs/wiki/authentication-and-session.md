@@ -82,17 +82,6 @@ Requires the server change in `docs/plans/server-patches/` (migration `037_mobil
 - With a key, the local 10-minute idle rule does not sign out; the next request renews the session. Opening the app offline with a key shows the saved account and renews once online.
 - Sign out calls `/auth/logout` with the key, so it stops working immediately.
 
-## Fingerprint unlock (Student/Faculty with a 30-day key)
-
-Because the phone stays signed in for 30 days, the app can ask for the phone's fingerprint (or face) or its PIN/pattern/password before showing the account. Uses `androidx.biometric` (`BiometricPrompt`); `MainActivity` is a `FragmentActivity` for it.
-
-- **Who:** only when the phone holds a refresh key (`LibraryRepository.canUseAppLock`) and the phone has a fingerprint or screen lock set up (`canUseDeviceUnlock`). The app only signs in students and faculty, so every signed-in phone qualifies once the server patch is deployed; until then no phone gets a key and nobody sees it.
-- **Asking:** after a Student/Faculty sign-in, once per school ID: "Use fingerprint to unlock?" (`AppLockGate`). "Turn on" runs the prompt once and turns it on only if it succeeds. "Not now" (or tapping outside) is remembered. Closing the prompt records nothing, so it is asked again next sign-in. The answer lives in plain prefs `smartlib_app_lock` (`lock_<SCHOOL_ID>` → true/false) and survives sign-out. The side menu has a **Fingerprint unlock On/Off** row to change it (turning on needs one successful check).
-- **When it locks** (`session/AppLock.kt`, unit-tested): when the app starts with a saved session (once per process, so rotation doesn't relock), and when it returns after **1 minute or more** in the background (`MainActivity.onStop`/`onStart`). A fresh password sign-in is never locked. Time spent on the system PIN screen while locked does not count as time away.
-- **Lock screen** (`auth/AppLockScreen.kt`): "Unlock with fingerprint" (the prompt also opens by itself when the lock appears) and "Sign in with password instead", which signs out (`logout`, so the key is revoked on the server). It covers the app instead of replacing it, so the user returns to the same screen; the app underneath is hidden from TalkBack and gets no touches, and Back sends the app to the background.
-- **Authenticators** (`appLockAuthenticators`): Android 11+ uses `BIOMETRIC_STRONG or DEVICE_CREDENTIAL`; Android 8–10 use `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`, because the strong combination isn't supported there. Error text comes from `unlockErrorMessage`: closing the prompt shows nothing; lockouts and a missing fingerprint/screen lock point to the password.
-- **Limits:** the lock is a screen over the app, not encryption. The refresh key stays in the existing encrypted prefs and is not tied to a fingerprint (hardware-bound key was deferred by the web team). The app still renews the session in the background while locked. The Recents preview can show the last screen for the first minute away.
-
 ## Restore, expiry and logout
 
 - **Restore:** at launch, `restoreSession()` calls `/auth/me`, then `/auth/activity`. On success it refreshes stored identity. On any `ApiException` it clears everything and returns false; a session-ending code is shown on the login screen.
