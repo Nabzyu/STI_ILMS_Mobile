@@ -67,7 +67,7 @@ class SessionErrorsTest {
     fun signInCodesHaveFixedCopy() {
         listOf(
             "LOGIN_CODE_WAIT", "LOGIN_EMAIL_MISSING", "LOGIN_CHANGED", "LOGIN_CODE_INVALID",
-            "LOGIN_CODE_PAUSED", "DEVICE_ORIGIN", "SESSION_EXPIRED", "SESSION_UPGRADE_REQUIRED",
+            "LOGIN_CODE_PAUSED", "DEVICE_ORIGIN", "STAFF_ACCOUNT_NOT_SUPPORTED", "SESSION_EXPIRED", "SESSION_UPGRADE_REQUIRED",
         ).forEach { code ->
             val message = userFacingMessage(ApiException("internal {detail}", code), "fallback")
             assertFalse(code, message == "fallback")

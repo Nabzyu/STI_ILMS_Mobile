@@ -18,25 +18,8 @@ data class StoredSession(
 class SessionStore(context: Context) {
     private val appContext = context.applicationContext
     private val prefs: SharedPreferences = createPrefs(appContext)
-    private val loginHints: SharedPreferences =
-        appContext.getSharedPreferences(PREFS_LOGIN_HINTS, Context.MODE_PRIVATE)
 
     fun getToken(): String? = prefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() }
-
-    /** Last successful API portal for a school ID (`user` or `staff`). Survives logout. */
-    fun preferredLoginPortal(schoolId: String): String? {
-        val key = schoolId.trim().uppercase()
-        if (key.isBlank()) return null
-        return loginHints.getString(hintKey(key), null)
-            ?.takeIf { it == "user" || it == "staff" }
-    }
-
-    fun rememberLoginPortal(schoolId: String, portal: String) {
-        val key = schoolId.trim().uppercase()
-        if (key.isBlank()) return
-        if (portal != "user" && portal != "staff") return
-        loginHints.edit().putString(hintKey(key), portal).apply()
-    }
 
     fun getSession(): StoredSession? {
         val token = getToken() ?: return null
@@ -86,9 +69,7 @@ class SessionStore(context: Context) {
         const val KEY_ROLE = "role"
         const val PREFS_ENCRYPTED = "smartlib_session"
         const val PREFS_FALLBACK = "smartlib_session_fallback"
-        const val PREFS_LOGIN_HINTS = "smartlib_login_hints"
 
-        fun hintKey(schoolId: String): String = "portal_$schoolId"
 
         fun createPrefs(context: Context): SharedPreferences {
             return try {
