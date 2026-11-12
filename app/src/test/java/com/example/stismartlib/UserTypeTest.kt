@@ -26,6 +26,14 @@ class UserTypeTest {
     }
 
     @Test
+    fun librariansAndStaffAreNotAppAccountsYet() {
+        listOf("Admin", "Librarian", "System Administrator", "Staff", "Library Staff").forEach {
+            assertTrue(it, UserType.isStaffAccountRole(it))
+        }
+        listOf("Student", "Faculty", null).forEach { assertFalse(UserType.isStaffAccountRole(it)) }
+    }
+
+    @Test
     fun fromServerRoleMapsUserRoles() {
         assertEquals(UserType.FACULTY, UserType.fromServerRole("Faculty"))
         assertEquals(UserType.STUDENT, UserType.fromServerRole("Student"))
