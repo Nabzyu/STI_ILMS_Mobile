@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -60,14 +61,15 @@ fun ForgotPasswordScreen(
 ) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
-    var stage by remember { mutableStateOf(previewStage) }
-    var identifier by remember { mutableStateOf("") }
+    // Saved across rotation: the step, ID, challenge and code. The reset token is memory-only.
+    var stage by rememberSaveable { mutableStateOf(previewStage) }
+    var identifier by rememberSaveable { mutableStateOf("") }
     var identifierError by remember { mutableStateOf<String?>(null) }
-    var challengeId by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
+    var challengeId by rememberSaveable { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
     var codeError by remember { mutableStateOf<String?>(null) }
-    // Short-lived reset token: kept in memory only, never stored.
-    var resetToken by remember { mutableStateOf("") }
+    // Short-lived reset token: held by the repository in memory only (survives rotation, never saved).
+    var resetToken by remember { mutableStateOf(repository.pendingResetToken.orEmpty()) }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -76,7 +78,7 @@ fun ForgotPasswordScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var isBusy by remember { mutableStateOf(false) }
     var isResending by remember { mutableStateOf(false) }
-    var resendSecondsLeft by remember {
+    var resendSecondsLeft by rememberSaveable {
         mutableIntStateOf(if (previewStage == PasswordResetStage.Verify) 42 else 0)
     }
 
@@ -88,6 +90,7 @@ fun ForgotPasswordScreen(
     }
 
     fun startAgain(error: String? = null) {
+        repository.clearPendingRecovery()
         stage = PasswordResetStage.Request
         challengeId = ""
         code = ""
@@ -101,10 +104,19 @@ fun ForgotPasswordScreen(
     }
 
     fun backToSignIn() {
+        repository.clearPendingRecovery()
         resetToken = ""
         password = ""
         confirmation = ""
         navController.popBackStack()
+    }
+
+    // The reset token isn't saved to disk, so if the app was closed in the background the
+    // new-password step can't finish; start again with a clear message instead.
+    LaunchedEffect(Unit) {
+        if (stage == PasswordResetStage.Reset && resetToken.isBlank() && previewStage != PasswordResetStage.Reset) {
+            startAgain("Your reset step timed out. Please request a new code.")
+        }
     }
 
     // From the code or new-password step, back starts recovery again instead of leaving.

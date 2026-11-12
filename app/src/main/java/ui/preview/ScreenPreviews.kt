@@ -7,7 +7,8 @@ import com.example.stismartlib.data.LoginChallenge
 import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.PasswordResetStage
-import com.example.stismartlib.ui.auth.RegisterScreen
+import com.example.stismartlib.ui.auth.ActivateAccountScreen
+import com.example.stismartlib.ui.auth.ActivationStage
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.PortalScreen
 import com.example.stismartlib.ui.dashboard.DashboardScreen
@@ -116,19 +117,35 @@ private fun ForgotPasswordResetPreview() {
     }
 }
 
-@Preview(name = "Register", showBackground = true, showSystemUi = true)
+@Preview(name = "Activate account", showBackground = true, showSystemUi = true)
 @Composable
-private fun RegisterScreenPreview() {
+private fun ActivateAccountPreview() {
     PreviewApp(seedSampleData = false) {
-        RegisterScreen(navController = rememberNavController())
+        ActivateAccountScreen(navController = rememberNavController(), previewStage = ActivationStage.Request)
     }
 }
 
-@Preview(name = "Register · Dark", showBackground = true, showSystemUi = true)
+@Preview(name = "Activate account · code · Dark", showBackground = true, showSystemUi = true)
 @Composable
-private fun RegisterScreenDarkPreview() {
+private fun ActivateAccountCodeDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
-        RegisterScreen(navController = rememberNavController())
+        ActivateAccountScreen(navController = rememberNavController(), previewStage = ActivationStage.Verify)
+    }
+}
+
+@Preview(name = "Activate account · password", showBackground = true, showSystemUi = true)
+@Composable
+private fun ActivateAccountPasswordPreview() {
+    PreviewApp(seedSampleData = false) {
+        ActivateAccountScreen(navController = rememberNavController(), previewStage = ActivationStage.Password)
+    }
+}
+
+@Preview(name = "Activate account · closed", showBackground = true, showSystemUi = true)
+@Composable
+private fun ActivateAccountClosedPreview() {
+    PreviewApp(seedSampleData = false) {
+        ActivateAccountScreen(navController = rememberNavController(), previewStage = ActivationStage.Closed)
     }
 }
 

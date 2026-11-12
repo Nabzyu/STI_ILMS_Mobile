@@ -32,7 +32,9 @@ import com.example.stismartlib.network.dto.PasswordRecoveryRequest
 import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
 import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.RefreshTokenRequest
-import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RosterBeginRequest
+import com.example.stismartlib.network.dto.RosterCompleteRequest
+import com.example.stismartlib.network.dto.RosterVerifyRequest
 import com.example.stismartlib.session.SessionActivityTracker
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
@@ -170,11 +172,27 @@ class LibraryRepository(
             PasswordResetChallenge(challengeId, data.message?.takeIf { it.isNotBlank() })
         }
 
+    /**
+     * Short-lived reset token and activation grant. Held in memory only: they survive screen rotation
+     * but not the app being closed, and are never written to disk or saved instance state.
+     */
+    var pendingResetToken: String? = null
+        private set
+    var pendingActivationGrant: String? = null
+        private set
+
+    fun clearPendingRecovery() {
+        pendingResetToken = null
+        pendingActivationGrant = null
+    }
+
     /** Step 2: exchange the emailed code for a short-lived reset token (kept in memory only). */
     suspend fun verifyPasswordResetCode(challengeId: String, code: String): String = withContext(Dispatchers.IO) {
-        ApiClient.unwrap(ApiClient.api.passwordRecoveryVerify(PasswordRecoveryVerifyRequest(challengeId, code.trim())))
+        val token = ApiClient.unwrap(ApiClient.api.passwordRecoveryVerify(PasswordRecoveryVerifyRequest(challengeId, code.trim())))
             .resetToken?.takeIf { it.isNotBlank() }
             ?: throw ApiException("Password reset is unavailable right now. Please try again.", "INVALID_RECOVERY_RESPONSE")
+        pendingResetToken = token
+        token
     }
 
     /** Step 3: set the new password. The server signs the account out everywhere. */
@@ -183,6 +201,7 @@ class LibraryRepository(
             ApiClient.unwrap(
                 ApiClient.api.passwordReset(PasswordResetRequest(challengeId, resetToken, password, confirmation)),
             )
+            pendingResetToken = null
             Unit
         }
 
@@ -287,31 +306,40 @@ class LibraryRepository(
             "Librarian and library staff accounts can't use the app yet. Please use the library website."
     }
 
-    suspend fun registerStudent(
-        schoolId: String,
-        firstName: String,
-        lastName: String,
-        email: String,
-        programStrand: String,
-        yearGradeLevel: String,
-        password: String,
-        confirmPassword: String,
-    ) = withContext(Dispatchers.IO) {
-        lastError = null
-        val response = ApiClient.api.register(
-            RegisterRequest(
-                schoolId = schoolId.trim(),
-                firstName = firstName.trim(),
-                lastName = lastName.trim(),
-                email = email.trim().lowercase(),
-                programStrand = programStrand.trim(),
-                yearGradeLevel = yearGradeLevel.trim(),
-                password = password,
-                confirmPassword = confirmPassword,
-            ),
-        )
-        ApiClient.unwrap(response)
+    /** Whether Student account activation is open this semester. */
+    suspend fun activationAvailability(): ActivationAvailability = withContext(Dispatchers.IO) {
+        val data = ApiClient.unwrap(ApiClient.api.rosterStatus())
+        activationAvailability(data.enabled, data.open)
     }
+
+    /**
+     * Step 1 of activation: the server emails a code to the roster's school email when the Student ID is
+     * eligible. It answers the same either way, so the app can't tell whether an email was sent.
+     */
+    suspend fun beginActivation(schoolId: String): String = withContext(Dispatchers.IO) {
+        ApiClient.unwrap(ApiClient.api.rosterBegin(RosterBeginRequest(normalizeSchoolId(schoolId))))
+            .challengeId?.takeIf { it.isNotBlank() }
+            ?: throw ApiException("Account activation is unavailable right now. Please try again.", "INVALID_ROSTER_RESPONSE")
+    }
+
+    /** Step 2: exchange the emailed code for a short-lived grant (kept in memory only). */
+    suspend fun verifyActivationCode(challengeId: String, code: String): String = withContext(Dispatchers.IO) {
+        val grant = ApiClient.unwrap(ApiClient.api.rosterVerify(RosterVerifyRequest(challengeId, code.trim())))
+            .grant?.takeIf { it.isNotBlank() }
+            ?: throw ApiException("Account activation is unavailable right now. Please try again.", "INVALID_ROSTER_RESPONSE")
+        pendingActivationGrant = grant
+        grant
+    }
+
+    /** Step 3: set the password. The account is created and active; returns its school ID for sign-in. */
+    suspend fun completeActivation(challengeId: String, grant: String, password: String, confirmation: String): String? =
+        withContext(Dispatchers.IO) {
+            val activated = ApiClient.unwrap(
+                ApiClient.api.rosterComplete(RosterCompleteRequest(challengeId, grant, password, confirmation)),
+            ).schoolId?.takeIf { it.isNotBlank() }
+            pendingActivationGrant = null
+            activated
+        }
 
     suspend fun restoreSession(): Boolean = withContext(Dispatchers.IO) {
         val stored = sessionStore.getSession() ?: return@withContext false

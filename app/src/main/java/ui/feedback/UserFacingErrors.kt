@@ -46,6 +46,14 @@ fun userFacingMessage(
                 "Choose a password different from your current one."
             "RECOVERY_RATE_LIMITED" ->
                 "Too many password reset attempts. Please wait 15 minutes and try again."
+            "ROSTER_CODE_INVALID" ->
+                "The code is incorrect, expired or already used. Request a new code or contact the library."
+            "ROSTER_REGISTRATION_CLOSED" ->
+                "Account activation is paused until the next semester starts."
+            "STUDENT_ID_INVALID" ->
+                "Enter a valid Student ID."
+            "ROSTER_PASSWORD_INVALID" ->
+                "Use a password of at least 8 characters and enter it twice."
             "DEVICE_ORIGIN" ->
                 "Sign-in from the app is not available right now. Please use the library website."
             in SessionEndingCodes, SESSION_IDLE_CODE ->

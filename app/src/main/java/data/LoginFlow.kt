@@ -75,3 +75,13 @@ data class PasswordResetChallenge(
     val challengeId: String,
     val message: String?,
 )
+
+/** Student account activation state, from `GET /auth/roster-registration`. */
+enum class ActivationAvailability { Open, Closed, Unavailable }
+
+/** Mirrors the web `RegistrationPage`: disabled → unavailable; enabled but no open semester → closed. */
+fun activationAvailability(enabled: Boolean?, open: Boolean?): ActivationAvailability = when {
+    enabled != true -> ActivationAvailability.Unavailable
+    open == true -> ActivationAvailability.Open
+    else -> ActivationAvailability.Closed
+}

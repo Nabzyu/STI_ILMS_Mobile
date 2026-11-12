@@ -30,7 +30,7 @@ Nothing is drawn until the start destination is known, so there is no flash of t
 | Route (`Screen`) | Composable | Notes |
 |---|---|---|
 | `login` | `LoginScreen` | default start |
-| `student_register` | `RegisterScreen` | students only |
+| `activate_account` | `ActivateAccountScreen` | students only |
 | `staff_home` | `StaffHomeScreen` | librarian / admin |
 | `dashboard/{userType}` | `DashboardScreen` | `userType` = enum name, defaults to `STUDENT` |
 

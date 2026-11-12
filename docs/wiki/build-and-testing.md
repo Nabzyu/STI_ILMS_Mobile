@@ -47,6 +47,7 @@ Unit tests only (`app/src/test/java/com/example/stismartlib/`):
 - `LoginRulesTest` — school ID rule, 6-digit code check and new-password rule.
 - `LoginFlowTest` — parsing `/auth/login` responses: emailed-code challenge vs token, broken payloads.
 - `SessionErrorsTest` — which codes end a session, 401 handling, sign-in error copy.
+- `LoginChallengeSaverTest` — the code step survives rotation; nothing else is saved.
 - `SessionActivityTrackerTest` — 10-minute idle limit and 30-second ping throttle.
 
 No instrumented tests exist, though the Espresso / Compose UI test dependencies are declared. `LibraryRepository` itself (network calls, storage) has no tests; there is no MockWebServer or Robolectric in the project.

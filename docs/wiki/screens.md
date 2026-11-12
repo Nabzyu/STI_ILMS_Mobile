@@ -14,7 +14,7 @@ Back to [index](README.md). Related: [Startup and navigation](startup-and-naviga
 | Screen | File | Does |
 |---|---|---|
 | Login | `auth/LoginScreen.kt` | School ID + password, show-password toggle, link to register. Server: login with portal fallback. See [Authentication](authentication-and-session.md#sign-in--one-form-two-server-portals). |
-| Register | `auth/RegisterScreen.kt` | Student sign-up form with program and year-level pickers. Server: register, then back to login. |
+| Activate account | `auth/ActivateAccountScreen.kt` | Student account activation against the semester roster: Student ID → emailed code → password, then back to sign-in. |
 
 ## Staff (Librarian / Admin)
 

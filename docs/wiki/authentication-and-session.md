@@ -32,6 +32,8 @@ The server has a **user** portal (Student, Faculty) and a **staff** portal (Admi
    - `deviceSwitchRequired` (only when the server's device sign-in feature is on) → `DEVICE_SWITCH_REQUIRED` error; the app can't finish that flow.
 4. Code step: `verifyLoginCode` → `POST api/v1/auth/login/verify` `{challenge_id, code}` (6 digits) returns the normal token payload. "Resend code" → `POST api/v1/auth/login/resend` `{challenge_id}`, disabled for the 60-second cooldown (countdown on the button). "Back to sign in" or the system back button returns to the password form. A wrong code (`LOGIN_CODE_INVALID`) shows under the field; `LOGIN_CODE_PAUSED` (3 wrong codes) and `LOGIN_CHANGED` send the user back to the password form.
 
+**Rotation and process death:** the school ID, code step (`LoginChallengeSaver`), code and resend countdown survive rotation and the app being closed in the background (`rememberSaveable`). The password is never saved. Password reset and activation keep their step, ID, challenge and code the same way; the short-lived reset token and activation grant live only in repository memory (`pendingResetToken`, `pendingActivationGrant`), so they survive rotation but not process death, in which case the screen starts again with a message.
+
 Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `dashboard/{type}` and the login screen is removed from the back stack.
 
 ## Password reset
@@ -44,15 +46,16 @@ Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must m
 
 **Who can reset:** only **Student** accounts in the app. The server also resets desk **Staff** accounts (`portal: "staff"`), but desk staff aren't supported in the app yet, so that option is parked on `archive/desk-staff-support`. Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
 
-## Registration (students only)
+## Activate account (students only)
 
-`RegisterScreen` → `LibraryRepository.registerStudent` → `POST api/v1/auth/register`.
+The server retired `POST /auth/register` (it always returns `410 REGISTRATION_FLOW_REPLACED`). New students now **activate** an account that is already on the semester enrollment roster, like the website's roster sign-up. "New student? Activate your account" on the sign-in screen opens `ActivateAccountScreen` (`activate_account`):
 
-Client checks (unchanged, still the old rules — see B3/M5 in [Web vs mobile](web-vs-mobile-comparison.md)): 11-digit student ID; first/last name; email matching the STI student domain (`name@stu.sti.edu.ph`); program/strand; year level; password ≥ 8 chars; confirmation matches. Program options and year levels come from `auth/ProgramOptions.kt`:
-- Senior High strands STEM, ABM, TVL → Grade 11–12
-- College BSIT, BSTM, BSHM → 1st–4th Year
+1. `GET api/v1/auth/roster-registration` → `{enabled, open}`. Not enabled → "temporarily unavailable" with Try again; enabled but no open semester → "opens when the library starts the semester" (`activationAvailability` in `data/LoginFlow.kt`).
+2. **Student ID** → `POST …/roster-registration/begin` `{school_id}`. The server emails a code to the **school email on the roster** (so no email field, and the old `@stu.sti.edu.ph` rule is gone). It answers the same whether or not the ID is eligible or already has an account.
+3. **Code** (reuses `LoginCodeStep`) → `…/verify` `{challenge_id, code}` → a short-lived `grant`, kept in memory only. Resend is a new `begin`, enabled after 60 seconds.
+4. **Password** (twice; `newPasswordError`) → `…/complete` `{challenge_id, grant, password, confirm_password}`. The account is created **active**; the app returns to sign-in with the Student ID filled in and "Your account is active…".
 
-Registration does **not** sign the user in; on success it returns to `login`. Server field errors map back onto the form.
+Errors: `STUDENT_ID_INVALID`, `ROSTER_CODE_INVALID` (back to step 2 if it happens at the password step), `ROSTER_PASSWORD_INVALID`, `ROSTER_REGISTRATION_CLOSED`. Faculty and staff accounts are set up by the library. These endpoints are treated as sign-in requests (no bearer token).
 
 ## Session storage — `session/SessionStore.kt`
 

@@ -85,27 +85,41 @@ data class LoginUser(
     val role: String? = null,
 )
 
-data class RegisterRequest(
+/** `GET /auth/roster-registration`: whether Student account activation is open this semester. */
+data class RosterStatusData(
+    val enabled: Boolean? = null,
+    val required: Boolean? = null,
+    val open: Boolean? = null,
+)
+
+data class RosterBeginRequest(
     @SerializedName("school_id") val schoolId: String,
-    @SerializedName("first_name") val firstName: String,
-    @SerializedName("last_name") val lastName: String,
-    val email: String,
-    @SerializedName("program_strand") val programStrand: String,
-    @SerializedName("year_grade_level") val yearGradeLevel: String,
+)
+
+/** Always returned, even when the ID isn't on the roster (the server doesn't reveal it). */
+data class RosterChallengeData(
+    val challengeId: String? = null,
+)
+
+data class RosterVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class RosterGrantData(
+    val grant: String? = null,
+)
+
+data class RosterCompleteRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val grant: String,
     val password: String,
     @SerializedName("confirm_password") val confirmPassword: String,
 )
 
-data class RegisterData(
-    val account: RegisterAccount? = null,
-)
-
-data class RegisterAccount(
-    val id: Int? = null,
+data class RosterCompleteData(
+    val status: String? = null,
     val schoolId: String? = null,
-    val role: String? = null,
-    val firstName: String? = null,
-    val lastName: String? = null,
 )
 
 data class MeUser(
