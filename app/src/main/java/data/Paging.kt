@@ -1,7 +1,12 @@
 package com.example.stismartlib.data
 
 /** Where a paged list stands; `page = 0` means nothing is loaded yet. */
-data class PageCursor(val page: Int = 0, val totalPages: Int = 0, val query: String? = null) {
+data class PageCursor(
+    val page: Int = 0,
+    val totalPages: Int = 0,
+    val query: String? = null,
+    val categoryId: Int? = null,
+) {
     val hasMore: Boolean get() = page in 1 until totalPages
 
     /** The next page of the same query. */
@@ -34,8 +39,9 @@ suspend fun <T, K> fetchPages(
     return rows to cursor
 }
 
-/** True when this cursor already holds results for [query], so a screen can skip reloading page 1. */
-fun PageCursor.isLoadedFor(query: String?): Boolean = page > 0 && this.query == query
+/** True when this cursor already holds results for [query] and [categoryId], so a screen can skip reloading page 1. */
+fun PageCursor.isLoadedFor(query: String?, categoryId: Int? = null): Boolean =
+    page > 0 && this.query == query && this.categoryId == categoryId
 
 /** Offer "Load more" while more pages exist, even if local filters hide everything loaded so far. */
 fun shouldOfferLoadMore(loadedCount: Int, cursor: PageCursor): Boolean = loadedCount > 0 && cursor.hasMore

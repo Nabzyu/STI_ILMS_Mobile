@@ -10,8 +10,8 @@ fun normalizeSchoolId(raw: String): String = raw.trim().uppercase()
 fun loginSchoolIdError(raw: String): String? {
     val normalized = normalizeSchoolId(raw)
     return when {
-        normalized.isEmpty() -> "School ID is required."
-        !SchoolIdPattern.matches(normalized) -> "Enter a valid STI school ID."
+        normalized.isEmpty() -> "Student ID or Employee ID is required."
+        !SchoolIdPattern.matches(normalized) -> "Enter a valid STI Student ID or Employee ID."
         else -> null
     }
 }

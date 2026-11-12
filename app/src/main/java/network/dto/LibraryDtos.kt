@@ -229,3 +229,27 @@ data class AttendanceSummaryDto(
     val todayCheckIn: String? = null,
     val commonPurpose: String? = null,
 )
+
+/** `meta.viewer` on `GET catalog/books`: the borrowing-policy limit and current commitments. */
+data class CatalogViewerDto(
+    val role: String? = null,
+    val activeBookCount: Int? = null,
+    /** Null means no limit (faculty under the default policy). */
+    val bookLimit: Int? = null,
+)
+
+data class BookCategoryDto(
+    val categoryId: Int? = null,
+    val categoryName: String? = null,
+)
+
+/** A row of `GET borrowing/in-library`: an on-site use assigned at the desk. */
+data class InLibraryUseDto(
+    @SerializedName("use_id") val useId: Long? = null,
+    val status: String? = null,
+    @SerializedName("started_at") val startedAt: String? = null,
+    @SerializedName("hand_back_by") val handBackBy: String? = null,
+    @SerializedName("ended_at") val endedAt: String? = null,
+    val title: String? = null,
+    val barcode: String? = null,
+)

@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -188,8 +189,13 @@ fun BorrowingHistoryScreen() {
         )
     }
 
+    LaunchedEffect(Unit) { runCatching { repository.loadInLibraryUses() } }
+
     ElmsPullRefresh(
-        onRefresh = { repository.loadBorrowingHistory() },
+        onRefresh = {
+            repository.loadBorrowingHistory()
+            runCatching { repository.loadInLibraryUses() }
+        },
         onRefreshError = { refreshError = it },
     ) {
         LazyColumn(
@@ -220,10 +226,11 @@ fun BorrowingHistoryScreen() {
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    val limit = repository.cartLimit()
                     StatCard(
                         "Borrowed",
-                        "$borrowedCount / 2",
-                        "Limit",
+                        if (limit != null) "$borrowedCount / $limit" else "$borrowedCount",
+                        if (limit != null) "Limit" else "No limit",
                         Lucide.BookOpen,
                         modifier = Modifier.weight(1f)
                     )
@@ -328,6 +335,7 @@ fun BorrowingHistoryScreen() {
             if (shouldOfferLoadMore(repository.borrowingHistory.size, repository.historyCursor)) {
                 item { LoadMoreFooter(loadMore) { repository.loadMoreBorrowingHistory() } }
             }
+            inLibraryUseItems(repository.inLibraryUses, repository.inLibraryError)
         }
     }
 }

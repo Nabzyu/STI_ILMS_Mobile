@@ -24,7 +24,7 @@ class LoginRulesTest {
 
     @Test
     fun rejectsInvalidSchoolIds() {
-        assertEquals("School ID is required.", loginSchoolIdError("   "))
+        assertEquals("Student ID or Employee ID is required.", loginSchoolIdError("   "))
         assertNotNull(loginSchoolIdError("AB"))
         assertNotNull(loginSchoolIdError("-ADMIN"))
         assertNotNull(loginSchoolIdError("ADMIN PORTAL"))

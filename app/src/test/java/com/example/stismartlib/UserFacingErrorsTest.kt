@@ -11,7 +11,7 @@ class UserFacingErrorsTest {
     @Test
     fun invalidCredentials() {
         val msg = userFacingMessage(ApiException("x", "INVALID_CREDENTIALS"))
-        assertEquals("Invalid school ID or password.", msg)
+        assertEquals("Invalid Student ID / Employee ID or password.", msg)
     }
 
     @Test

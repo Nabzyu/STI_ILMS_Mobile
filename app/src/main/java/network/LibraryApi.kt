@@ -3,6 +3,8 @@ package com.example.stismartlib.network
 import com.example.stismartlib.network.dto.ApiEnvelope
 import com.example.stismartlib.network.dto.AttendancePassDto
 import com.example.stismartlib.network.dto.BookCatalogItemDto
+import com.example.stismartlib.network.dto.BookCategoryDto
+import com.example.stismartlib.network.dto.InLibraryUseDto
 import com.example.stismartlib.network.dto.BorrowRequestReceiptDto
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
@@ -106,10 +108,20 @@ interface LibraryApi {
         @Query("q") query: String? = null,
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 50,
+        @Query("category_id") categoryId: Int? = null,
     ): Response<ApiEnvelope<List<BookCatalogItemDto>>>
+
+    @GET("api/v1/catalog/categories")
+    suspend fun bookCategories(): Response<ApiEnvelope<List<BookCategoryDto>>>
 
     @GET("api/v1/catalog/books/{titleId}")
     suspend fun bookOverview(@Path("titleId") titleId: Int): Response<ApiEnvelope<BookCatalogItemDto>>
+
+    @GET("api/v1/catalog/research/{id}")
+    suspend fun researchOverview(@Path("id") id: Int): Response<ApiEnvelope<ResearchCatalogItemDto>>
+
+    @GET("api/v1/borrowing/in-library")
+    suspend fun inLibraryUses(): Response<ApiEnvelope<List<InLibraryUseDto>>>
 
     @POST("api/v1/reservations/request")
     suspend fun reserveBook(@Body body: ReserveRequestDto): Response<ApiEnvelope<ReserveResultDto>>
@@ -218,6 +230,11 @@ interface LibraryApi {
     @GET("api/v1/printing/receipts/{receiptId}/pdf")
     suspend fun printReceiptPdf(
         @Path("receiptId") receiptId: Int,
+    ): Response<ResponseBody>
+
+    @GET("api/v1/printing/requests/{requestId}/invoice/pdf")
+    suspend fun printInvoicePdf(
+        @Path("requestId") requestId: Int,
     ): Response<ResponseBody>
 
     @Multipart

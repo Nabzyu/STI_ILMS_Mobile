@@ -23,6 +23,9 @@ import com.example.stismartlib.data.models.apaCitation
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
+import com.example.stismartlib.ui.components.DetailFallback
+import com.example.stismartlib.ui.components.DetailLoad
+import com.example.stismartlib.ui.components.rememberDetailItem
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -38,13 +41,13 @@ fun ResearchDetailScreen(
 ) {
     val repository = rememberLibraryRepository()
     var showApaCitation by remember { mutableStateOf(false) }
-    val item = repository.research.find { it.id == researchId }
+    val loaded = rememberDetailItem(researchId, repository.research.find { it.id == researchId }) {
+        repository.findOrFetchResearch(researchId)
+    }
+    val item = (loaded as? DetailLoad.Ready)?.item
 
     if (item == null) {
-        Column(modifier = Modifier.fillMaxSize().then(Modifier)) {
-            Text("Research not found.", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.height(48.dp))
-            PortalButton(text = "Go back", onClick = onBack, variant = PortalButtonVariant.Secondary)
-        }
+        DetailFallback(loaded, notFoundText = "Research not found.", onBack = onBack)
         return
     }
 

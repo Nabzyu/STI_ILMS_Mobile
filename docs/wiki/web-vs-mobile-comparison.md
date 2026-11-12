@@ -38,7 +38,7 @@ The mobile app was written against an older version of the server's `/api/v1` co
 | M3 | Single session | Every successful login revokes the account's other sessions (`library_login_sessions … revoked_at=NOW()`, `login-security.service.ts` ~line 84). | Assumes its token stays valid. | Signing in on the web logs the phone out, and the reverse. The app sees `ACCOUNT_ACCESS_REVOKED` or `SESSION_EXPIRED`. |
 | M4 ✅ | Session error codes | Also sends `SESSION_EXPIRED`, `SESSION_UPGRADE_REQUIRED`, `JWT_ROLE_FORBIDDEN`. | Clears the session only for `ACCOUNT_DEACTIVATED`, `ACCOUNT_ACCESS_REVOKED`, `JWT_REQUIRED`, `JWT_INVALID`. | Expired sessions aren't cleared. The user is stuck on error banners until relaunch. |
 | M5 ✅ | School email domain | `@ormoc.sti.edu.ph` (`account-auth.validation.ts` line 8). | Register form requires `@stu.sti.edu.ph`. | Would block registration even after B3 is fixed. |
-| M6 | Borrow limit | Set by the librarian's borrowing policy (`student_max_active_books`, `faculty_max_active_books`), counting active loans. Exposed via `GET /api/v1/borrow/cart-state`. | Hard-coded: students 2 in the cart, faculty unlimited (`LibraryRepository.cartLimit()`). Ignores current loans. Since `feat/october-features` the app calls `cart-state`, but only to drop titles already requested or borrowed. | The app can let a student build a cart the server will refuse, or block one the policy allows. |
+| M6 ✅ | Borrow limit | Set by the librarian's borrowing policy (`student_max_active_books`, `faculty_max_active_books`), counting active loans and requests. Sent as `meta.viewer { activeBookCount, bookLimit }` on `GET /api/v1/catalog/books` (not `cart-state`, which only lists active title ids). The server enforces it on submit with `422 STUDENT_BORROW_LIMIT_REACHED`. | Fixed on `feat/web-parity-gaps`: the cart limit comes from `meta.viewer` (`cartLimitFor`), falling back to students 2 / faculty unlimited before the catalog loads. Like the web, it caps the cart size; the cart header shows active books + requests against the limit. | — |
 | M7 | Device origin check | With `LOGIN_DEVICES_ENABLED=true`, `/auth/login` rejects requests whose `Origin` / `Sec-Fetch-Site` isn't the website (`403 DEVICE_ORIGIN`). | Native app; sends neither header. | Probably fine today: a missing header passes. Worth confirming the deployed flag and keeping in mind if the check gets stricter. |
 | M8 | Page size | Catalogue `limit` is capped at **100**, default 24 (`book-catalog.validation.ts` line 53). | Sends 50. | Fine now. No paging in the app (already in [Known gaps](known-gaps.md)). |
 
@@ -54,15 +54,12 @@ The field match was checked by name only, not against a recorded live response.
 
 State on `feat/october-features` @ `82e18b5`. The October work closed most of the earlier list: printing submit (quote, multipart upload, cancel, receipts with PDF), server read-state and delete for notifications, server clearance (`/clearance/me`, lost-book report), `/dashboard` summary (occupancy, announcements), My Books, `cart-state`, `reservations/request`, fines receipts with PDF, profile and avatar, floor plan and book location, and password recovery. The return-request screen was removed.
 
+Closed on branch `feat/web-parity-gaps` (2026-11-12): the borrowing-policy cart limit (M6), server categories (`GET /catalog/categories` with `category_id` filtering on the server), book and research detail by id (`GET /catalog/books/{id}`, `GET /catalog/research/{id}` when the item is not loaded), print invoice PDF (`GET /printing/requests/{id}/invoice/pdf`), and in-library use history (`GET /borrowing/in-library`, shown under borrowing history). All four new endpoints answer `401` without a token on the live server, so they are deployed.
+
 Still missing:
 
 | Server has | Web uses it in | App today | Note |
 |---|---|---|---|
-| `GET /borrowing/in-library` | `features/circulation/InLibraryHistory.tsx` | Nothing | In-library (on-site) use history. |
-| `GET /printing/requests/{id}/invoice[/pdf]` | `features/printing/PrintingInvoice.tsx` | Receipts only | Invoice download for a print request. |
-| `GET /catalog/categories` | `features/catalog/CategoryFilterSearchBar.tsx` | Builds categories from the books already loaded (`BookCatalogScreen.kt`) | With Load more paging, categories on unloaded pages are missing from the filter. |
-| `GET /catalog/research/{id}` | research detail | Looks the item up in the loaded list | An item not yet loaded cannot open. |
-| Borrowing-policy limits in `GET /borrow/cart-state` | cart | Hard-coded limit | See M6. |
 | Full librarian/staff API under `/api/v1/admin/*` | ~35 librarian, staff and admin routes | Staff home placeholders | Out of the first release (web team decision below). |
 
 ## 5. Screen coverage side by side
@@ -74,18 +71,18 @@ Web routes come from `apps/web/src/App.tsx` (student and faculty portals are alm
 | dashboard | overview from `/dashboard`, with occupancy and announcements (faculty overview scrolls, pull-to-refresh) |
 | catalog, library | book catalogue with list/grid and Load more, detail with physical copies and barcode |
 | research | research catalogue with list/grid and Load more, detail |
-| cart | book cart, drops titles already requested or borrowed |
+| cart | book cart, limit from the borrowing policy, drops titles already requested or borrowed |
 | borrowing | borrowing history with Load more |
 | my-books | My Books |
 | reservations | reservations (request, cancel) |
 | attendance | My QR attendance |
-| printing (student) | printing: quote, upload, cancel, history, receipts with PDF (no invoices) |
+| printing (student) | printing: quote, upload, cancel, history, invoices and receipts with PDF |
 | fines | fines, receipts with PDF |
 | clearance | clearance from `/clearance/me`, deadline, lost-book report |
 | notifications | notifications: mark read, mark all read, delete, library hours and closures |
 | profile | My profile with avatar |
 | floor-plan | floor plan and book location |
-| in-library history (part of borrowing) | — |
+| in-library history (part of borrowing) | "My in-library use" under borrowing history |
 | forgot-password, register | forgot password, Activate account (roster) |
 | librarian / staff / admin portals (~35 routes) | staff home placeholder |
 
@@ -94,7 +91,7 @@ Web routes come from `apps/web/src/App.tsx` (student and faculty portals are alm
 1. ✅ **Sign-in:** add the emailed-code step (B1), keep the session alive or re-login on `SESSION_EXPIRED` (B2, M4), relax the ID rule (B4), map `Staff` (B5), and handle `LOGIN_PAUSED` without double-counting attempts (M1, M2). Nothing else is testable until this works.
 2. ✅ **Registration:** move to roster registration with the `@ormoc.sti.edu.ph` domain (B3, M5), or hand users to the website.
 3. ✅ **Portal parity** (October work): printing, notifications, clearance, dashboard, My Books, profile, floor plan. Merge `feat/october-features` to `main`.
-4. **Remaining gaps:** borrow limits from `cart-state` (M6), server categories, research detail by id, print invoices, in-library history.
+4. ✅ **Remaining gaps:** borrowing-policy cart limit (M6), server categories, detail by id, print invoices, in-library history (branch `feat/web-parity-gaps`).
 5. **Live test** with a real student and faculty account: sign-in code, idle expiry, single session (M3), and the October screens.
 
 ## Web team decisions (2026-11-12)

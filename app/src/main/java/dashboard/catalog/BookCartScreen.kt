@@ -32,9 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stismartlib.data.cartLimitDescription
 import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.network.ApiException
-import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
 import com.example.stismartlib.ui.components.ElmsBanner
@@ -70,11 +70,7 @@ fun BookCartScreen(
         }
     }
     val allAvailable = repository.allCartItemsAvailable()
-    val cartLimitText = if (repository.session.userType == UserType.STUDENT) {
-        "Student cart limit: maximum of 2 books"
-    } else {
-        "Faculty can add multiple books"
-    }
+    val cartLimitText = cartLimitDescription(repository.cartLimit(), repository.catalogViewer)
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         PageHeader(eyebrow = "My library", title = "Book cart", description = cartLimitText)
