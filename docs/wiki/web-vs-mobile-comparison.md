@@ -92,4 +92,11 @@ The web routes come from `apps/web/src` (student and faculty portals are almost 
 3. **Quick wins:** server read-state for notifications, server clearance, borrow limits from `cart-state`.
 4. **Printing submit**, then profile and the rest of section 4.
 
-Before step 1, confirm with the web team that a native client may use `/auth/login/verify` and `/auth/activity`, since those routes are written with the browser in mind.
+## Web team decisions (2026-11-12)
+
+- **Native use of `/auth/login/verify` and `/auth/activity`:** allowed. The server routes get a comment saying the Android app depends on them.
+- **`LOGIN_DEVICES_ENABLED`:** stays off. The app cannot complete the device-switch step or send the browser device cookie.
+- **Bare 401s from `/auth/activity`:** will carry `SESSION_EXPIRED` (and `SESSION_UPGRADE_REQUIRED` for the no-session-id case). The app works with or without the codes.
+- **Separate code for wrong-portal sign-in:** not decided; the server still answers `INVALID_CREDENTIALS` and counts the attempt.
+- **Library desk staff:** not in the first app release; support is parked on `archive/desk-staff-support`.
+- **Stay signed in on the phone:** to be a server refresh token for students and faculty only (design pending).
