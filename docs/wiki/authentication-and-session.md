@@ -36,13 +36,13 @@ Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must m
 
 ## Password reset
 
-"Forgot password?" under the Sign in button opens `ForgotPasswordScreen` (`forgot_password?staff=…`, staff mode follows the login screen's switch). It mirrors the web `PasswordRecoveryPage`:
+"Forgot password?" under the Sign in button (student sign-in only) opens `ForgotPasswordScreen` (`forgot_password`). It mirrors the web `PasswordRecoveryPage`:
 
-1. **Request:** school ID or school email → `POST api/v1/auth/password-recovery/request` `{identifier, portal?}` (`portal: "staff"` in staff mode). The server always returns a `challengeId` and a neutral "if an account matches…" message, so the app can't tell whether an email was sent.
+1. **Request:** school ID or school email → `POST api/v1/auth/password-recovery/request` `{identifier}`. The server always returns a `challengeId` and a neutral "if an account matches…" message, so the app can't tell whether an email was sent.
 2. **Verify:** 6-digit code (reuses `LoginCodeStep`) → `/password-recovery/verify` `{challenge_id, code}` → `resetToken` (valid 5 minutes, kept in memory only). "Resend code" is a new request (new challenge), enabled after 60 seconds. Three wrong codes → `RECOVERY_LOCKED` for 15 minutes, back to step 1.
 3. **Reset:** new password + confirmation (`newPasswordError`: 8+ characters, at most 72 UTF-8 bytes, must match) → `/password-recovery/reset` `{challenge_id, reset_token, password, confirm_password}`. `PASSWORD_UNCHANGED` shows under the field; `RECOVERY_TOKEN_INVALID` restarts. Success signs the account out everywhere (server bumps `auth_version`).
 
-**Who can reset:** only **Student** accounts, and **Staff** accounts created by the library (staff mode). Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
+**Who can reset:** only **Student** accounts in the app. The server also resets desk **Staff** accounts (`portal: "staff"`), but desk staff aren't supported in the app yet, so that option is parked on `archive/desk-staff-support`. Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library, and the link is hidden on librarian sign-in. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
 
 ## Registration (students only)
 

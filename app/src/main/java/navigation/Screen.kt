@@ -10,9 +10,7 @@ sealed class Screen(val route: String) {
 
     object Register : Screen("student_register")
 
-    object ForgotPassword : Screen("forgot_password?staff={staff}") {
-        fun create(staff: Boolean): String = "forgot_password?staff=$staff"
-    }
+    object ForgotPassword : Screen("forgot_password")
 
     object Dashboard : Screen("dashboard/{userType}") {
         fun create(userType: UserType): String = "dashboard/${userType.name}"

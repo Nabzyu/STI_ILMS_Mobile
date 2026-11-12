@@ -90,7 +90,7 @@ private fun LoginCodeScreenDarkPreview() {
 @Composable
 private fun ForgotPasswordScreenPreview() {
     PreviewApp(seedSampleData = false) {
-        ForgotPasswordScreen(navController = rememberNavController(), staff = false)
+        ForgotPasswordScreen(navController = rememberNavController())
     }
 }
 
@@ -100,7 +100,6 @@ private fun ForgotPasswordCodeDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         ForgotPasswordScreen(
             navController = rememberNavController(),
-            staff = false,
             previewStage = PasswordResetStage.Verify,
         )
     }
@@ -112,7 +111,6 @@ private fun ForgotPasswordResetPreview() {
     PreviewApp(seedSampleData = false) {
         ForgotPasswordScreen(
             navController = rememberNavController(),
-            staff = false,
             previewStage = PasswordResetStage.Reset,
         )
     }

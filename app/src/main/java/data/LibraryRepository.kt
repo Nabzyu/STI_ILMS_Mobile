@@ -159,17 +159,15 @@ class LibraryRepository(
     }
 
     /**
-     * Step 1 of password recovery (Student accounts, or library Staff with [staff]).
-     * The server always answers with a challenge and a neutral message, even when no account matches.
+     * Step 1 of password recovery (Student accounts only; the server's staff option is for desk staff,
+     * who are not supported in the app yet). The server always answers with a challenge and a
+     * neutral message, even when no account matches.
      */
-    suspend fun requestPasswordReset(identifier: String, staff: Boolean): PasswordResetChallenge =
+    suspend fun requestPasswordReset(identifier: String): PasswordResetChallenge =
         withContext(Dispatchers.IO) {
             val data = ApiClient.unwrap(
                 ApiClient.api.passwordRecoveryRequest(
-                    PasswordRecoveryRequest(
-                        identifier = identifier.trim(),
-                        portal = if (staff) PORTAL_STAFF else null,
-                    ),
+                    PasswordRecoveryRequest(identifier = identifier.trim()),
                 ),
             )
             val challengeId = data.challengeId?.takeIf { it.isNotBlank() }

@@ -102,7 +102,7 @@ data class MeUser(
     val role: String? = null,
 )
 
-/** `/auth/password-recovery/request`. `portal` is `staff` for library Staff accounts, omitted for students. */
+/** `/auth/password-recovery/request`. `portal: "staff"` (desk staff) is not used by the app yet. */
 data class PasswordRecoveryRequest(
     val identifier: String,
     val portal: String? = null,

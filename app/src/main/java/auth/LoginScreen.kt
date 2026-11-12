@@ -335,6 +335,8 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 .fillMaxWidth()
                 .sizeIn(minHeight = 52.dp)
         )
+        // Librarian passwords cannot be reset through the server's recovery flow.
+        if (!staffPortal) {
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Text(
@@ -346,10 +348,13 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 modifier = Modifier
                     .sizeIn(minHeight = 48.dp)
                     .clickable(enabled = !isSubmitting) {
-                        navController.navigate(Screen.ForgotPassword.create(staffPortal))
+                        navController.navigate(Screen.ForgotPassword.route)
                     }
                     .padding(vertical = 12.dp)
             )
+        }
+        } else {
+            Spacer(modifier = Modifier.height(16.dp))
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(

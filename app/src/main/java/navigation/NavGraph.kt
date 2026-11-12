@@ -61,19 +61,8 @@ fun AppNavGraph(startDestination: String = Screen.Login.route) {
             RegisterScreen(navController)
         }
 
-        composable(
-            route = Screen.ForgotPassword.route,
-            arguments = listOf(
-                navArgument("staff") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
-            )
-        ) { backStackEntry ->
-            ForgotPasswordScreen(
-                navController = navController,
-                staff = backStackEntry.arguments?.getBoolean("staff") ?: false,
-            )
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(navController = navController)
         }
 
         composable(

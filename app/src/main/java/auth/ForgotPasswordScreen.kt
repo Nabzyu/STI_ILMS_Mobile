@@ -49,14 +49,13 @@ import kotlinx.coroutines.launch
 enum class PasswordResetStage { Request, Verify, Reset, Done }
 
 /**
- * Password recovery for Student accounts, or library Staff accounts with [staff].
- * The server only sends codes to those roles; faculty and librarians are told to contact the library.
+ * Password recovery for Student accounts. The server only sends codes to students (and desk staff,
+ * who are not supported in the app yet); faculty and librarians are told to contact the library.
  * [previewStage] opens a later step directly, for previews only.
  */
 @Composable
 fun ForgotPasswordScreen(
     navController: NavHostController,
-    staff: Boolean,
     previewStage: PasswordResetStage = PasswordResetStage.Request,
 ) {
     val repository = rememberLibraryRepository()
@@ -117,7 +116,7 @@ fun ForgotPasswordScreen(
     fun sendCode(onSent: () -> Unit) {
         scope.launch {
             try {
-                val challenge = repository.requestPasswordReset(identifier, staff)
+                val challenge = repository.requestPasswordReset(identifier)
                 challengeId = challenge.challengeId
                 code = ""
                 codeError = null
@@ -148,7 +147,7 @@ fun ForgotPasswordScreen(
         StiMark()
         Spacer(modifier = Modifier.height(32.dp))
         Text(
-            text = if (staff) "LIBRARY STAFF" else "PASSWORD RESET",
+            text = "PASSWORD RESET",
             style = EyebrowStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -166,11 +165,8 @@ fun ForgotPasswordScreen(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = when (stage) {
-                PasswordResetStage.Request -> if (staff) {
-                    "For library staff accounts set up by the library. We'll email a six-digit code to the school email on your account. Librarian passwords are reset by the library administrator."
-                } else {
+                PasswordResetStage.Request ->
                     "For student accounts. We'll email a six-digit code to the school email on your account. Faculty and librarians: please contact the library to reset your password."
-                }
                 PasswordResetStage.Verify ->
                     "Enter the code from your school email. It expires in 10 minutes. Three incorrect codes lock password reset for 15 minutes."
                 PasswordResetStage.Reset ->
@@ -198,7 +194,7 @@ fun ForgotPasswordScreen(
         when (stage) {
             PasswordResetStage.Request -> {
                 PortalField(
-                    label = if (staff) "Staff school ID or school email" else "Student ID or school email",
+                    label = "Student ID or school email",
                     value = identifier,
                     onValueChange = {
                         identifier = it.take(254)
