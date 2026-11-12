@@ -14,34 +14,32 @@ Back to [index](README.md). Related: [Networking and API](networking-and-api.md)
 | Server role | `UserType` | Label | `isStaff` |
 |---|---|---|---|
 | `Admin`, `Librarian`, `System Administrator` | `ADMIN` | Librarian | yes |
+| `Staff`, `Library Staff` | `STAFF` | Staff | yes |
 | `Faculty` | `FACULTY` | Faculty | no |
 | anything else / null | `STUDENT` | Student | no |
 
-Covered by `UserTypeTest`.
+Staff users (`isStaff`) land on `staff_home`. Covered by `UserTypeTest`.
 
-## Sign in — one form, two server portals
+## Sign in — two portals, one attempt per press
 
-The API has separate **user** and **staff** login portals; the app shows a single form and works out which one to use (`LibraryRepository.login`):
+The server has a **user** portal (Student, Faculty) and a **staff** portal (Admin, Librarian, Staff). A role/portal mismatch is answered with the same `INVALID_CREDENTIALS` as a wrong password and counts against the account's budget of **8 wrong attempts per 10 minutes** (then `429 LOGIN_PAUSED`). Sending no `portal` field doesn't help: the server then defaults to `user` (`validateRoleLogin` in `account-auth.validation.ts`). So the app no longer tries both portals. Like the web app's separate `/login` and `/staff` pages, the login screen has a **"Use staff sign in" / "Use student sign in"** switch. The portal last used for a school ID (`SessionStore.preferredLoginPortal`) is pre-selected while the user types that ID, unless they used the switch.
 
-1. Normalise the school ID (trim, upper-case).
-2. Try the portal remembered for that ID (`SessionStore.preferredLoginPortal`), default `user`.
-3. If that fails with `INVALID_CREDENTIALS`, try the other portal. (Admins are rejected by the user portal, so first-time librarians fall through to `staff`.)
-4. If the second attempt fails, surface its error only when it is `TOO_MANY_LOGIN_ATTEMPTS` or `ACCOUNT_DEACTIVATED`; otherwise re-throw the first error.
+`LibraryRepository.login(schoolId, password, staffPortal)`:
+1. Normalises the school ID (trim, upper-case) and clears any previous session, so no stale `Authorization` header is sent.
+2. `POST api/v1/auth/login` with `{school_id, password, portal}`.
+3. `interpretLoginData` (`data/LoginFlow.kt`) decides what came back:
+   - **Staff roles:** a token payload → `completeSignIn` saves token + identity, sets `session`, remembers the portal, starts idle tracking. A non-staff role from the staff portal is rejected with `ADMIN_ROLE_REQUIRED`.
+   - **Student / Faculty:** `{otpRequired, challengeId, emailHint, expiresIn: 600, resendAfter: 60}` → `LoginOutcome.CodeRequired`. The login screen switches to the code step (`auth/LoginCodeStep.kt`).
+   - `deviceSwitchRequired` (only when the server's device sign-in feature is on) → `DEVICE_SWITCH_REQUIRED` error; the app can't finish that flow.
+4. Code step: `verifyLoginCode` → `POST api/v1/auth/login/verify` `{challenge_id, code}` (6 digits) returns the normal token payload. "Resend code" → `POST api/v1/auth/login/resend` `{challenge_id}`, disabled for the 60-second cooldown (countdown on the button). "Back to sign in" or the system back button returns to the password form. A wrong code (`LOGIN_CODE_INVALID`) shows under the field; `LOGIN_CODE_PAUSED` (3 wrong codes) and `LOGIN_CHANGED` send the user back to the password form.
 
-Each attempt (`authenticatePortal`):
-- clears the stored session and in-memory data first, so no stale `Authorization` header is sent;
-- `POST api/v1/auth/login` with `{school_id, password, portal}`;
-- requires a non-blank `token` and an account id, else throws;
-- rejects a non-staff role coming back from the `staff` portal with `ADMIN_ROLE_REQUIRED`;
-- saves token + identity, sets `session`, and remembers the portal for that school ID (this hint survives logout).
-
-Client-side validation in `LoginScreen`: school ID must be **exactly 11 digits**; password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `staff_home` or `dashboard/{type}` and the login screen is removed from the back stack.
+Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`, `ADMIN-PORTAL-001`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `staff_home` or `dashboard/{type}` and the login screen is removed from the back stack.
 
 ## Registration (students only)
 
 `RegisterScreen` → `LibraryRepository.registerStudent` → `POST api/v1/auth/register`.
 
-Client checks: 11-digit student ID; first/last name; email matching the STI student domain (`name@stu.sti.edu.ph`); program/strand; year level; password ≥ 8 chars; confirmation matches. Program options and year levels come from `auth/ProgramOptions.kt`:
+Client checks (unchanged, still the old rules — see B3/M5 in [Web vs mobile](web-vs-mobile-comparison.md)): 11-digit student ID; first/last name; email matching the STI student domain (`name@stu.sti.edu.ph`); program/strand; year level; password ≥ 8 chars; confirmation matches. Program options and year levels come from `auth/ProgramOptions.kt`:
 - Senior High strands STEM, ABM, TVL → Grade 11–12
 - College BSIT, BSTM, BSHM → 1st–4th Year
 
@@ -55,9 +53,19 @@ Registration does **not** sign the user in; on success it returns to `login`. Se
 - `getSession()` returns null unless token, account id ≥ 0, school ID and role are all present.
 - Login-portal hints live in a separate plain prefs file `smartlib_login_hints` (school ID → `user`/`staff`).
 
+## Idle limit and session renewal
+
+The server ends a session after **10 minutes without activity**; only `POST api/v1/auth/activity` (Bearer) refreshes it, returning `{token, idleSeconds}`. The app follows the web client's `SessionActivity.tsx`:
+
+- **What counts as activity:** any touch or key press (`MainActivity.onUserInteraction` → `LibraryRepository.onUserInteraction`). Normal API calls do not count, on the server or in the app.
+- **When it pings:** at most once every 30 seconds, always following the latest interaction (a throttled touch schedules one ping for when the 30 seconds are up). The renewed token replaces the stored one (`SessionStore.updateToken`). Offline or failed pings are retried on the next touch.
+- **Local expiry:** if 10 minutes pass with no interaction, the next touch, or the app returning to the foreground (`MainActivity.onStart` → `checkIdleTimeout`), signs the user out with "You were signed out after 10 minutes of inactivity." The logic is in `session/SessionActivityTracker.kt` (unit-tested).
+- **After a restore** the app pings once, because `/auth/me` does not refresh the server's idle window.
+- Unlike the web app, there is no 60-second countdown warning.
+
 ## Restore, expiry and logout
 
-- **Restore:** at launch, `restoreSession()` calls `/auth/me`; on success it refreshes stored identity, on any `ApiException` it clears everything and returns false.
-- **Server-side invalidation:** `ApiClient.unwrap` clears the stored session when the error code is `ACCOUNT_DEACTIVATED`, `ACCOUNT_ACCESS_REVOKED`, `JWT_REQUIRED` or `JWT_INVALID`. The in-memory `session` is *not* reset at that point, so the user stays on the current screen until they navigate or restart.
+- **Restore:** at launch, `restoreSession()` calls `/auth/me`, then `/auth/activity`. On success it refreshes stored identity. On any `ApiException` it clears everything and returns false; a session-ending code is shown on the login screen.
+- **Server-side invalidation:** `SESSION_EXPIRED`, `SESSION_UPGRADE_REQUIRED`, `JWT_REQUIRED`, `JWT_INVALID`, `ACCOUNT_ACCESS_REVOKED` and `ACCOUNT_DEACTIVATED` (`network/SessionErrors.kt`), or a bare 401 from any non-sign-in endpoint, end the session. `ApiClient.unwrap` clears the stored session and calls `ApiClient.onSessionEnded` (wired in `STIOrmocLibraryApp`) → `LibraryRepository.onServerSessionEnded` clears in-memory data and `session`. `AppNavGraph` watches `session.isAuthenticated` and returns to `login`, which shows the reason (`sessionEndedMessage`). Errors from the sign-in endpoints never end a session. `JWT_ROLE_FORBIDDEN` (a 403 for one resource) does not sign out.
+- **One session per account:** a sign-in on the web (or another phone) revokes this one; the app sees `ACCOUNT_ACCESS_REVOKED` or `SESSION_EXPIRED` and returns to login.
 - **Logout:** clears stored session, all in-memory lists and the cart; navigation pops to `login`.
-- There is no token refresh flow; `expiresIn` from the login response is ignored.

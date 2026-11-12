@@ -43,9 +43,13 @@ Back to [index](README.md).
 
 Unit tests only (`app/src/test/java/com/example/stismartlib/`):
 - `ApiConfigTest` — base URL ends with `/` and equals the hosted web API.
-- `UserTypeTest` — server-role mapping, including admin aliases and null.
+- `UserTypeTest` — server-role mapping, including admin and staff aliases and null.
+- `LoginRulesTest` — school ID rule and 6-digit code check.
+- `LoginFlowTest` — parsing `/auth/login` responses: emailed-code challenge vs token, broken payloads.
+- `SessionErrorsTest` — which codes end a session, 401 handling, sign-in error copy.
+- `SessionActivityTrackerTest` — 10-minute idle limit and 30-second ping throttle.
 
-No instrumented tests exist, though the Espresso / Compose UI test dependencies are declared. The repository, mapping and error sanitising have no tests.
+No instrumented tests exist, though the Espresso / Compose UI test dependencies are declared. `LibraryRepository` itself (network calls, storage) has no tests; there is no MockWebServer or Robolectric in the project.
 
 ## Visual verification
 
