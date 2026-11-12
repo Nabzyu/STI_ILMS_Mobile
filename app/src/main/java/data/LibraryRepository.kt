@@ -114,31 +114,25 @@ class LibraryRepository(
         cart.isNotEmpty() && cart.all { it.isAvailable }
 
     /**
-     * Sign-in for one server portal: `user` (Student/Faculty) or `staff` (Admin/Librarian).
-     * Desk staff (`Staff`) also use the staff portal but are not supported in the app yet.
-     * The server counts a portal/role mismatch as a wrong password, so the app never retries the
-     * other portal on its own; the login screen lets the user pick the staff sign-in instead.
-     * Student/Faculty get [LoginOutcome.CodeRequired] and finish with [verifyLoginCode].
+     * Student and Faculty sign-in through the server's `user` portal; they get
+     * [LoginOutcome.CodeRequired] and finish with [verifyLoginCode]. Librarian and staff accounts
+     * use the website for now (the server's separate `staff` portal isn't offered in the app).
      */
-    suspend fun login(schoolId: String, password: String, staffPortal: Boolean): LoginOutcome =
+    suspend fun login(schoolId: String, password: String): LoginOutcome =
         withContext(Dispatchers.IO) {
             lastError = null
             val normalizedSchoolId = normalizeSchoolId(schoolId)
-            val portal = if (staffPortal) PORTAL_STAFF else PORTAL_USER
             // Drop any previous token so login is not sent with a stale Authorization header.
             endLocalSession()
             val data = ApiClient.unwrap(
                 ApiClient.api.login(
-                    LoginRequest(schoolId = normalizedSchoolId, password = password, portal = portal),
+                    LoginRequest(schoolId = normalizedSchoolId, password = password, portal = PORTAL_USER),
                 ),
             )
             when (val step = interpretLoginData(data, normalizedSchoolId)) {
-                is LoginStep.CodeRequired -> {
-                    sessionStore.rememberLoginPortal(normalizedSchoolId, portal)
-                    LoginOutcome.CodeRequired(step.challenge)
-                }
+                is LoginStep.CodeRequired -> LoginOutcome.CodeRequired(step.challenge)
                 is LoginStep.Authenticated -> {
-                    completeSignIn(step, portal)
+                    completeSignIn(step)
                     LoginOutcome.SignedIn
                 }
             }
@@ -149,7 +143,7 @@ class LibraryRepository(
         lastError = null
         val data = ApiClient.unwrap(ApiClient.api.loginVerify(LoginVerifyRequest(challengeId, code.trim())))
         when (val step = interpretLoginData(data, normalizeSchoolId(schoolId))) {
-            is LoginStep.Authenticated -> completeSignIn(step, PORTAL_USER)
+            is LoginStep.Authenticated -> completeSignIn(step)
             is LoginStep.CodeRequired ->
                 throw ApiException("The server returned an incomplete login response.", "INVALID_LOGIN_RESPONSE")
         }
@@ -193,23 +187,13 @@ class LibraryRepository(
             Unit
         }
 
-    /** True/false when this school ID last signed in through the staff/user portal; null if unknown. */
-    fun prefersStaffPortal(schoolId: String): Boolean? =
-        sessionStore.preferredLoginPortal(normalizeSchoolId(schoolId))?.let { it == PORTAL_STAFF }
-
-    private fun completeSignIn(step: LoginStep.Authenticated, portal: String) {
-        if (UserType.isDeskStaffRole(step.role)) {
+    private fun completeSignIn(step: LoginStep.Authenticated) {
+        // The user portal never returns these roles today; this guards against a server change.
+        if (UserType.isStaffAccountRole(step.role)) {
             sessionStore.clear()
-            throw ApiException(DESK_STAFF_MESSAGE, "DESK_STAFF_NOT_SUPPORTED")
+            throw ApiException(STAFF_ACCOUNT_MESSAGE, "STAFF_ACCOUNT_NOT_SUPPORTED")
         }
         val userType = UserType.fromServerRole(step.role)
-        if (portal == PORTAL_STAFF && !userType.isStaff) {
-            sessionStore.clear()
-            throw ApiException(
-                "This sign-in is for Librarian accounts only.",
-                "ADMIN_ROLE_REQUIRED",
-            )
-        }
         sessionStore.save(
             token = step.token,
             accountId = step.accountId,
@@ -224,7 +208,6 @@ class LibraryRepository(
             accountId = step.accountId,
             isAuthenticated = true,
         )
-        sessionStore.rememberLoginPortal(step.schoolId, portal)
         sessionEndReason = null
         activityTracker.start(clock())
     }
@@ -296,9 +279,8 @@ class LibraryRepository(
 
     private companion object {
         const val PORTAL_USER = "user"
-        const val PORTAL_STAFF = "staff"
-        const val DESK_STAFF_MESSAGE =
-            "Library desk staff accounts can't use the app yet. Please use the library website."
+        const val STAFF_ACCOUNT_MESSAGE =
+            "Librarian and library staff accounts can't use the app yet. Please use the library website."
     }
 
     /** Whether Student account activation is open this semester. */
@@ -339,7 +321,8 @@ class LibraryRepository(
             val accountId = me.accountId ?: me.id ?: stored.accountId
             val schoolId = me.schoolId ?: stored.schoolId
             val role = me.role ?: stored.role
-            if (UserType.isDeskStaffRole(role)) {
+            // A librarian session saved by an earlier app version is dropped.
+            if (UserType.isStaffAccountRole(role)) {
                 endLocalSession()
                 return@withContext false
             }
