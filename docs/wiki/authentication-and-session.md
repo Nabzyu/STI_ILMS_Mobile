@@ -17,32 +17,32 @@ Back to [index](README.md). Related: [Networking and API](networking-and-api.md)
 | `Faculty` | `FACULTY` | Faculty | no |
 | anything else / null | `STUDENT` | Student | no |
 
-Librarians (`isStaff`) land on `staff_home`. **Library desk staff (`Staff`, `Library Staff`) are not supported in the app yet** (decision by the web team): `UserType.isDeskStaffRole` catches them, sign-in stops with "Library desk staff accounts can't use the app yet. Please use the library website." (`DESK_STAFF_NOT_SUPPORTED`), and a restored desk-staff session is dropped. Because the server has already created a session by then, a desk-staff sign-in attempt from the app still signs that account out of the website. Desk-staff support is parked on branch `archive/desk-staff-support`. Covered by `UserTypeTest`.
+**Librarian, Admin and desk Staff accounts can't use the app yet** (web team decision): the staff side of the app is still placeholders, so they use the website. The sign-in screen says "Librarians and library staff: please use the library website." `UserType.isStaffAccountRole` guards sign-in (`STAFF_ACCOUNT_NOT_SUPPORTED`) and drops a staff session saved by an earlier app version. The staff home screen and `ADMIN` type stay in the code for later. Parked work: librarian sign-in on `archive/librarian-sign-in`, desk staff on `archive/desk-staff-support`. Covered by `UserTypeTest`.
 
-## Sign in — two portals, one attempt per press
+## Sign in — students and faculty only
 
-The server has a **user** portal (Student, Faculty) and a **staff** portal (Admin, Librarian, and desk Staff, which the app does not support yet). A role/portal mismatch is answered with the same `INVALID_CREDENTIALS` as a wrong password and counts against the account's budget of **8 wrong attempts per 10 minutes** (then `429 LOGIN_PAUSED`). Sending no `portal` field doesn't help: the server then defaults to `user` (`validateRoleLogin` in `account-auth.validation.ts`). So the app no longer tries both portals. Like the web app's separate `/login` and `/staff` pages, the login screen has a **"Use librarian sign in" / "Use student sign in"** switch. The portal last used for a school ID (`SessionStore.preferredLoginPortal`) is pre-selected while the user types that ID, unless they used the switch.
+The server has a **user** portal (Student, Faculty) and a **staff** portal (Admin, Librarian, Staff). A role/portal mismatch is answered with the same `INVALID_CREDENTIALS` as a wrong password and counts against the account's budget of **8 wrong attempts per 10 minutes** (then `429 LOGIN_PAUSED`). The app only uses the user portal, so each press costs at most one attempt. A librarian who tries the app anyway sees "Invalid school ID or password" (the server can't say it's the wrong portal) and uses one attempt.
 
-`LibraryRepository.login(schoolId, password, staffPortal)`:
+`LibraryRepository.login(schoolId, password)`:
 1. Normalises the school ID (trim, upper-case) and clears any previous session, so no stale `Authorization` header is sent.
-2. `POST api/v1/auth/login` with `{school_id, password, portal}`.
+2. `POST api/v1/auth/login` with `{school_id, password, portal: "user"}`.
 3. `interpretLoginData` (`data/LoginFlow.kt`) decides what came back:
-   - **Staff roles:** a token payload → `completeSignIn` saves token + identity, sets `session`, remembers the portal, starts idle tracking. A non-staff role from the staff portal is rejected with `ADMIN_ROLE_REQUIRED`.
    - **Student / Faculty:** `{otpRequired, challengeId, emailHint, expiresIn: 600, resendAfter: 60}` → `LoginOutcome.CodeRequired`. The login screen switches to the code step (`auth/LoginCodeStep.kt`).
+   - A token payload (not expected from the user portal) → `completeSignIn` saves token + identity, sets `session` and starts idle tracking, unless the role is a staff account.
    - `deviceSwitchRequired` (only when the server's device sign-in feature is on) → `DEVICE_SWITCH_REQUIRED` error; the app can't finish that flow.
 4. Code step: `verifyLoginCode` → `POST api/v1/auth/login/verify` `{challenge_id, code}` (6 digits) returns the normal token payload. "Resend code" → `POST api/v1/auth/login/resend` `{challenge_id}`, disabled for the 60-second cooldown (countdown on the button). "Back to sign in" or the system back button returns to the password form. A wrong code (`LOGIN_CODE_INVALID`) shows under the field; `LOGIN_CODE_PAUSED` (3 wrong codes) and `LOGIN_CHANGED` send the user back to the password form.
 
-Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`, `ADMIN-PORTAL-001`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `staff_home` or `dashboard/{type}` and the login screen is removed from the back stack.
+Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `dashboard/{type}` and the login screen is removed from the back stack.
 
 ## Password reset
 
-"Forgot password?" under the Sign in button (student sign-in only) opens `ForgotPasswordScreen` (`forgot_password`). It mirrors the web `PasswordRecoveryPage`:
+"Forgot password?" under the Sign in button opens `ForgotPasswordScreen` (`forgot_password`). It mirrors the web `PasswordRecoveryPage`:
 
 1. **Request:** school ID or school email → `POST api/v1/auth/password-recovery/request` `{identifier}`. The server always returns a `challengeId` and a neutral "if an account matches…" message, so the app can't tell whether an email was sent.
 2. **Verify:** 6-digit code (reuses `LoginCodeStep`) → `/password-recovery/verify` `{challenge_id, code}` → `resetToken` (valid 5 minutes, kept in memory only). "Resend code" is a new request (new challenge), enabled after 60 seconds. Three wrong codes → `RECOVERY_LOCKED` for 15 minutes, back to step 1.
 3. **Reset:** new password + confirmation (`newPasswordError`: 8+ characters, at most 72 UTF-8 bytes, must match) → `/password-recovery/reset` `{challenge_id, reset_token, password, confirm_password}`. `PASSWORD_UNCHANGED` shows under the field; `RECOVERY_TOKEN_INVALID` restarts. Success signs the account out everywhere (server bumps `auth_version`).
 
-**Who can reset:** only **Student** accounts in the app. The server also resets desk **Staff** accounts (`portal: "staff"`), but desk staff aren't supported in the app yet, so that option is parked on `archive/desk-staff-support`. Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library, and the link is hidden on librarian sign-in. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
+**Who can reset:** only **Student** accounts in the app. The server also resets desk **Staff** accounts (`portal: "staff"`), but desk staff aren't supported in the app yet, so that option is parked on `archive/desk-staff-support`. Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
 
 ## Registration (students only)
 
@@ -60,7 +60,6 @@ Registration does **not** sign the user in; on success it returns to `login`. Se
 - **Fallback:** if the encrypted store cannot be created, it logs a warning and uses plain `smartlib_session_fallback` prefs. The token is then stored unencrypted on that device.
 - Writes use `commit()` so the token is readable before the very next request.
 - `getSession()` returns null unless token, account id ≥ 0, school ID and role are all present.
-- Login-portal hints live in a separate plain prefs file `smartlib_login_hints` (school ID → `user`/`staff`).
 
 ## Idle limit and session renewal
 
@@ -77,7 +76,7 @@ The server ends a session after **10 minutes without activity**; only `POST api/
 Requires the server change in `docs/plans/server-patches/` (migration `037_mobile_sessions.sql`, `/auth/refresh`, `/auth/logout`). Until it is deployed, the server ignores `client` and sends no key, so the app behaves as before.
 
 - Every sign-in sends `client: "mobile"`. The server keeps **one website session and one phone session** per account: a website sign-in no longer signs the phone out, and vice versa. A second phone sign-in replaces the first.
-- Student/Faculty sign-ins get a `refreshToken` valid for **30 days from sign-in** (rotating it does not extend this). It is stored only in the encrypted prefs (`SessionStore.getRefreshToken`). Librarians get none and keep the 10-minute idle sign-out.
+- Student/Faculty sign-ins get a `refreshToken` valid for **30 days from sign-in** (rotating it does not extend this). It is stored only in the encrypted prefs (`SessionStore.getRefreshToken`). (Librarians would get none, but they can no longer sign in to the app.) Without a key, for example before the server patch is deployed, the 10-minute idle sign-out still applies.
 - `network/SessionRefreshInterceptor.kt`: when a request fails with `SESSION_EXPIRED` or `JWT_INVALID`, it calls `/auth/refresh` once (one refresh at a time), saves the new token and key, and retries the request. A rejected key passes the 401 through, so the normal sign-out applies. If the server can't be reached, the request fails as offline and the key is kept.
 - The server rotates the key on every refresh. Reusing a replaced key ends the session (treated as stolen). Password reset, deactivation, role change and semester end also stop it.
 - With a key, the local 10-minute idle rule does not sign out; the next request renews the session. Opening the app offline with a key shows the saved account and renews once online.
@@ -87,7 +86,7 @@ Requires the server change in `docs/plans/server-patches/` (migration `037_mobil
 
 Because the phone stays signed in for 30 days, the app can ask for the phone's fingerprint (or face) or its PIN/pattern/password before showing the account. Uses `androidx.biometric` (`BiometricPrompt`); `MainActivity` is a `FragmentActivity` for it.
 
-- **Who:** only when the phone holds a refresh key (`LibraryRepository.canUseAppLock`) and the phone has a fingerprint or screen lock set up (`canUseDeviceUnlock`). Librarians, and every account until the server patch is deployed, never see it.
+- **Who:** only when the phone holds a refresh key (`LibraryRepository.canUseAppLock`) and the phone has a fingerprint or screen lock set up (`canUseDeviceUnlock`). The app only signs in students and faculty, so every signed-in phone qualifies once the server patch is deployed; until then no phone gets a key and nobody sees it.
 - **Asking:** after a Student/Faculty sign-in, once per school ID: "Use fingerprint to unlock?" (`AppLockGate`). "Turn on" runs the prompt once and turns it on only if it succeeds. "Not now" (or tapping outside) is remembered. Closing the prompt records nothing, so it is asked again next sign-in. The answer lives in plain prefs `smartlib_app_lock` (`lock_<SCHOOL_ID>` → true/false) and survives sign-out. The side menu has a **Fingerprint unlock On/Off** row to change it (turning on needs one successful check).
 - **When it locks** (`session/AppLock.kt`, unit-tested): when the app starts with a saved session (once per process, so rotation doesn't relock), and when it returns after **1 minute or more** in the background (`MainActivity.onStop`/`onStart`). A fresh password sign-in is never locked. Time spent on the system PIN screen while locked does not count as time away.
 - **Lock screen** (`auth/AppLockScreen.kt`): "Unlock with fingerprint" (the prompt also opens by itself when the lock appears) and "Sign in with password instead", which signs out (`logout`, so the key is revoked on the server). It covers the app instead of replacing it, so the user returns to the same screen; the app underneath is hidden from TalkBack and gets no touches, and Back sends the app to the background.

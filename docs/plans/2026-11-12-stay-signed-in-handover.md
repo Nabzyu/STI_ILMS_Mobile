@@ -4,7 +4,7 @@ Date: 2026-11-12. Branch: `feat/stay-signed-in` (built on `feat/password-reset`,
 
 ## Decisions from the web team (the user is on the web team)
 
-- Students and faculty only for "stay signed in". Library desk staff are not in the first release (support parked on `archive/desk-staff-support`).
+- Students and faculty only for "stay signed in". Librarians and library desk staff can't sign in to the app in the first release (librarian sign-in parked on `archive/librarian-sign-in`, desk staff on `archive/desk-staff-support`; merged in from `feat/password-reset`).
 - Refresh key lifetime: **30 days** from sign-in, not extended by use.
 - **One website session and one phone session per account** (a website sign-in must not sign the phone out).
 - `LOGIN_DEVICES_ENABLED` stays off. Wrong-portal sign-in stays as it is (counts as a wrong password).
@@ -39,7 +39,7 @@ Verified there: `tsc --noEmit` clean, 430/430 API tests pass, and deliberate bug
 
 ## Verified (second session)
 
-- Android SDK installed (platform 36, build-tools 36.0.0). `./gradlew :app:testDebugUnitTest :app:assembleDebug` passes: **55/55** JVM tests (37 existing, no fixes needed; 18 new in `AppLockTest`, `BiometricUnlockTest`), debug APK builds. Note: `gradlew` is committed without the executable bit; run it with `sh ./gradlew` or `chmod +x`.
+- Android SDK installed (platform 36, build-tools 36.0.0). `./gradlew :app:testDebugUnitTest :app:assembleDebug` passes: **55/55** JVM tests (37 existing, no fixes needed; 18 new in `AppLockTest`, `BiometricUnlockTest`), debug APK builds. After merging `feat/password-reset` (students and faculty only): **56/56**, APK builds. Note: `gradlew` is committed without the executable bit; run it with `sh ./gradlew` or `chmod +x`.
 
 ## Not verified yet
 

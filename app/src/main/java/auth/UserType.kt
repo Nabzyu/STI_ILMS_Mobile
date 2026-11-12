@@ -30,5 +30,12 @@ enum class UserType(val displayName: String) {
             return normalized.equals("Staff", ignoreCase = true) ||
                 normalized.equals("Library Staff", ignoreCase = true)
         }
+
+        /**
+         * Librarian, Admin and desk Staff accounts. None of them can use the app yet: the staff side
+         * of the app is still placeholders, so they use the website. Librarian sign-in is parked on
+         * the `archive/librarian-sign-in` branch.
+         */
+        fun isStaffAccountRole(role: String?): Boolean = fromServerRole(role).isStaff || isDeskStaffRole(role)
     }
 }

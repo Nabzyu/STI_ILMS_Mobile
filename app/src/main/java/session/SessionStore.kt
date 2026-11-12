@@ -19,8 +19,6 @@ data class StoredSession(
 class SessionStore(context: Context) : SessionTokens {
     private val appContext = context.applicationContext
     private val prefs: SharedPreferences = createPrefs(appContext)
-    private val loginHints: SharedPreferences =
-        appContext.getSharedPreferences(PREFS_LOGIN_HINTS, Context.MODE_PRIVATE)
     private val appLockChoices: SharedPreferences =
         appContext.getSharedPreferences(PREFS_APP_LOCK, Context.MODE_PRIVATE)
 
@@ -40,21 +38,6 @@ class SessionStore(context: Context) : SessionTokens {
             .putString(KEY_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
             .commit()
-    }
-
-    /** Last successful API portal for a school ID (`user` or `staff`). Survives logout. */
-    fun preferredLoginPortal(schoolId: String): String? {
-        val key = schoolId.trim().uppercase()
-        if (key.isBlank()) return null
-        return loginHints.getString(hintKey(key), null)
-            ?.takeIf { it == "user" || it == "staff" }
-    }
-
-    fun rememberLoginPortal(schoolId: String, portal: String) {
-        val key = schoolId.trim().uppercase()
-        if (key.isBlank()) return
-        if (portal != "user" && portal != "staff") return
-        loginHints.edit().putString(hintKey(key), portal).apply()
     }
 
     /** Fingerprint unlock answer for a school ID: true/false, or null if never asked. Survives logout. */
@@ -121,10 +104,7 @@ class SessionStore(context: Context) : SessionTokens {
         const val KEY_ROLE = "role"
         const val PREFS_ENCRYPTED = "smartlib_session"
         const val PREFS_FALLBACK = "smartlib_session_fallback"
-        const val PREFS_LOGIN_HINTS = "smartlib_login_hints"
         const val PREFS_APP_LOCK = "smartlib_app_lock"
-
-        fun hintKey(schoolId: String): String = "portal_$schoolId"
 
         fun appLockKey(schoolId: String): String = "lock_$schoolId"
 

@@ -17,7 +17,7 @@ The mobile app was written against an older version of the server's `/api/v1` co
 
 ## 1. Blockers — the app cannot get past sign-in
 
-> **Status (branch `claude/fix-sign-in-flow`):** items marked ✅ (B1, B2, B4, M1, M2, M4) are fixed in the app. B5 (⏸) is deliberately not shipped: desk-staff accounts get a "use the website" message, and the full support is kept on branch `archive/desk-staff-support`. The rows below still describe the original problem; [Authentication and session](authentication-and-session.md) describes the new behaviour. None of it has been tested against the live server yet. B3, M3 (now handled as a normal sign-out) and M5–M8 are unchanged.
+> **Status (branch `claude/fix-sign-in-flow`):** items marked ✅ (B1, B2, B4, M1, M2, M4) are fixed in the app. B5 (⏸) is deliberately not shipped: librarian and desk-staff accounts use the website for now, and the full support is kept on branch `archive/desk-staff-support`. The rows below still describe the original problem; [Authentication and session](authentication-and-session.md) describes the new behaviour. None of it has been tested against the live server yet. B3, M3 (now handled as a normal sign-out) and M5–M8 are unchanged.
 
 | # | Server now | Mobile does | Effect |
 |---|---|---|---|
@@ -98,5 +98,5 @@ The web routes come from `apps/web/src` (student and faculty portals are almost 
 - **`LOGIN_DEVICES_ENABLED`:** stays off. The app cannot complete the device-switch step or send the browser device cookie.
 - **Bare 401s from `/auth/activity`:** will carry `SESSION_EXPIRED` (and `SESSION_UPGRADE_REQUIRED` for the no-session-id case). The app works with or without the codes.
 - **Separate code for wrong-portal sign-in:** no, leave as is. The server answers `INVALID_CREDENTIALS` and counts the attempt; the app relies on the remembered portal and the librarian switch.
-- **Library desk staff:** not in the first app release; support is parked on `archive/desk-staff-support`.
-- **Stay signed in on the phone:** 30-day refresh key for students and faculty only, and one website plus one phone session per account. Server change in `docs/plans/server-patches/`, app side on branch `feat/stay-signed-in`. Fingerprint unlock requested next.
+- **Librarians and library staff:** not in the first app release (the staff side of the app is placeholders). Librarian sign-in is parked on `archive/librarian-sign-in`, desk staff on `archive/desk-staff-support`.
+- **Stay signed in on the phone:** 30-day refresh key for students and faculty only, and one website plus one phone session per account. Server change in `docs/plans/server-patches/`, app side on branch `feat/stay-signed-in`, including fingerprint unlock.

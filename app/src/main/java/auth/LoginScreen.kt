@@ -35,6 +35,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -59,8 +60,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Sign-in for every role. Student/Faculty use the `user` portal and then enter an emailed code;
- * Librarians switch to the librarian sign-in (the server's separate `staff` portal).
+ * Student and Faculty sign-in: school ID and password, then a code emailed to their school email.
+ * Librarian and staff accounts use the website for now (parked on `archive/librarian-sign-in`).
  * [previewChallenge] opens the code step directly, for previews only.
  */
 @Composable
@@ -75,8 +76,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
     var banner by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
-    var staffPortal by remember { mutableStateOf(false) }
-    var portalChosenByUser by remember { mutableStateOf(false) }
     var challenge by remember { mutableStateOf(previewChallenge) }
     var code by remember { mutableStateOf("") }
     var codeError by remember { mutableStateOf<String?>(null) }
@@ -85,10 +84,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
 
     LaunchedEffect(Unit) {
         repository.consumeSessionEndReason()?.let { notice = sessionEndedMessage(it) }
-    }
-    // Pre-select the portal this school ID last signed in with, unless the user picked one.
-    LaunchedEffect(schoolId) {
-        if (!portalChosenByUser) repository.prefersStaffPortal(schoolId)?.let { staffPortal = it }
     }
     LaunchedEffect(challenge, resendSecondsLeft) {
         if (challenge != null && resendSecondsLeft > 0) {
@@ -134,7 +129,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Text(
             text = when {
                 activeChallenge != null -> "CHECK YOUR EMAIL"
-                staffPortal -> "LIBRARIAN"
                 else -> "WELCOME BACK"
             },
             style = EyebrowStyle,
@@ -144,7 +138,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Text(
             text = when {
                 activeChallenge != null -> "Enter your code"
-                staffPortal -> "Librarian sign in"
                 else -> "Sign in"
             },
             style = MaterialTheme.typography.headlineLarge,
@@ -156,10 +149,8 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 activeChallenge != null ->
                     "We sent a six-digit code to ${activeChallenge.emailHint}. " +
                         "It expires in ${(activeChallenge.expiresInSeconds / 60).coerceAtLeast(1)} minutes."
-                staffPortal ->
-                    "For librarian accounts. Use your school ID and password."
                 else ->
-                    "Use your school ID and password. Students and faculty then enter a code sent to their school email."
+                    "For students and faculty. Use your school ID and password, then enter the code sent to your school email."
             },
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             fontSize = 14.sp,
@@ -237,7 +228,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
             onValueChange = { value ->
                 schoolId = value.filter { it.isLetterOrDigit() || it in "._-" }.take(50)
             },
-            placeholder = if (staffPortal) "Enter your librarian school ID" else "Enter your Student or Faculty ID",
+            placeholder = "Enter your Student or Faculty ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
@@ -307,7 +298,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 notice = null
                 scope.launch {
                     try {
-                        when (val outcome = repository.login(normalized, password, staffPortal)) {
+                        when (val outcome = repository.login(normalized, password)) {
                             is LoginOutcome.SignedIn -> goToWorkspace()
                             is LoginOutcome.CodeRequired -> {
                                 password = ""
@@ -335,8 +326,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 .fillMaxWidth()
                 .sizeIn(minHeight = 52.dp)
         )
-        // Librarian passwords cannot be reset through the server's recovery flow.
-        if (!staffPortal) {
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Text(
@@ -353,38 +342,16 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                     .padding(vertical = 12.dp)
             )
         }
-        } else {
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Text(
-                text = buildAnnotatedString {
-                    append(if (staffPortal) "Student or faculty? " else "Librarian? ")
-                    withStyle(
-                        SpanStyle(
-                            fontWeight = FontWeight.Black,
-                            textDecoration = TextDecoration.Underline,
-                            color = ElmsCyan
-                        )
-                    ) {
-                        append(if (staffPortal) "Use student sign in" else "Use librarian sign in")
-                    }
-                },
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                modifier = Modifier
-                    .sizeIn(minHeight = 48.dp)
-                    .clickable(enabled = !isSubmitting) {
-                        staffPortal = !staffPortal
-                        portalChosenByUser = true
-                        banner = null
-                        schoolIdError = null
-                        passwordError = null
-                    }
-                    .padding(vertical = 12.dp)
-            )
-        }
-        if (!staffPortal) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Librarians and library staff: please use the library website.",
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
@@ -407,7 +374,6 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                     .clickable { navController.navigate(Screen.Register.route) }
                     .padding(vertical = 12.dp)
             )
-        }
         }
         }
     }
