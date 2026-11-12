@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -65,14 +66,15 @@ fun ActivateAccountScreen(
 ) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
-    var stage by remember { mutableStateOf(previewStage ?: ActivationStage.Checking) }
-    var schoolId by remember { mutableStateOf("") }
+    // Saved across rotation: the step, ID, challenge and code. The grant is memory-only.
+    var stage by rememberSaveable { mutableStateOf(previewStage ?: ActivationStage.Checking) }
+    var schoolId by rememberSaveable { mutableStateOf("") }
     var schoolIdError by remember { mutableStateOf<String?>(null) }
-    var challengeId by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
+    var challengeId by rememberSaveable { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
     var codeError by remember { mutableStateOf<String?>(null) }
-    // Short-lived grant from the code step: kept in memory only, never stored.
-    var grant by remember { mutableStateOf("") }
+    // Short-lived grant from the code step: held by the repository in memory only (survives rotation).
+    var grant by remember { mutableStateOf(repository.pendingActivationGrant.orEmpty()) }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
@@ -81,7 +83,7 @@ fun ActivateAccountScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var isBusy by remember { mutableStateOf(false) }
     var isResending by remember { mutableStateOf(false) }
-    var resendSecondsLeft by remember {
+    var resendSecondsLeft by rememberSaveable {
         mutableIntStateOf(if (previewStage == ActivationStage.Verify) 42 else 0)
     }
     var checkAttempt by remember { mutableIntStateOf(0) }
@@ -106,6 +108,7 @@ fun ActivateAccountScreen(
     }
 
     fun startOver(error: String? = null) {
+        repository.clearPendingRecovery()
         stage = ActivationStage.Request
         challengeId = ""
         code = ""
@@ -119,6 +122,7 @@ fun ActivateAccountScreen(
     }
 
     fun backToSignIn(activatedSchoolId: String? = null) {
+        repository.clearPendingRecovery()
         grant = ""
         password = ""
         confirmation = ""
@@ -126,6 +130,14 @@ fun ActivateAccountScreen(
             navController.previousBackStackEntry?.savedStateHandle?.set(ActivatedSchoolIdKey, activatedSchoolId)
         }
         navController.popBackStack()
+    }
+
+    // The grant isn't saved to disk, so if the app was closed in the background the password step
+    // can't finish; start again with a clear message instead.
+    LaunchedEffect(Unit) {
+        if (stage == ActivationStage.Password && grant.isBlank() && previewStage != ActivationStage.Password) {
+            startOver("Your activation step timed out. Please request a new code.")
+        }
     }
 
     BackHandler(

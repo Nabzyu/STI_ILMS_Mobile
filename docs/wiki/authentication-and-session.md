@@ -32,6 +32,8 @@ The server has a **user** portal (Student, Faculty) and a **staff** portal (Admi
    - `deviceSwitchRequired` (only when the server's device sign-in feature is on) → `DEVICE_SWITCH_REQUIRED` error; the app can't finish that flow.
 4. Code step: `verifyLoginCode` → `POST api/v1/auth/login/verify` `{challenge_id, code}` (6 digits) returns the normal token payload. "Resend code" → `POST api/v1/auth/login/resend` `{challenge_id}`, disabled for the 60-second cooldown (countdown on the button). "Back to sign in" or the system back button returns to the password form. A wrong code (`LOGIN_CODE_INVALID`) shows under the field; `LOGIN_CODE_PAUSED` (3 wrong codes) and `LOGIN_CHANGED` send the user back to the password form.
 
+**Rotation and process death:** the school ID, code step (`LoginChallengeSaver`), code and resend countdown survive rotation and the app being closed in the background (`rememberSaveable`). The password is never saved. Password reset and activation keep their step, ID, challenge and code the same way; the short-lived reset token and activation grant live only in repository memory (`pendingResetToken`, `pendingActivationGrant`), so they survive rotation but not process death, in which case the screen starts again with a message.
+
 Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `dashboard/{type}` and the login screen is removed from the back stack.
 
 ## Password reset

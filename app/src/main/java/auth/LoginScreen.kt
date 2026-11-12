@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,7 +70,8 @@ import kotlinx.coroutines.launch
 fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallenge? = null) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
-    var schoolId by remember { mutableStateOf("") }
+    // Saved across rotation and process death: the ID and code step, never the password.
+    var schoolId by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var schoolIdError by remember { mutableStateOf<String?>(null) }
@@ -76,11 +79,11 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
     var banner by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
-    var challenge by remember { mutableStateOf(previewChallenge) }
-    var code by remember { mutableStateOf("") }
+    var challenge by rememberSaveable(stateSaver = LoginChallengeSaver) { mutableStateOf(previewChallenge) }
+    var code by rememberSaveable { mutableStateOf("") }
     var codeError by remember { mutableStateOf<String?>(null) }
     var isResending by remember { mutableStateOf(false) }
-    var resendSecondsLeft by remember { mutableIntStateOf(previewChallenge?.resendAfterSeconds ?: 0) }
+    var resendSecondsLeft by rememberSaveable { mutableIntStateOf(previewChallenge?.resendAfterSeconds ?: 0) }
 
     LaunchedEffect(Unit) {
         repository.consumeSessionEndReason()?.let { notice = sessionEndedMessage(it) }
@@ -384,3 +387,20 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
     }
     }
 }
+
+/** Keeps the code step across rotation and process death. Holds no password or token. */
+val LoginChallengeSaver = listSaver<LoginChallenge?, Any>(
+    save = { challenge ->
+        challenge?.run { listOf(challengeId, emailHint, expiresInSeconds, resendAfterSeconds) }.orEmpty()
+    },
+    restore = { saved ->
+        saved.takeIf { it.size == 4 }?.let {
+            LoginChallenge(
+                challengeId = it[0] as String,
+                emailHint = it[1] as String,
+                expiresInSeconds = it[2] as Int,
+                resendAfterSeconds = it[3] as Int,
+            )
+        }
+    },
+)
