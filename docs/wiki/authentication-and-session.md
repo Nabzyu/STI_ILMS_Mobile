@@ -14,15 +14,14 @@ Back to [index](README.md). Related: [Networking and API](networking-and-api.md)
 | Server role | `UserType` | Label | `isStaff` |
 |---|---|---|---|
 | `Admin`, `Librarian`, `System Administrator` | `ADMIN` | Librarian | yes |
-| `Staff`, `Library Staff` | `STAFF` | Staff | yes |
 | `Faculty` | `FACULTY` | Faculty | no |
 | anything else / null | `STUDENT` | Student | no |
 
-Staff users (`isStaff`) land on `staff_home`. Covered by `UserTypeTest`.
+Librarians (`isStaff`) land on `staff_home`. **Library desk staff (`Staff`, `Library Staff`) are not supported in the app yet** (decision by the web team): `UserType.isDeskStaffRole` catches them, sign-in stops with "Library desk staff accounts can't use the app yet. Please use the library website." (`DESK_STAFF_NOT_SUPPORTED`), and a restored desk-staff session is dropped. Because the server has already created a session by then, a desk-staff sign-in attempt from the app still signs that account out of the website. Desk-staff support is parked on branch `archive/desk-staff-support`. Covered by `UserTypeTest`.
 
 ## Sign in — two portals, one attempt per press
 
-The server has a **user** portal (Student, Faculty) and a **staff** portal (Admin, Librarian, Staff). A role/portal mismatch is answered with the same `INVALID_CREDENTIALS` as a wrong password and counts against the account's budget of **8 wrong attempts per 10 minutes** (then `429 LOGIN_PAUSED`). Sending no `portal` field doesn't help: the server then defaults to `user` (`validateRoleLogin` in `account-auth.validation.ts`). So the app no longer tries both portals. Like the web app's separate `/login` and `/staff` pages, the login screen has a **"Use staff sign in" / "Use student sign in"** switch. The portal last used for a school ID (`SessionStore.preferredLoginPortal`) is pre-selected while the user types that ID, unless they used the switch.
+The server has a **user** portal (Student, Faculty) and a **staff** portal (Admin, Librarian, and desk Staff, which the app does not support yet). A role/portal mismatch is answered with the same `INVALID_CREDENTIALS` as a wrong password and counts against the account's budget of **8 wrong attempts per 10 minutes** (then `429 LOGIN_PAUSED`). Sending no `portal` field doesn't help: the server then defaults to `user` (`validateRoleLogin` in `account-auth.validation.ts`). So the app no longer tries both portals. Like the web app's separate `/login` and `/staff` pages, the login screen has a **"Use librarian sign in" / "Use student sign in"** switch. The portal last used for a school ID (`SessionStore.preferredLoginPortal`) is pre-selected while the user types that ID, unless they used the switch.
 
 `LibraryRepository.login(schoolId, password, staffPortal)`:
 1. Normalises the school ID (trim, upper-case) and clears any previous session, so no stale `Authorization` header is sent.

@@ -4,11 +4,9 @@ enum class UserType(val displayName: String) {
     STUDENT("Student"),
     FACULTY("Faculty"),
     /** Server role is Admin; UI label is Librarian. */
-    ADMIN("Librarian"),
-    /** Server role Staff (library desk staff). Signs in through the staff portal. */
-    STAFF("Staff");
+    ADMIN("Librarian");
 
-    val isStaff: Boolean get() = this == ADMIN || this == STAFF
+    val isStaff: Boolean get() = this == ADMIN
 
     companion object {
         fun fromServerRole(role: String?): UserType {
@@ -17,11 +15,20 @@ enum class UserType(val displayName: String) {
                 normalized.equals("Admin", ignoreCase = true) -> ADMIN
                 normalized.equals("Librarian", ignoreCase = true) -> ADMIN
                 normalized.equals("System Administrator", ignoreCase = true) -> ADMIN
-                normalized.equals("Staff", ignoreCase = true) -> STAFF
-                normalized.equals("Library Staff", ignoreCase = true) -> STAFF
                 normalized.equals("Faculty", ignoreCase = true) -> FACULTY
                 else -> STUDENT
             }
+        }
+
+        /**
+         * Library desk staff (`Staff`) are not supported in the app yet; they use the website.
+         * Kept separate so they are never treated as students. Support is parked on the
+         * `archive/desk-staff-support` branch.
+         */
+        fun isDeskStaffRole(role: String?): Boolean {
+            val normalized = role?.trim().orEmpty()
+            return normalized.equals("Staff", ignoreCase = true) ||
+                normalized.equals("Library Staff", ignoreCase = true)
         }
     }
 }
