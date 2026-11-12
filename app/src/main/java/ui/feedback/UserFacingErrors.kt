@@ -5,13 +5,14 @@ import com.example.stismartlib.network.SESSION_IDLE_CODE
 import com.example.stismartlib.network.SessionEndingCodes
 import java.io.IOException
 
+
 /**
  * Maps exceptions to user-safe copy. Never exposes stack traces, raw HTTP bodies,
  * SQL, internal paths, or server codes.
  */
 fun userFacingMessage(
     error: Throwable,
-    fallback: String = "Something went wrong. Please try again."
+    fallback: String = "Something went wrong. Please try again.",
 ): String {
     return when (error) {
         is ApiException -> when (error.code) {
@@ -58,7 +59,11 @@ fun userFacingMessage(
                 "Sign-in from the app is not available right now. Please use the library website."
             in SessionEndingCodes, SESSION_IDLE_CODE ->
                 sessionEndedMessage(error.code)
-            else -> sanitizeApiMessage(error.message) ?: fallback
+            "JWT_ROLE_FORBIDDEN" ->
+                "You do not have access to this action."
+            "AUTH_VALIDATION_FAILED" ->
+                "Please check the highlighted fields."
+            else -> otherApiMessage(error, fallback)
         }
         is IOException ->
             "Unable to reach the library service. Check your internet connection and try again."
@@ -95,7 +100,19 @@ private fun pausedMessage(raw: String?): String? {
     return "Too many wrong attempts. Sign-in is paused. Try again in $minutes $unit."
 }
 
-private fun sanitizeApiMessage(raw: String?): String? {
+/** Non-sign-in wording kept from the October feature work (`kind-rosalind`). */
+private fun otherApiMessage(error: ApiException, fallback: String): String {
+    val lower = error.message.orEmpty().lowercase()
+    return when {
+        lower.contains("route not found") -> "This feature is not available right now."
+        lower.contains("invalid book id") -> "This book could not be reserved."
+        lower.contains("invalid reservation id") -> "This reservation could not be updated."
+        else -> sanitizeApiMessage(error.message) ?: fallback
+    }
+}
+
+/** Light filter for developer / dump-like strings. Returns null when unsafe. */
+fun sanitizeApiMessage(raw: String?): String? {
     if (raw.isNullOrBlank()) return null
     val lower = raw.lowercase()
     val looksInternal =

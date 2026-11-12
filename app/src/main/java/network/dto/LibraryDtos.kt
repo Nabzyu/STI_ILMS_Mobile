@@ -11,8 +11,10 @@ data class BookCatalogItemDto(
     val publicationYear: Int? = null,
     val categoryId: Int? = null,
     val categoryName: String? = null,
+    @SerializedName(value = "callNumber", alternate = ["call_number"])
     val callNumber: String? = null,
     val coverImagePath: String? = null,
+    @SerializedName(value = "shelfLocation", alternate = ["shelf_location"])
     val shelfLocation: String? = null,
     val currentAvailabilityStatus: String? = null,
     val totalCopiesCount: Int? = null,
@@ -30,6 +32,7 @@ data class ResearchCatalogItemDto(
     val adviser: String? = null,
     val department: String? = null,
     val publicationYear: Int? = null,
+    @SerializedName(value = "shelfLocation", alternate = ["shelf_location"])
     val shelfLocation: String? = null,
     @SerializedName("abstract") val abstractText: String? = null,
     val keywords: String? = null,
@@ -39,12 +42,44 @@ data class ResearchCatalogItemDto(
 data class BorrowingHistoryDataDto(
     val summary: BorrowingSummaryDto? = null,
     val items: List<BorrowingItemDto>? = null,
+    val pagination: PaginationDto? = null,
 )
 
 data class BorrowingSummaryDto(
     val activeLoans: Int? = null,
     val activeReservations: Int? = null,
 )
+
+/** `GET catalog/copies/{barcode}`: one physical copy; `barcodeImageData` is an SVG data URI. */
+data class CatalogCopyDto(
+    val accessionNumber: String? = null,
+    val barcode: String? = null,
+    val shelfLocation: String? = null,
+    val conditionStatus: String? = null,
+    val barcodeImageData: String? = null,
+)
+
+/** `GET dashboard` (Student/Faculty); only the fields the app shows. */
+data class UserDashboardDto(
+    val occupancy: OccupancyDto? = null,
+    val announcement: AnnouncementDto? = null,
+)
+
+data class OccupancyDto(val current: Int? = null, val capacity: Int? = null)
+
+data class AnnouncementDto(
+    val id: Long? = null,
+    val title: String? = null,
+    val message: String? = null,
+    val priority: String? = null,
+    val publishedAt: String? = null,
+)
+
+/** `GET borrow/cart-state`: titles with an active loan or request. */
+data class CartStateDto(val activeTitleIds: List<Long>? = null)
+
+/** `GET borrowing/my-books`: the same row shape as borrowing history. */
+data class MyBooksDto(val items: List<BorrowingItemDto>? = null)
 
 data class BorrowingItemDto(
     val transactionId: Int? = null,
@@ -66,6 +101,10 @@ data class ReservationItemDto(
     val status: String? = null,
     val reservedAt: String? = null,
     val pickupDeadline: String? = null,
+)
+
+data class ReserveRequestDto(
+    @SerializedName("bookTitleId") val bookTitleId: Int,
 )
 
 data class ReserveResultDto(
@@ -90,6 +129,35 @@ data class FineObligationDto(
     val occurredAt: String? = null,
 )
 
+/** `GET fines/receipts` row: a cash payment recorded at the library counter. */
+data class FineReceiptDto(
+    val receiptId: Long? = null,
+    val receiptNumber: String? = null,
+    val amountReceived: Double? = null,
+    val paymentMethod: String? = null,
+    val receivedAt: String? = null,
+    val status: String? = null,
+)
+
+/** `GET notifications/schedule`. Days are 1 = Monday … 7 = Sunday; times look like "08:00:00". */
+data class LibraryScheduleDto(
+    val timezone: String? = null,
+    val weekly: List<WeeklyHoursDto>? = null,
+    val upcomingClosures: List<LibraryClosureDto>? = null,
+)
+
+data class WeeklyHoursDto(
+    val dayOfWeek: Int? = null,
+    val isOpen: Boolean? = null,
+    val opensAt: String? = null,
+    val closesAt: String? = null,
+)
+
+data class LibraryClosureDto(
+    val date: String? = null,
+    val reason: String? = null,
+)
+
 data class NotificationListDto(
     val items: List<NotificationItemDto>? = null,
     val unreadCount: Int? = null,
@@ -106,19 +174,34 @@ data class NotificationItemDto(
 )
 
 data class PrintRequestDto(
-    @SerializedName("request_id") val requestId: Int? = null,
-    @SerializedName("file_name") val fileName: String? = null,
-    @SerializedName("number_of_copies") val numberOfCopies: Int? = null,
-    @SerializedName("print_type") val printType: String? = null,
-    @SerializedName("paper_size") val paperSize: String? = null,
-    @SerializedName("calculated_cost") val calculatedCost: Double? = null,
-    @SerializedName("payment_status") val paymentStatus: String? = null,
-    @SerializedName("job_status") val jobStatus: String? = null,
-    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName(value = "request_id", alternate = ["requestId"])
+    val requestId: Int? = null,
+    @SerializedName(value = "file_name", alternate = ["fileName"])
+    val fileName: String? = null,
+    @SerializedName(value = "number_of_copies", alternate = ["numberOfCopies"])
+    val numberOfCopies: Int? = null,
+    @SerializedName(value = "print_type", alternate = ["printType"])
+    val printType: String? = null,
+    @SerializedName(value = "paper_size", alternate = ["paperSize"])
+    val paperSize: String? = null,
+    @SerializedName(value = "page_count", alternate = ["pageCount"])
+    val pageCount: Int? = null,
+    @SerializedName(value = "calculated_cost", alternate = ["calculatedCost"])
+    val calculatedCost: Double? = null,
+    @SerializedName(value = "payment_status", alternate = ["paymentStatus"])
+    val paymentStatus: String? = null,
+    @SerializedName(value = "job_status", alternate = ["jobStatus"])
+    val jobStatus: String? = null,
+    @SerializedName(value = "created_at", alternate = ["createdAt"])
+    val createdAt: String? = null,
 )
 
 data class BorrowSubmitRequest(
     @SerializedName("title_ids") val titleIds: List<Int>,
+)
+
+data class CancelBorrowRequestDto(
+    val reason: String? = null,
 )
 
 data class BorrowRequestReceiptDto(

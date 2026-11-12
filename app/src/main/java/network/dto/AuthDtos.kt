@@ -8,7 +8,17 @@ data class ApiEnvelope<T>(
     val code: String? = null,
     val data: T? = null,
     val details: ApiErrorDetails? = null,
-    val meta: Any? = null,
+    val meta: PageMetaDto? = null,
+)
+
+/** `meta` on list endpoints (catalog, research). */
+data class PageMetaDto(val pagination: PaginationDto? = null)
+
+data class PaginationDto(
+    val page: Int? = null,
+    val limit: Int? = null,
+    val total: Int? = null,
+    val totalPages: Int? = null,
 )
 
 data class ApiErrorDetails(

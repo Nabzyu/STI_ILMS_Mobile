@@ -1,6 +1,7 @@
 package com.example.stismartlib.network
 
 import com.example.stismartlib.network.dto.ApiEnvelope
+import com.example.stismartlib.network.dto.PaginationDto
 import com.example.stismartlib.session.SessionStore
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -18,6 +19,7 @@ object ApiClient {
     private val gson = Gson()
 
     val api: LibraryApi by lazy { retrofit.create(LibraryApi::class.java) }
+    val floorPlanApi: FloorPlanApi by lazy { retrofit.create(FloorPlanApi::class.java) }
 
     /**
      * Called (on the request thread) after a session-ending error has cleared stored credentials.
@@ -91,6 +93,17 @@ object ApiClient {
             onSessionEnded?.invoke(code)
         }
         throw ApiException(message, code, fieldErrors, response.code())
+    }
+
+    /** Like [unwrap], and also returns `meta.pagination` (catalog and research lists). */
+    fun <T> unwrapPage(response: Response<ApiEnvelope<T>>): Pair<T, PaginationDto?> =
+        unwrap(response) to response.body()?.meta?.pagination
+
+    /** Like [unwrap], but a successful reply with `data: null` (nothing to show) returns null. */
+    fun <T> unwrapOrNull(response: Response<ApiEnvelope<T>>): T? {
+        val body = response.body()
+        if (response.isSuccessful && body?.success == true && body.data == null) return null
+        return unwrap(response)
     }
 
     private fun parseError(response: Response<*>): ApiEnvelope<Any?>? {

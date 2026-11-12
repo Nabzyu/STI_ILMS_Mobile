@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
@@ -19,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +49,11 @@ import com.example.stismartlib.ui.feedback.userFacingMessage
 import kotlinx.coroutines.launch
 
 @Composable
-fun BookCartScreen(onBack: () -> Unit) {
+fun BookCartScreen(
+    onBack: () -> Unit,
+    // Preview hook: show the sync notice without a server.
+    initialSyncNotice: String? = null,
+) {
     val repository = rememberLibraryRepository()
     val scope = rememberCoroutineScope()
     var showBorrowDialog by remember { mutableStateOf(false) }
@@ -55,7 +61,14 @@ fun BookCartScreen(onBack: () -> Unit) {
     var dialogMessage by remember { mutableStateOf("Your cart is ready to claim at the library desk.") }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var syncNotice by remember { mutableStateOf(initialSyncNotice) }
     val cartItems = repository.cart
+
+    LaunchedEffect(Unit) {
+        if (cartItems.isNotEmpty() && repository.syncCartWithServer() > 0) {
+            syncNotice = "Removed books already requested or checked out. You can find them in My books or Borrowing history."
+        }
+    }
     val allAvailable = repository.allCartItemsAvailable()
     val cartLimitText = if (repository.session.userType == UserType.STUDENT) {
         "Student cart limit: maximum of 2 books"
@@ -68,6 +81,10 @@ fun BookCartScreen(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         if (errorMessage != null) {
             ElmsBanner(message = errorMessage.orEmpty(), tone = ElmsBannerTone.Error)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        syncNotice?.let {
+            ElmsBanner(message = it, tone = ElmsBannerTone.Info)
             Spacer(modifier = Modifier.height(8.dp))
         }
         if (cartItems.isEmpty()) {
@@ -92,7 +109,10 @@ fun BookCartScreen(onBack: () -> Unit) {
                                 Text(item.book.author, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 12.sp)
                                 StatusBadge(if (item.isAvailable) "Available" else "Unavailable", warning = !item.isAvailable)
                             }
-                            IconButton(onClick = { repository.removeFromCart(item.book.id) }) {
+                            IconButton(
+                                onClick = { repository.removeFromCart(item.book.id) },
+                                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                            ) {
                                 Icon(Lucide.Trash2, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface)
                             }
                         }
@@ -103,6 +123,7 @@ fun BookCartScreen(onBack: () -> Unit) {
                 PortalButton(
                     text = if (isSubmitting) "Submitting..." else "Borrow books",
                     onClick = {
+                        if (isSubmitting) return@PortalButton
                         isSubmitting = true
                         errorMessage = null
                         scope.launch {
@@ -118,7 +139,9 @@ fun BookCartScreen(onBack: () -> Unit) {
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSubmitting,
+                    loading = isSubmitting,
                 )
             } else {
                 PortalButton(text = "Reserve unavailable books", onClick = { showReserveDialog = true }, modifier = Modifier.fillMaxWidth())

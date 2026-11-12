@@ -16,6 +16,24 @@ data class Book(
     val totalCopies: Int,
     val description: String,
     val coverColor: Long = 0xFF0B5EA2,
+    val callNumber: String = "",
+    /** A physical copy's barcode for copy details; null when the title has no copy. */
+    val previewBarcode: String? = null,
+)
+
+data class PrintReceipt(
+    val id: String,
+    val receiptNumber: String,
+    val verificationCode: String,
+    val fileName: String,
+    val amountReceived: Double,
+    val printType: String,
+    val paperSize: String,
+    val copies: Int,
+    val pageCount: Int,
+    val receivedAt: String,
+    val receivedBy: String,
+    val status: String,
 )
 
 data class Research(
@@ -64,13 +82,46 @@ data class FineRecord(
     val paymentDate: String?,
 )
 
+/** Official receipt for a cash payment of fines or replacement charges. */
+data class FineReceipt(
+    val id: String,
+    val number: String,
+    val amount: Double,
+    val method: String,
+    /** ISO date (yyyy-MM-dd). */
+    val receivedOn: String,
+    val status: String,
+) {
+    val isReversed: Boolean get() = status.equals("Reversed", ignoreCase = true) || status.equals("Void", ignoreCase = true)
+}
+
 data class Reservation(
     val id: String,
     val book: Book,
     val queuePosition: Int,
     val dateReserved: String,
     val status: String = "pending",
-)
+    val pickupDeadline: String? = null,
+) {
+    val isCancellable: Boolean
+        get() {
+            val normalized = status.lowercase().replace(' ', '_')
+            return normalized in setOf("pending", "approved", "ready_for_pickup", "queued", "")
+        }
+
+    val statusBadgeLabel: String
+        get() = when (status.lowercase().replace(' ', '_')) {
+            "ready_for_pickup" -> "Ready to claim"
+            "approved" -> "Approved"
+            "cancelled" -> "Cancelled"
+            "expired" -> "Expired"
+            "claimed" -> "Claimed"
+            else -> "Queued"
+        }
+
+    val isReadyForPickup: Boolean
+        get() = status.lowercase().replace(' ', '_') == "ready_for_pickup"
+}
 
 enum class NotificationCategory(val label: String) {
     BOOKS("Books"),
@@ -99,6 +150,58 @@ data class PrintRequest(
     val amountPaid: Double,
     val status: PrintStatus,
     val dateSubmitted: String,
+    val paymentStatus: String = "",
+    val pageCount: Int = 0,
+) {
+    val canCancel: Boolean
+        get() = status == PrintStatus.PENDING &&
+            paymentStatus.equals("Unpaid", ignoreCase = true)
+}
+
+data class PrintQuote(
+    val pageCount: Int,
+    val totalSheets: Int,
+    val calculatedCost: Double,
+    val documentSha256: String,
+    val printableFileName: String?,
+)
+
+data class ClearanceStanding(
+    val isCleared: Boolean,
+    val statusLabel: String,
+    val reason: String,
+    val checkedAt: String?,
+    val activeLoans: Int,
+    val unpaidOverdueFines: Int,
+    val unpaidReplacementCharges: Double,
+    val totalOutstanding: Double,
+    val loans: List<ClearanceLoanItem> = emptyList(),
+    val fines: List<ClearanceFineItem> = emptyList(),
+    val lostBooks: List<ClearanceLostBookItem> = emptyList(),
+    val activeOverrideReason: String? = null,
+    /** Clearance deadline wording (see clearanceScheduleLine); null only for preview data. */
+    val scheduleLine: String? = null,
+    val pastDeadline: Boolean = false,
+)
+
+data class ClearanceLoanItem(
+    val title: String,
+    val status: String,
+    val dueAt: String?,
+    val currentFine: Double,
+)
+
+data class ClearanceFineItem(
+    val title: String,
+    val amount: Double,
+    val basis: String?,
+)
+
+data class ClearanceLostBookItem(
+    val title: String,
+    val status: String,
+    val replacementCharge: Double,
+    val paymentStatus: String,
 )
 
 enum class PrintStatus(val label: String) {
@@ -120,6 +223,34 @@ data class LibrarySession(
     val schoolId: String = "",
     val accountId: Int = 0,
     val isAuthenticated: Boolean = false,
+)
+
+enum class AvatarApprovalStatus(val label: String) {
+    NONE("No photo"),
+    PENDING("Pending approval"),
+    APPROVED("Approved"),
+    REJECTED("Rejected"),
+    UNKNOWN("Unknown"),
+}
+
+data class UserProfile(
+    val accountId: Int = 0,
+    val schoolId: String = "",
+    val firstName: String = "",
+    val lastName: String = "",
+    val fullName: String = "",
+    val email: String = "",
+    val role: String = "",
+    val programStrand: String = "",
+    val yearGradeLevel: String = "",
+    val status: String = "",
+)
+
+data class ProfileAvatar(
+    val status: AvatarApprovalStatus = AvatarApprovalStatus.NONE,
+    val imageUrl: String? = null,
+    val rejectionReason: String? = null,
+    val note: String? = null,
 )
 
 data class AttendancePass(
