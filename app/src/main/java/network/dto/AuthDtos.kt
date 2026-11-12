@@ -40,27 +40,35 @@ data class LoginUser(
     val role: String? = null,
 )
 
-data class RegisterRequest(
+/** Step 1 of roster sign-up: the server emails a code to the school email on the enrolment roster. */
+data class RosterBeginRequest(
     @SerializedName("school_id") val schoolId: String,
-    @SerializedName("first_name") val firstName: String,
-    @SerializedName("last_name") val lastName: String,
-    val email: String,
-    @SerializedName("program_strand") val programStrand: String,
-    @SerializedName("year_grade_level") val yearGradeLevel: String,
+)
+
+/** Always returned, even when the ID is not eligible, so anonymous callers learn nothing about the roster. */
+data class RosterBeginData(
+    val challengeId: String? = null,
+)
+
+data class RosterVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class RosterVerifyData(
+    val grant: String? = null,
+)
+
+data class RosterCompleteRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val grant: String,
     val password: String,
     @SerializedName("confirm_password") val confirmPassword: String,
 )
 
-data class RegisterData(
-    val account: RegisterAccount? = null,
-)
-
-data class RegisterAccount(
-    val id: Int? = null,
+data class RosterCompleteData(
+    val status: String? = null,
     val schoolId: String? = null,
-    val role: String? = null,
-    val firstName: String? = null,
-    val lastName: String? = null,
 )
 
 data class MeUser(

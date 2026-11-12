@@ -23,7 +23,9 @@ import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.LoginRequest
-import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RosterBeginRequest
+import com.example.stismartlib.network.dto.RosterCompleteRequest
+import com.example.stismartlib.network.dto.RosterVerifyRequest
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
 import kotlinx.coroutines.Dispatchers
@@ -171,30 +173,41 @@ class LibraryRepository(
         const val PORTAL_STAFF = "staff"
     }
 
-    suspend fun registerStudent(
-        schoolId: String,
-        firstName: String,
-        lastName: String,
-        email: String,
-        programStrand: String,
-        yearGradeLevel: String,
+    /** Returns the challenge ID. The server answers the same way whether or not the ID is on the roster. */
+    suspend fun beginRosterRegistration(schoolId: String): String = withContext(Dispatchers.IO) {
+        lastError = null
+        val data = ApiClient.unwrap(
+            ApiClient.api.rosterRegistrationBegin(RosterBeginRequest(schoolId = schoolId.trim().uppercase())),
+        )
+        data.challengeId ?: throw ApiException("Registration could not be started. Please try again.")
+    }
+
+    /** Exchanges the emailed 6-digit code for a short-lived grant used to set the password. */
+    suspend fun verifyRosterRegistrationCode(challengeId: String, code: String): String = withContext(Dispatchers.IO) {
+        lastError = null
+        val data = ApiClient.unwrap(
+            ApiClient.api.rosterRegistrationVerify(RosterVerifyRequest(challengeId = challengeId, code = code.trim())),
+        )
+        data.grant ?: throw ApiException("The code could not be verified. Please try again.")
+    }
+
+    suspend fun completeRosterRegistration(
+        challengeId: String,
+        grant: String,
         password: String,
         confirmPassword: String,
     ) = withContext(Dispatchers.IO) {
         lastError = null
-        val response = ApiClient.api.register(
-            RegisterRequest(
-                schoolId = schoolId.trim(),
-                firstName = firstName.trim(),
-                lastName = lastName.trim(),
-                email = email.trim().lowercase(),
-                programStrand = programStrand.trim(),
-                yearGradeLevel = yearGradeLevel.trim(),
-                password = password,
-                confirmPassword = confirmPassword,
+        ApiClient.unwrap(
+            ApiClient.api.rosterRegistrationComplete(
+                RosterCompleteRequest(
+                    challengeId = challengeId,
+                    grant = grant,
+                    password = password,
+                    confirmPassword = confirmPassword,
+                ),
             ),
         )
-        ApiClient.unwrap(response)
     }
 
     suspend fun restoreSession(): Boolean = withContext(Dispatchers.IO) {

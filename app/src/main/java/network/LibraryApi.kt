@@ -12,8 +12,12 @@ import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
 import com.example.stismartlib.network.dto.PrintRequestDto
-import com.example.stismartlib.network.dto.RegisterData
-import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RosterBeginData
+import com.example.stismartlib.network.dto.RosterBeginRequest
+import com.example.stismartlib.network.dto.RosterCompleteData
+import com.example.stismartlib.network.dto.RosterCompleteRequest
+import com.example.stismartlib.network.dto.RosterVerifyData
+import com.example.stismartlib.network.dto.RosterVerifyRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveResultDto
@@ -30,8 +34,14 @@ interface LibraryApi {
     @POST("api/v1/auth/login")
     suspend fun login(@Body body: LoginRequest): Response<ApiEnvelope<LoginData>>
 
-    @POST("api/v1/auth/register")
-    suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>
+    @POST("api/v1/auth/roster-registration/begin")
+    suspend fun rosterRegistrationBegin(@Body body: RosterBeginRequest): Response<ApiEnvelope<RosterBeginData>>
+
+    @POST("api/v1/auth/roster-registration/verify")
+    suspend fun rosterRegistrationVerify(@Body body: RosterVerifyRequest): Response<ApiEnvelope<RosterVerifyData>>
+
+    @POST("api/v1/auth/roster-registration/complete")
+    suspend fun rosterRegistrationComplete(@Body body: RosterCompleteRequest): Response<ApiEnvelope<RosterCompleteData>>
 
     @GET("api/v1/auth/me")
     suspend fun me(): Response<ApiEnvelope<MeUser>>

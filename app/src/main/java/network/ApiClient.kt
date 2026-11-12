@@ -26,7 +26,7 @@ object ApiClient {
     private val authInterceptor = Interceptor { chain ->
         val original = chain.request()
         val path = original.url.encodedPath
-        val isAuthHandshake = path.endsWith("/auth/login") || path.endsWith("/auth/register")
+        val isAuthHandshake = path.endsWith("/auth/login") || path.contains("/auth/roster-registration")
         val token = if (!isAuthHandshake && ::sessionStore.isInitialized) sessionStore.getToken() else null
         val request = if (!token.isNullOrBlank()) {
             original.newBuilder()
