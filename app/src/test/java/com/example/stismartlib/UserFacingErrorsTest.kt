@@ -21,7 +21,8 @@ class UserFacingErrorsTest {
             fallback = "Unable to load.",
         )
         assertFalse(msg.contains("Bearer", ignoreCase = true))
-        assertEquals("Your session expired. Please sign in again.", msg)
+        // Sign-in copy follows PR #1 (`sessionEndedMessage`).
+        assertEquals("Please sign in again to continue.", msg)
     }
 
     @Test
