@@ -93,16 +93,22 @@ fun BookCatalogScreen(
     var refreshError by remember { mutableStateOf<String?>(null) }
     var reloadToken by remember { mutableStateOf(0) }
 
-    LaunchedEffect(searchQuery, reloadToken) {
+    LaunchedEffect(Unit) {
+        if (repository.bookCategories.isEmpty()) runCatching { repository.loadBookCategories() }
+    }
+    // A server category filters on the server, so pages not loaded yet are included.
+    val categoryId = repository.bookCategories.firstOrNull { it.name == category }?.id
+
+    LaunchedEffect(searchQuery, categoryId, reloadToken) {
         // Coming back to the same search keeps the pages already loaded with Load more.
-        if (reloadToken == 0 && repository.booksCursor.isLoadedFor(searchQuery.ifBlank { null })) {
+        if (reloadToken == 0 && repository.booksCursor.isLoadedFor(searchQuery.ifBlank { null }, categoryId)) {
             loading = false
             return@LaunchedEffect
         }
         loading = true
         loadError = null
         delay(300)
-        runCatching { repository.loadBooks(searchQuery.ifBlank { null }) }
+        runCatching { repository.loadBooks(searchQuery.ifBlank { null }, categoryId) }
             .onFailure { error ->
                 if (repository.books.isEmpty()) {
                     loadError = userFacingMessage(error, "Unable to load the catalog.")
@@ -111,9 +117,10 @@ fun BookCatalogScreen(
         loading = false
     }
 
-    val categories = listOf("All") + repository.books.map { it.category }.distinct()
+    val categories = listOf("All") + repository.bookCategories.map { it.name }
+        .ifEmpty { repository.books.map { it.category }.distinct() }
     val visible = repository.books.filter { book ->
-        val matchesCategory = category == "All" || book.category == category
+        val matchesCategory = category == "All" || categoryId != null || book.category == category
         val matchesAvailability = when (availabilityFilter) {
             "Available" -> book.availableCopies > 0
             "Unavailable" -> book.availableCopies == 0
@@ -130,7 +137,7 @@ fun BookCatalogScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         ElmsPullRefresh(
             onRefresh = {
-                repository.loadBooks(searchQuery.ifBlank { null })
+                repository.loadBooks(searchQuery.ifBlank { null }, categoryId)
             },
             onRefreshError = { refreshError = it },
         ) {

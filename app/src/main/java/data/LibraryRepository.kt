@@ -11,7 +11,9 @@ import com.example.stismartlib.data.models.AvatarApprovalStatus
 import com.example.stismartlib.data.models.Book
 import com.example.stismartlib.data.models.BorrowStatus
 import com.example.stismartlib.data.models.BorrowingRecord
+import com.example.stismartlib.data.models.BookCategory
 import com.example.stismartlib.data.models.CartItem
+import com.example.stismartlib.data.models.CatalogViewer
 import com.example.stismartlib.data.models.ClearanceFineItem
 import com.example.stismartlib.data.models.ClearanceLoanItem
 import com.example.stismartlib.data.models.ClearanceLostBookItem
@@ -19,6 +21,7 @@ import com.example.stismartlib.data.models.ClearanceStanding
 import com.example.stismartlib.data.models.FineReceipt
 import com.example.stismartlib.data.models.FineRecord
 import com.example.stismartlib.data.models.FineStatus
+import com.example.stismartlib.data.models.InLibraryUse
 import com.example.stismartlib.data.models.LibrarySession
 import com.example.stismartlib.data.models.NotificationCategory
 import com.example.stismartlib.data.models.NotificationItem
@@ -38,8 +41,10 @@ import com.example.stismartlib.network.dto.BookCatalogItemDto
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.BorrowingItemDto
 import com.example.stismartlib.network.dto.CancelBorrowRequestDto
+import com.example.stismartlib.network.dto.CatalogViewerDto
 import com.example.stismartlib.network.dto.ClearanceRecordDto
 import com.example.stismartlib.network.dto.FineReceiptDto
+import com.example.stismartlib.network.dto.InLibraryUseDto
 import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
@@ -116,6 +121,13 @@ class LibraryRepository(
     var historyCursor by mutableStateOf(PageCursor())
         private set
     var fineReceiptsError by mutableStateOf<String?>(null)
+        private set
+    /** From `meta.viewer` on the last catalog page; null until the catalog has loaded. */
+    var catalogViewer by mutableStateOf<CatalogViewer?>(null)
+        private set
+    val bookCategories = mutableStateListOf<BookCategory>()
+    val inLibraryUses = mutableStateListOf<InLibraryUse>()
+    var inLibraryError by mutableStateOf<String?>(null)
         private set
     var librarySchedule by mutableStateOf<LibrarySchedule?>(null)
         private set
@@ -197,7 +209,7 @@ class LibraryRepository(
         )
     }
 
-    fun cartLimit(): Int? = if (session.userType == UserType.STUDENT) 2 else null
+    fun cartLimit(): Int? = cartLimitFor(session.userType, catalogViewer)
 
     fun canAddToCart(): Boolean {
         val limit = cartLimit() ?: return true
@@ -515,22 +527,75 @@ class LibraryRepository(
         }
     }
 
-    suspend fun loadBooks(query: String? = null) = withContext(Dispatchers.IO) {
-        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.books(query = query))
+    suspend fun loadBooks(query: String? = null, categoryId: Int? = null) = withContext(Dispatchers.IO) {
+        val response = ApiClient.api.books(query = query, categoryId = categoryId)
+        val (items, pagination) = ApiClient.unwrapPage(response)
         books.clear()
         books.addAll(items.map { it.toBook() })
-        booksCursor = PageCursor(1, pagination?.totalPages ?: 1, query)
+        booksCursor = PageCursor(1, pagination?.totalPages ?: 1, query, categoryId)
+        response.body()?.meta?.viewer?.let { catalogViewer = it.toCatalogViewer() }
     }
 
     /** Appends the next catalog page of the current search; no-op on the last page. */
     suspend fun loadMoreBooks() = withContext(Dispatchers.IO) {
         val from = booksCursor
         val next = from.takeIf { it.hasMore }?.next() ?: return@withContext
-        val (items, pagination) = ApiClient.unwrapPage(ApiClient.api.books(query = next.query, page = next.page))
+        val response = ApiClient.api.books(query = next.query, page = next.page, categoryId = next.categoryId)
+        val (items, pagination) = ApiClient.unwrapPage(response)
         if (booksCursor != from) return@withContext // a new search replaced the list meanwhile
         books.addAll(newItems(books, items.map { it.toBook() }) { it.id })
         booksCursor = next.copy(totalPages = pagination?.totalPages ?: next.totalPages)
+        response.body()?.meta?.viewer?.let { catalogViewer = it.toCatalogViewer() }
     }
+
+    /** Server category list for the catalog filter; keeps the old list if the call fails. */
+    suspend fun loadBookCategories() = withContext(Dispatchers.IO) {
+        val items = ApiClient.unwrap(ApiClient.api.bookCategories()).mapNotNull { dto ->
+            val id = dto.categoryId ?: return@mapNotNull null
+            BookCategory(id, dto.categoryName.orEmpty().ifBlank { return@mapNotNull null })
+        }
+        bookCategories.clear()
+        bookCategories.addAll(items)
+    }
+
+    /** The loaded book, or the server's copy when it is on a page not loaded yet. */
+    suspend fun findOrFetchBook(bookId: String): Book? = withContext(Dispatchers.IO) {
+        books.find { it.id == bookId }?.let { return@withContext it }
+        val titleId = bookId.toIntOrNull() ?: return@withContext null
+        ApiClient.unwrap(ApiClient.api.bookOverview(titleId)).toBook()
+    }
+
+    /** The loaded research record, or the server's copy when it is on a page not loaded yet. */
+    suspend fun findOrFetchResearch(researchId: String): Research? = withContext(Dispatchers.IO) {
+        research.find { it.id == researchId }?.let { return@withContext it }
+        val id = researchId.toIntOrNull() ?: return@withContext null
+        ApiClient.unwrap(ApiClient.api.researchOverview(id)).toResearch()
+    }
+
+    suspend fun loadInLibraryUses() = withContext(Dispatchers.IO) {
+        try {
+            val rows = ApiClient.unwrap(ApiClient.api.inLibraryUses())
+            inLibraryUses.clear()
+            inLibraryUses.addAll(rows.map { it.toInLibraryUse() })
+            inLibraryError = null
+        } catch (error: ApiException) {
+            inLibraryError = userFacingMessage(error, "In-library history is unavailable.")
+            throw error
+        }
+    }
+
+    private fun CatalogViewerDto.toCatalogViewer() = CatalogViewer(
+        activeBookCount = activeBookCount ?: 0,
+        bookLimit = bookLimit,
+    )
+
+    private fun InLibraryUseDto.toInLibraryUse() = InLibraryUse(
+        id = (useId ?: 0L).toString(),
+        title = title.orEmpty().ifBlank { "Library copy" },
+        barcode = barcode.orEmpty(),
+        status = status.orEmpty(),
+        handBackBy = handBackBy.orEmpty(),
+    )
 
     private fun BookCatalogItemDto.toBook(): Book = Book(
         id = (titleId ?: 0).toString(),
@@ -863,6 +928,12 @@ class LibraryRepository(
         }
     }
 
+    suspend fun loadPrintInvoicePdf(requestId: String): ByteArray = withContext(Dispatchers.IO) {
+        val id = requestId.toIntOrNull()
+            ?: throw ApiException("This invoice could not be downloaded.")
+        downloadPdf { ApiClient.api.printInvoicePdf(id) }
+    }
+
     suspend fun quotePrint(
         fileBytes: ByteArray,
         fileName: String,
@@ -1158,6 +1229,10 @@ class LibraryRepository(
         dashboardSummary = null
         myBooks.clear()
         myBooksError = null
+        catalogViewer = null
+        bookCategories.clear()
+        inLibraryUses.clear()
+        inLibraryError = null
         booksCursor = PageCursor()
         researchCursor = PageCursor()
         historyCursor = PageCursor()

@@ -56,7 +56,7 @@ fun BorrowProcessScreen(
             ElmsSectionCard {
                 Text("Steps", fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                Step("1. Browse & add up to 2 books to your cart")
+                Step("1. Browse & add books to your cart, up to your borrowing limit")
                 Step("2. Visit the library counter with your ID")
                 Step("3. Librarian confirms the borrow")
                 Step("4. Books issued — due next day at 8:59 AM")

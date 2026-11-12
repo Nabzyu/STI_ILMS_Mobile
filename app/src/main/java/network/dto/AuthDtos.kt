@@ -12,7 +12,10 @@ data class ApiEnvelope<T>(
 )
 
 /** `meta` on list endpoints (catalog, research). */
-data class PageMetaDto(val pagination: PaginationDto? = null)
+data class PageMetaDto(
+    val pagination: PaginationDto? = null,
+    val viewer: CatalogViewerDto? = null,
+)
 
 data class PaginationDto(
     val page: Int? = null,

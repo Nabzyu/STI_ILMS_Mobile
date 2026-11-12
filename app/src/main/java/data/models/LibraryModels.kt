@@ -273,3 +273,31 @@ fun Research.apaCitation(): String {
 
 fun Book.availabilityLabel(): String =
     if (availableCopies > 0) "$availableCopies of $totalCopies available" else "Unavailable"
+
+/** The borrowing-policy view the catalog returns: active loans plus requests, and the role's limit. */
+data class CatalogViewer(
+    val activeBookCount: Int,
+    /** Null means no limit. */
+    val bookLimit: Int?,
+) {
+    val atLimit: Boolean get() = bookLimit != null && activeBookCount >= bookLimit
+}
+
+data class BookCategory(val id: Int, val name: String)
+
+/** An on-site use of a copy, assigned at the desk; separate from take-home loans. */
+data class InLibraryUse(
+    val id: String,
+    val title: String,
+    val barcode: String,
+    val status: String,
+    val handBackBy: String,
+) {
+    /** The web shows "Review" as a missing hand-back the borrower should sort out at the desk. */
+    val statusLabel: String
+        get() = if (status.equals("Review", ignoreCase = true)) {
+            "Hand-back missing — contact the library"
+        } else {
+            status
+        }
+}

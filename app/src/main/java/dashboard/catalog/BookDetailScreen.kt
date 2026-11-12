@@ -34,6 +34,9 @@ import com.example.stismartlib.data.rememberLibraryRepository
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.ui.components.AppDialog
 import com.example.stismartlib.ui.components.AppDialogType
+import com.example.stismartlib.ui.components.DetailFallback
+import com.example.stismartlib.ui.components.DetailLoad
+import com.example.stismartlib.ui.components.rememberDetailItem
 import com.example.stismartlib.ui.components.PageHeader
 import com.example.stismartlib.ui.components.PortalButton
 import com.example.stismartlib.ui.components.PortalButtonVariant
@@ -55,13 +58,13 @@ fun BookDetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showApaCitation by remember { mutableStateOf(false) }
-    val book = repository.books.find { it.id == bookId }
+    val loaded = rememberDetailItem(bookId, repository.books.find { it.id == bookId }) {
+        repository.findOrFetchBook(bookId)
+    }
+    val book = (loaded as? DetailLoad.Ready)?.item
 
     if (book == null) {
-        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-            Text("Book not found.", color = MaterialTheme.colorScheme.onSurface)
-            PortalButton(text = "Go back", onClick = onBack, variant = PortalButtonVariant.Secondary)
-        }
+        DetailFallback(loaded, notFoundText = "Book not found.", onBack = onBack)
         return
     }
 
@@ -127,7 +130,11 @@ fun BookDetailScreen(
                         LibraryRepository.AddToCartResult.AlreadyInCart ->
                             Toast.makeText(context, "Book is already in cart", Toast.LENGTH_SHORT).show()
                         LibraryRepository.AddToCartResult.LimitReached ->
-                            Toast.makeText(context, "Student cart limit: 2 books maximum", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                "Your cart can hold ${repository.cartLimit()} books. Remove one before adding another.",
+                                Toast.LENGTH_LONG,
+                            ).show()
                     }
                 }
             )

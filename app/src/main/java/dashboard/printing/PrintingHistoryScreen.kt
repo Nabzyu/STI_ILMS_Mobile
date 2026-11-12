@@ -123,7 +123,7 @@ fun PrintingHistoryScreen(onBack: () -> Unit) {
             PageHeader(
                 eyebrow = "Online service",
                 title = "Print history",
-                description = "Requests and payment receipts. Cancel while Pending and Unpaid.",
+                description = "Requests, invoices and payment receipts. Cancel while Pending and Unpaid.",
             )
         }
         if (refreshError != null) {
@@ -156,6 +156,28 @@ fun PrintingHistoryScreen(onBack: () -> Unit) {
             else -> items(history, key = { it.id }) { request ->
                 Column {
                     PrintQueueCard(request)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val invoiceKey = "invoice-${request.id}"
+                    PortalButton(
+                        text = if (downloadingId == invoiceKey) "Preparing…" else "Share invoice PDF",
+                        variant = PortalButtonVariant.Ghost,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = downloadingId == null,
+                        onClick = {
+                            actionError = null
+                            downloadingId = invoiceKey
+                            scope.launch {
+                                try {
+                                    val bytes = repository.loadPrintInvoicePdf(request.id)
+                                    sharePdf(context, bytes, "print-invoice-${request.id}.pdf", "Share invoice PDF")
+                                } catch (error: Exception) {
+                                    actionError = userFacingMessage(error, "Unable to download the invoice.")
+                                } finally {
+                                    downloadingId = null
+                                }
+                            }
+                        },
+                    )
                     if (request.canCancel) {
                         Spacer(modifier = Modifier.height(8.dp))
                         PortalButton(

@@ -1,6 +1,8 @@
 package com.example.stismartlib.ui.format
 
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
@@ -27,4 +29,15 @@ private fun formatOrRaw(raw: String, formatter: DateTimeFormatter): String {
     } catch (_: DateTimeParseException) {
         trimmed
     }
+}
+
+private val Manila: ZoneId = ZoneId.of("Asia/Manila")
+private val MediumDateTime: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a", Locale.US)
+
+/** A server timestamp (ISO instant) in library time, e.g. "Sep 15, 2026 4:30 PM". Falls back to the raw string. */
+fun formatDateTime(raw: String): String = try {
+    Instant.parse(raw.trim()).atZone(Manila).format(MediumDateTime)
+} catch (_: DateTimeParseException) {
+    raw.trim()
 }
