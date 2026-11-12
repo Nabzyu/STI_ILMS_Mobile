@@ -28,6 +28,9 @@ import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
+import com.example.stismartlib.network.dto.PasswordRecoveryRequest
+import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
+import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.session.SessionActivityTracker
 import com.example.stismartlib.session.SessionStore
@@ -153,6 +156,41 @@ class LibraryRepository(
     suspend fun resendLoginCode(challengeId: String): Int = withContext(Dispatchers.IO) {
         ApiClient.unwrap(ApiClient.api.loginResend(LoginResendRequest(challengeId))).resendAfter ?: 60
     }
+
+    /**
+     * Step 1 of password recovery (Student accounts, or library Staff with [staff]).
+     * The server always answers with a challenge and a neutral message, even when no account matches.
+     */
+    suspend fun requestPasswordReset(identifier: String, staff: Boolean): PasswordResetChallenge =
+        withContext(Dispatchers.IO) {
+            val data = ApiClient.unwrap(
+                ApiClient.api.passwordRecoveryRequest(
+                    PasswordRecoveryRequest(
+                        identifier = identifier.trim(),
+                        portal = if (staff) PORTAL_STAFF else null,
+                    ),
+                ),
+            )
+            val challengeId = data.challengeId?.takeIf { it.isNotBlank() }
+                ?: throw ApiException("Password reset is unavailable right now. Please try again.", "INVALID_RECOVERY_RESPONSE")
+            PasswordResetChallenge(challengeId, data.message?.takeIf { it.isNotBlank() })
+        }
+
+    /** Step 2: exchange the emailed code for a short-lived reset token (kept in memory only). */
+    suspend fun verifyPasswordResetCode(challengeId: String, code: String): String = withContext(Dispatchers.IO) {
+        ApiClient.unwrap(ApiClient.api.passwordRecoveryVerify(PasswordRecoveryVerifyRequest(challengeId, code.trim())))
+            .resetToken?.takeIf { it.isNotBlank() }
+            ?: throw ApiException("Password reset is unavailable right now. Please try again.", "INVALID_RECOVERY_RESPONSE")
+    }
+
+    /** Step 3: set the new password. The server signs the account out everywhere. */
+    suspend fun resetPassword(challengeId: String, resetToken: String, password: String, confirmation: String) =
+        withContext(Dispatchers.IO) {
+            ApiClient.unwrap(
+                ApiClient.api.passwordReset(PasswordResetRequest(challengeId, resetToken, password, confirmation)),
+            )
+            Unit
+        }
 
     /** True/false when this school ID last signed in through the staff/user portal; null if unknown. */
     fun prefersStaffPortal(schoolId: String): Boolean? =

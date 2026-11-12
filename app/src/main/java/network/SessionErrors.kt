@@ -15,7 +15,8 @@ fun isAuthHandshakePath(encodedPath: String): Boolean =
     encodedPath.endsWith("/auth/login") ||
         encodedPath.endsWith("/auth/login/verify") ||
         encodedPath.endsWith("/auth/login/resend") ||
-        encodedPath.endsWith("/auth/register")
+        encodedPath.endsWith("/auth/register") ||
+        encodedPath.contains("/auth/password-recovery/")
 
 /**
  * Picks the error code for a failed response. A 401 without a code means a wrong password on

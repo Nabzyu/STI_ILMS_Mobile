@@ -36,6 +36,16 @@ fun userFacingMessage(
                 "The code is incorrect, expired or already used. Use the newest code or start sign-in again."
             "LOGIN_CODE_PAUSED" ->
                 "Three incorrect codes were entered. Wait 10 minutes before signing in again."
+            "RECOVERY_CODE_INVALID" ->
+                "The code is incorrect, expired or already used. Use the newest code or request a new one."
+            "RECOVERY_LOCKED" ->
+                "Three incorrect codes were entered. Wait 15 minutes before trying again. Your current password still works."
+            "RECOVERY_TOKEN_INVALID" ->
+                "This password reset has expired or was already used. Please start again."
+            "PASSWORD_UNCHANGED" ->
+                "Choose a password different from your current one."
+            "RECOVERY_RATE_LIMITED" ->
+                "Too many password reset attempts. Please wait 15 minutes and try again."
             "DEVICE_ORIGIN" ->
                 "Sign-in from the app is not available right now. Please use the library website."
             in SessionEndingCodes, SESSION_IDLE_CODE ->

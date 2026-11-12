@@ -66,3 +66,9 @@ fun interpretLoginData(data: LoginData, requestedSchoolId: String): LoginStep {
         role = user.role.orEmpty(),
     )
 }
+
+/** Password recovery in progress; `message` is the server's neutral "if an account matches…" text. */
+data class PasswordResetChallenge(
+    val challengeId: String,
+    val message: String?,
+)

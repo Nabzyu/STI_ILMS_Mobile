@@ -17,8 +17,8 @@ import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.PortalField
 
 /**
- * Second sign-in step for Student and Faculty accounts: the six-digit code emailed by the server.
- * Stateless; [LoginScreen] owns the challenge, the code and the resend countdown.
+ * Six-digit emailed-code entry. Used for the second sign-in step (Student and Faculty) and for
+ * password recovery. Stateless; the calling screen owns the code and the resend countdown.
  */
 @Composable
 fun LoginCodeStep(
@@ -32,11 +32,14 @@ fun LoginCodeStep(
     onResend: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    verifyLabel: String = "Verify and sign in",
+    backLabel: String = "Back to sign in",
+    codeLabel: String = "Login code",
 ) {
     val busy = isVerifying || isResending
     Column(modifier = modifier.fillMaxWidth()) {
         PortalField(
-            label = "Login code",
+            label = codeLabel,
             value = code,
             onValueChange = { onCodeChange(it.filter(Char::isDigit).take(6)) },
             placeholder = "Enter the 6-digit code",
@@ -47,7 +50,7 @@ fun LoginCodeStep(
         )
         Spacer(modifier = Modifier.height(20.dp))
         PortalButton(
-            text = if (isVerifying) "Verifying..." else "Verify and sign in",
+            text = if (isVerifying) "Verifying..." else verifyLabel,
             onClick = onVerify,
             enabled = !busy && isValidLoginCode(code),
             loading = isVerifying,
@@ -70,7 +73,7 @@ fun LoginCodeStep(
         )
         Spacer(modifier = Modifier.height(8.dp))
         PortalButton(
-            text = "Back to sign in",
+            text = backLabel,
             onClick = onBack,
             variant = PortalButtonVariant.Ghost,
             enabled = !busy,

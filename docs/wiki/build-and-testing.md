@@ -44,7 +44,7 @@ Back to [index](README.md).
 Unit tests only (`app/src/test/java/com/example/stismartlib/`):
 - `ApiConfigTest` — base URL ends with `/` and equals the hosted web API.
 - `UserTypeTest` — server-role mapping, including admin and staff aliases and null.
-- `LoginRulesTest` — school ID rule and 6-digit code check.
+- `LoginRulesTest` — school ID rule, 6-digit code check and new-password rule.
 - `LoginFlowTest` — parsing `/auth/login` responses: emailed-code challenge vs token, broken payloads.
 - `SessionErrorsTest` — which codes end a session, 401 handling, sign-in error copy.
 - `SessionActivityTrackerTest` — 10-minute idle limit and 30-second ping throttle.

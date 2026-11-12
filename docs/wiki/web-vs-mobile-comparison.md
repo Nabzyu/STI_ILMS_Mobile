@@ -59,7 +59,7 @@ This revises three items in [Known gaps](known-gaps.md):
 | Return request is local-only | Returns are **librarian-only**: `PUT /api/v1/admin/borrowing/{transactionId}/return` (desk permission) | The app is right not to call anything. The screen should say it's a reminder, not a "request submitted". |
 | Clearance computed on the phone | `GET /clearance/me`, `/clearance/schedule`, `POST /clearance/lost-books/{transactionId}/report` | Server is the source of truth. The app's rule (no loans + no unpaid fines) may differ. |
 | Overview assembled from 8 calls | `GET /dashboard` (student/faculty summary) | Could replace much of `refreshStudentData()`. |
-| — | `GET /borrowing/my-books`, `GET /borrowing/in-library`, `GET /borrow/cart-state`, `POST /reservations/request`, `GET /fines/terms`, `/fines/receipts[/{id}]`, `GET/PATCH /profile/me`, profile avatar, `GET /floor-plan`, password recovery (`/auth/password-recovery/{request,verify,reset}`) | Not in the app. |
+| — | `GET /borrowing/my-books`, `GET /borrowing/in-library`, `GET /borrow/cart-state`, `POST /reservations/request`, `GET /fines/terms`, `/fines/receipts[/{id}]`, `GET/PATCH /profile/me`, profile avatar, `GET /floor-plan`, password recovery (`/auth/password-recovery/{request,verify,reset}`; ✅ added on branch `feat/password-reset`) | Not in the app. |
 | Staff home is placeholders | Full librarian/staff API under `/api/v1/admin/*` (circulation desk, attendance scanning, reservations queue, printing desk, fines, inventory, reports) | Large. Separate decision. |
 
 ## 5. Screen coverage side by side
@@ -82,7 +82,7 @@ The web routes come from `apps/web/src` (student and faculty portals are almost 
 | profile | — |
 | floor-plan | — |
 | library (in-library) | — |
-| forgot-password | — |
+| forgot-password | ✅ forgot password (branch `feat/password-reset`) |
 | librarian / staff / admin portals (~35 routes) | staff home placeholder |
 
 ## Suggested order (for discussion, nothing changed yet)

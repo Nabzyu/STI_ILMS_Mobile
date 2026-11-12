@@ -17,3 +17,11 @@ fun loginSchoolIdError(raw: String): String? {
 }
 
 fun isValidLoginCode(code: String): Boolean = LoginCodePattern.matches(code)
+
+/** Server rule for a new password: 8+ characters, at most 72 UTF-8 bytes, and a matching confirmation. */
+fun newPasswordError(password: String, confirmation: String): String? = when {
+    password.length < 8 -> "Use at least 8 characters."
+    password.toByteArray(Charsets.UTF_8).size > 72 -> "Use a shorter password (at most 72 characters)."
+    password != confirmation -> "The passwords do not match."
+    else -> null
+}

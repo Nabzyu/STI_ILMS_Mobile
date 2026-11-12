@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
 import com.example.stismartlib.data.LoginChallenge
+import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
+import com.example.stismartlib.ui.auth.PasswordResetStage
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
 import com.example.stismartlib.ui.components.PortalScreen
@@ -81,6 +83,38 @@ private fun LoginCodeScreenPreview() {
 private fun LoginCodeScreenDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         LoginScreen(navController = rememberNavController(), previewChallenge = PreviewLoginChallenge)
+    }
+}
+
+@Preview(name = "Forgot password", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordScreenPreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(navController = rememberNavController(), staff = false)
+    }
+}
+
+@Preview(name = "Forgot password · code · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordCodeDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        ForgotPasswordScreen(
+            navController = rememberNavController(),
+            staff = false,
+            previewStage = PasswordResetStage.Verify,
+        )
+    }
+}
+
+@Preview(name = "Forgot password · new password", showBackground = true, showSystemUi = true)
+@Composable
+private fun ForgotPasswordResetPreview() {
+    PreviewApp(seedSampleData = false) {
+        ForgotPasswordScreen(
+            navController = rememberNavController(),
+            staff = false,
+            previewStage = PasswordResetStage.Reset,
+        )
     }
 }
 

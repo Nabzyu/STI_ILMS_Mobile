@@ -101,3 +101,36 @@ data class MeUser(
     val email: String? = null,
     val role: String? = null,
 )
+
+/** `/auth/password-recovery/request`. `portal` is `staff` for library Staff accounts, omitted for students. */
+data class PasswordRecoveryRequest(
+    val identifier: String,
+    val portal: String? = null,
+)
+
+/** Always returned, whether or not an account matched (the server does not reveal accounts). */
+data class PasswordRecoveryChallengeData(
+    val challengeId: String? = null,
+    val message: String? = null,
+)
+
+data class PasswordRecoveryVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class PasswordRecoveryTokenData(
+    val resetToken: String? = null,
+    val expiresIn: Int? = null,
+)
+
+data class PasswordResetRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    @SerializedName("reset_token") val resetToken: String,
+    val password: String,
+    @SerializedName("confirm_password") val confirmPassword: String,
+)
+
+data class PasswordResetData(
+    val message: String? = null,
+)

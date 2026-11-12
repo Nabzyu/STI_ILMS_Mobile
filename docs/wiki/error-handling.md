@@ -32,7 +32,7 @@ Thrown by `ApiClient.unwrap` and by the repository for local problems (empty car
 | `TOO_MANY_LOGIN_ATTEMPTS` (bare 429) | Too many requests. Please wait a few minutes and try again. |
 | `ACCOUNT_DEACTIVATED` | Your account is currently deactivated. Please coordinate with the campus librarian. |
 | `ADMIN_ROLE_REQUIRED` | This sign-in is for Librarian and library staff accounts only. |
-| `LOGIN_EMAIL_MISSING`, `LOGIN_CHANGED`, `LOGIN_CODE_WAIT`, `LOGIN_CODE_INVALID`, `LOGIN_CODE_PAUSED`, `DEVICE_ORIGIN` | fixed copy in `UserFacingErrors.kt` |
+| `LOGIN_EMAIL_MISSING`, `LOGIN_CHANGED`, `LOGIN_CODE_WAIT`, `LOGIN_CODE_INVALID`, `LOGIN_CODE_PAUSED`, `DEVICE_ORIGIN`, `RECOVERY_CODE_INVALID`, `RECOVERY_LOCKED`, `RECOVERY_TOKEN_INVALID`, `PASSWORD_UNCHANGED`, `RECOVERY_RATE_LIMITED` | fixed copy in `UserFacingErrors.kt` |
 | session-ending codes, `SESSION_IDLE` (client) | `sessionEndedMessage(code)` |
 | other `ApiException` | sanitised server message, else `fallback` |
 | `IOException` (offline, timeout) | Unable to reach the library service. Check your internet connection and try again. |

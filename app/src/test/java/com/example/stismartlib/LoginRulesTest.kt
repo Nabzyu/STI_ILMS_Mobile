@@ -2,6 +2,7 @@ package com.example.stismartlib
 
 import com.example.stismartlib.ui.auth.isValidLoginCode
 import com.example.stismartlib.ui.auth.loginSchoolIdError
+import com.example.stismartlib.ui.auth.newPasswordError
 import com.example.stismartlib.ui.auth.normalizeSchoolId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -42,5 +43,17 @@ class LoginRulesTest {
         assertFalse(isValidLoginCode("12345"))
         assertFalse(isValidLoginCode("1234567"))
         assertFalse(isValidLoginCode("12a456"))
+    }
+
+    @Test
+    fun newPasswordFollowsServerRule() {
+        assertNull(newPasswordError("abcd1234", "abcd1234"))
+        assertNull(newPasswordError("a".repeat(72), "a".repeat(72)))
+        assertEquals("Use at least 8 characters.", newPasswordError("short", "short"))
+        assertNotNull(newPasswordError("a".repeat(73), "a".repeat(73)))
+        // 36 two-byte characters = 72 bytes is fine; 37 is 74 bytes.
+        assertNull(newPasswordError("é".repeat(36), "é".repeat(36)))
+        assertNotNull(newPasswordError("é".repeat(37), "é".repeat(37)))
+        assertEquals("The passwords do not match.", newPasswordError("abcd1234", "abcd1235"))
     }
 }

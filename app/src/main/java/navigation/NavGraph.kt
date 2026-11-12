@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.stismartlib.data.rememberLibraryRepository
+import com.example.stismartlib.ui.auth.ForgotPasswordScreen
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
@@ -26,7 +27,9 @@ fun AppNavGraph(startDestination: String = Screen.Login.route) {
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated) return@LaunchedEffect
         val route = navController.currentDestination?.route
-        if (route != null && route != Screen.Login.route && route != Screen.Register.route) {
+        if (route != null && route != Screen.Login.route && route != Screen.Register.route &&
+            route != Screen.ForgotPassword.route
+        ) {
             navController.navigate(Screen.Login.route) {
                 popUpTo(0) { inclusive = true }
             }
@@ -56,6 +59,21 @@ fun AppNavGraph(startDestination: String = Screen.Login.route) {
 
         composable(Screen.Register.route) {
             RegisterScreen(navController)
+        }
+
+        composable(
+            route = Screen.ForgotPassword.route,
+            arguments = listOf(
+                navArgument("staff") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            ForgotPasswordScreen(
+                navController = navController,
+                staff = backStackEntry.arguments?.getBoolean("staff") ?: false,
+            )
         }
 
         composable(

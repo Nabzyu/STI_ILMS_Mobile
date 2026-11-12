@@ -35,6 +35,16 @@ The server has a **user** portal (Student, Faculty) and a **staff** portal (Admi
 
 Client-side validation in `LoginScreen` (`auth/LoginRules.kt`): school ID must match the server rule `^[A-Z0-9][A-Z0-9._-]{2,49}$` after upper-casing (e.g. `02000123456`, `ADMIN-PORTAL-001`); password required. Server field errors (`school_id`, `password`) are shown under the fields. On success the user goes to `staff_home` or `dashboard/{type}` and the login screen is removed from the back stack.
 
+## Password reset
+
+"Forgot password?" under the Sign in button opens `ForgotPasswordScreen` (`forgot_password?staff=…`, staff mode follows the login screen's switch). It mirrors the web `PasswordRecoveryPage`:
+
+1. **Request:** school ID or school email → `POST api/v1/auth/password-recovery/request` `{identifier, portal?}` (`portal: "staff"` in staff mode). The server always returns a `challengeId` and a neutral "if an account matches…" message, so the app can't tell whether an email was sent.
+2. **Verify:** 6-digit code (reuses `LoginCodeStep`) → `/password-recovery/verify` `{challenge_id, code}` → `resetToken` (valid 5 minutes, kept in memory only). "Resend code" is a new request (new challenge), enabled after 60 seconds. Three wrong codes → `RECOVERY_LOCKED` for 15 minutes, back to step 1.
+3. **Reset:** new password + confirmation (`newPasswordError`: 8+ characters, at most 72 UTF-8 bytes, must match) → `/password-recovery/reset` `{challenge_id, reset_token, password, confirm_password}`. `PASSWORD_UNCHANGED` shows under the field; `RECOVERY_TOKEN_INVALID` restarts. Success signs the account out everywhere (server bumps `auth_version`).
+
+**Who can reset:** only **Student** accounts, and **Staff** accounts created by the library (staff mode). Faculty, Librarian and Admin accounts never receive a code; the screen tells them to contact the library. These endpoints are treated as sign-in requests (`isAuthHandshakePath`): no bearer token, and their errors never end a session.
+
 ## Registration (students only)
 
 `RegisterScreen` → `LibraryRepository.registerStudent` → `POST api/v1/auth/register`.

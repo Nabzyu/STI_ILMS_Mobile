@@ -14,6 +14,12 @@ import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
+import com.example.stismartlib.network.dto.PasswordRecoveryChallengeData
+import com.example.stismartlib.network.dto.PasswordRecoveryRequest
+import com.example.stismartlib.network.dto.PasswordRecoveryTokenData
+import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
+import com.example.stismartlib.network.dto.PasswordResetData
+import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.PrintRequestDto
 import com.example.stismartlib.network.dto.RegisterData
 import com.example.stismartlib.network.dto.RegisterRequest
@@ -43,6 +49,15 @@ interface LibraryApi {
     /** Keeps the server session alive (10-minute idle limit) and returns a renewed token. */
     @POST("api/v1/auth/activity")
     suspend fun sessionActivity(@Body body: Map<String, String> = emptyMap()): Response<ApiEnvelope<SessionActivityData>>
+
+    @POST("api/v1/auth/password-recovery/request")
+    suspend fun passwordRecoveryRequest(@Body body: PasswordRecoveryRequest): Response<ApiEnvelope<PasswordRecoveryChallengeData>>
+
+    @POST("api/v1/auth/password-recovery/verify")
+    suspend fun passwordRecoveryVerify(@Body body: PasswordRecoveryVerifyRequest): Response<ApiEnvelope<PasswordRecoveryTokenData>>
+
+    @POST("api/v1/auth/password-recovery/reset")
+    suspend fun passwordReset(@Body body: PasswordResetRequest): Response<ApiEnvelope<PasswordResetData>>
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>

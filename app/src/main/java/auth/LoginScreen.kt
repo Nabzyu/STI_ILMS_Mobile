@@ -335,7 +335,22 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                 .fillMaxWidth()
                 .sizeIn(minHeight = 52.dp)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Text(
+                text = "Forgot password?",
+                color = ElmsCyan,
+                fontWeight = FontWeight.Bold,
+                textDecoration = TextDecoration.Underline,
+                fontSize = 14.sp,
+                modifier = Modifier
+                    .sizeIn(minHeight = 48.dp)
+                    .clickable(enabled = !isSubmitting) {
+                        navController.navigate(Screen.ForgotPassword.create(staffPortal))
+                    }
+                    .padding(vertical = 12.dp)
+            )
+        }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
                 text = buildAnnotatedString {

@@ -18,6 +18,9 @@ class SessionErrorsTest {
         assertTrue(isAuthHandshakePath("/api/v1/auth/login"))
         assertTrue(isAuthHandshakePath("/api/v1/auth/login/verify"))
         assertTrue(isAuthHandshakePath("/api/v1/auth/login/resend"))
+        assertTrue(isAuthHandshakePath("/api/v1/auth/password-recovery/request"))
+        assertTrue(isAuthHandshakePath("/api/v1/auth/password-recovery/verify"))
+        assertTrue(isAuthHandshakePath("/api/v1/auth/password-recovery/reset"))
         assertFalse(isAuthHandshakePath("/api/v1/auth/activity"))
         assertFalse(isAuthHandshakePath("/api/v1/auth/me"))
     }
@@ -68,6 +71,8 @@ class SessionErrorsTest {
         listOf(
             "LOGIN_CODE_WAIT", "LOGIN_EMAIL_MISSING", "LOGIN_CHANGED", "LOGIN_CODE_INVALID",
             "LOGIN_CODE_PAUSED", "DEVICE_ORIGIN", "SESSION_EXPIRED", "SESSION_UPGRADE_REQUIRED",
+            "RECOVERY_CODE_INVALID", "RECOVERY_LOCKED", "RECOVERY_TOKEN_INVALID", "PASSWORD_UNCHANGED",
+            "RECOVERY_RATE_LIMITED",
         ).forEach { code ->
             val message = userFacingMessage(ApiException("internal {detail}", code), "fallback")
             assertFalse(code, message == "fallback")
