@@ -53,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -68,11 +69,14 @@ import com.example.stismartlib.ui.components.ShapeXl
 import com.example.stismartlib.ui.components.StiMarkTile
 import com.example.stismartlib.ui.dashboard.account.ClearanceScreen
 import com.example.stismartlib.ui.dashboard.account.FinesScreen
+import com.example.stismartlib.ui.dashboard.account.ProfileScreen
 import com.example.stismartlib.ui.dashboard.borrow.BorrowProcessScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCartScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookCatalogScreen
 import com.example.stismartlib.ui.dashboard.catalog.BookDetailScreen
+import com.example.stismartlib.ui.dashboard.floorplan.FloorPlanScreen
 import com.example.stismartlib.ui.dashboard.history.BorrowingHistoryScreen
+import com.example.stismartlib.ui.dashboard.mybooks.MyBooksScreen
 import com.example.stismartlib.ui.dashboard.notifications.NotificationsScreen
 import com.example.stismartlib.ui.dashboard.overview.DashboardOverviewScreen
 import com.example.stismartlib.ui.dashboard.printing.PrintingHistoryScreen
@@ -81,7 +85,7 @@ import com.example.stismartlib.ui.dashboard.qr.AttendanceScreen
 import com.example.stismartlib.ui.dashboard.reserve.ReserveBookScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchCatalogScreen
 import com.example.stismartlib.ui.dashboard.research.ResearchDetailScreen
-import com.example.stismartlib.ui.dashboard.returnbook.ReturnBookScreen
+import com.example.stismartlib.ui.dashboard.search.GlobalSearchScreen
 import com.example.stismartlib.ui.theme.ElmsCyan
 import com.example.stismartlib.ui.theme.LocalThemeController
 import com.example.stismartlib.ui.theme.StiMarkBlue
@@ -103,6 +107,30 @@ private data class BottomDest(
     val icon: ImageVector,
     val opensDrawer: Boolean = false
 )
+
+/**
+ * Bottom-bar / drawer navigation that does not get stuck on stacked screens
+ * (e.g. Notifications on top of Dashboard). Prefer popping back to an existing
+ * destination before using restoreState navigate.
+ */
+private fun NavController.navigateDashboardRoute(route: String) {
+    if (currentDestination?.route == route) return
+    if (popBackStack(route, inclusive = false)) return
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+private fun NavController.openStackedRoute(route: String) {
+    if (currentDestination?.route == route) return
+    navigate(route) {
+        launchSingleTop = true
+    }
+}
 
 @Composable
 fun DashboardScreen(
@@ -150,8 +178,7 @@ fun DashboardScreen(
             currentRoute?.startsWith("research_detail") == true -> DashboardRoute.ResearchCatalog.route
         currentRoute == DashboardRoute.BorrowingHistory.route ||
             currentRoute == DashboardRoute.ReserveBook.route ||
-            currentRoute == DashboardRoute.BorrowProcess.route ||
-            currentRoute == DashboardRoute.ReturnBook.route -> DashboardRoute.BorrowingHistory.route
+            currentRoute == DashboardRoute.BorrowProcess.route -> DashboardRoute.BorrowingHistory.route
         else -> null
     }
 
@@ -189,17 +216,10 @@ fun DashboardScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        HeaderIconButton(
-                            onClick = { /* search reserved for future */ },
-                            contentDescription = "Search"
-                        ) {
-                            Icon(
-                                Lucide.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        StiMarkTile(
+                            size = 40.dp,
+                            contentDescription = stringResource(R.string.system_full_name),
+                        )
                         Spacer(modifier = Modifier.weight(1f))
                         HeaderIconButton(
                             onClick = { scope.launch { drawerState.close() } },
@@ -235,17 +255,29 @@ fun DashboardScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .sizeIn(minHeight = 48.dp)
                                     .clip(ShapeXl)
                                     .background(
                                         if (selected) ElmsCyan.copy(alpha = 0.15f) else Color.Transparent
                                     )
                                     .clickable {
-                                        dashboardNavController.navigate(item.route) {
-                                            popUpTo(dashboardNavController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                        // Secondary screens (notifications, fines, …) stack; tabs restore.
+                                        val stacksOverTabs = item.route in setOf(
+                                            DashboardRoute.Notifications.route,
+                                            DashboardRoute.Fines.route,
+                                            DashboardRoute.Clearance.route,
+                                            DashboardRoute.Profile.route,
+                                            DashboardRoute.ReserveBook.route,
+                                            DashboardRoute.BorrowProcess.route,
+                                            DashboardRoute.PrintingService.route,
+                                            DashboardRoute.QrLogin.route,
+                                            DashboardRoute.Search.route,
+                                            DashboardRoute.MyBooks.route,
+                                        )
+                                        if (stacksOverTabs) {
+                                            dashboardNavController.openStackedRoute(item.route)
+                                        } else {
+                                            dashboardNavController.navigateDashboardRoute(item.route)
                                         }
                                         scope.launch { drawerState.close() }
                                     }
@@ -270,11 +302,10 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable {
-                                    dashboardNavController.navigate(DashboardRoute.QrLogin.route) {
-                                        launchSingleTop = true
-                                    }
+                                    dashboardNavController.openStackedRoute(DashboardRoute.QrLogin.route)
                                     scope.launch { drawerState.close() }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -295,6 +326,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable {
                                     themeController.themeMode =
@@ -319,6 +351,7 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .clickable { showLogoutConfirm = true }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -337,8 +370,13 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
                                 .clip(ShapeXl)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable {
+                                    dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
+                                    scope.launch { drawerState.close() }
+                                }
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -380,66 +418,98 @@ fun DashboardScreen(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .height(56.dp)
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 8.dp)
                 ) {
-                    HeaderIconButton(
-                        onClick = { scope.launch { drawerState.open() } },
-                        contentDescription = "Open navigation"
-                    ) {
-                        Icon(
-                            Lucide.Menu,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    StiMarkTile(size = 36.dp, contentDescription = stringResource(R.string.system_full_name))
-                    Spacer(modifier = Modifier.weight(1f))
-                    HeaderIconButton(
-                        onClick = {
-                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
-                        },
-                        contentDescription = "Messages"
-                    ) {
-                        Box {
+                    Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                        HeaderIconButton(
+                            onClick = { scope.launch { drawerState.open() } },
+                            contentDescription = "Open navigation"
+                        ) {
                             Icon(
-                                Lucide.Inbox,
+                                Lucide.Menu,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            ElmsCountBadge(
-                                count = unreadCount,
-                                modifier = Modifier.align(Alignment.TopEnd)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    HeaderIconButton(
-                        onClick = {
-                            dashboardNavController.navigate(DashboardRoute.Notifications.route)
-                        },
-                        contentDescription = "Notifications"
+                    Box(modifier = Modifier.align(Alignment.Center)) {
+                        StiMarkTile(
+                            size = 36.dp,
+                            contentDescription = stringResource(R.string.system_full_name),
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box {
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Search.route)
+                            },
+                            contentDescription = "Search"
+                        ) {
                             Icon(
-                                Lucide.Bell,
+                                Lucide.Search,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                                tint = ElmsCyan,
+                                modifier = Modifier.size(24.dp)
                             )
-                            ElmsCountBadge(
-                                count = unreadCount,
-                                modifier = Modifier.align(Alignment.TopEnd)
-                            )
+                        }
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
+                            },
+                            contentDescription = "Notifications"
+                        ) {
+                            Box {
+                                Icon(
+                                    Lucide.Bell,
+                                    contentDescription = null,
+                                    tint = ElmsCyan,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                ElmsCountBadge(
+                                    count = unreadCount,
+                                    modifier = Modifier.align(Alignment.TopEnd)
+                                )
+                            }
+                        }
+                        HeaderIconButton(
+                            onClick = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.Profile.route)
+                            },
+                            contentDescription = "My profile"
+                        ) {
+                            val initials = repository.session.userName
+                                .trim()
+                                .split(Regex("\\s+"))
+                                .filter { it.isNotEmpty() }
+                                .take(2)
+                                .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+                                .joinToString("")
+                                .ifBlank { userType.displayName.take(2).uppercase() }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(StiYellow)
+                                    .border(1.dp, ElmsCyan.copy(alpha = 0.25f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = initials,
+                                    color = StiMarkBlue,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 11.sp,
+                                )
+                            }
                         }
                     }
                 }
@@ -459,13 +529,7 @@ fun DashboardScreen(
                                 if (dest.opensDrawer) {
                                     scope.launch { drawerState.open() }
                                 } else {
-                                    dashboardNavController.navigate(dest.route) {
-                                        popUpTo(dashboardNavController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                    dashboardNavController.navigateDashboardRoute(dest.route)
                                 }
                             },
                             icon = {
@@ -524,9 +588,6 @@ fun DashboardScreen(
                             onNavigateToBorrowProcess = {
                                 dashboardNavController.navigate(DashboardRoute.BorrowProcess.route)
                             },
-                            onNavigateToReturnBook = {
-                                dashboardNavController.navigate(DashboardRoute.ReturnBook.route)
-                            },
                             onNavigateToReserveBook = {
                                 dashboardNavController.navigate(DashboardRoute.ReserveBook.route)
                             },
@@ -537,9 +598,12 @@ fun DashboardScreen(
                                 dashboardNavController.navigate(DashboardRoute.QrLogin.route)
                             },
                             onNavigateToNotifications = {
-                                dashboardNavController.navigate(DashboardRoute.Notifications.route)
+                                dashboardNavController.openStackedRoute(DashboardRoute.Notifications.route)
                             },
-                            onLogout = { showLogoutConfirm = true }
+                            onLogout = { showLogoutConfirm = true },
+                            onNavigateToFloorPlan = {
+                                dashboardNavController.openStackedRoute(DashboardRoute.FloorPlan.route)
+                            }
                         )
                     }
                     composable(DashboardRoute.BookCatalog.route) {
@@ -561,6 +625,9 @@ fun DashboardScreen(
                             onBack = { dashboardNavController.popBackStack() },
                             onCartClick = {
                                 dashboardNavController.navigate(DashboardRoute.BookCart.route)
+                            },
+                            onViewLocation = { titleId ->
+                                dashboardNavController.navigate(DashboardRoute.BookLocation.create(titleId))
                             }
                         )
                     }
@@ -578,9 +645,6 @@ fun DashboardScreen(
                             }
                         )
                     }
-                    composable(DashboardRoute.ReturnBook.route) {
-                        ReturnBookScreen(onBack = { dashboardNavController.popBackStack() })
-                    }
                     composable(DashboardRoute.ReserveBook.route) {
                         ReserveBookScreen(
                             onBack = { dashboardNavController.popBackStack() },
@@ -591,6 +655,20 @@ fun DashboardScreen(
                     }
                     composable(DashboardRoute.Notifications.route) {
                         NotificationsScreen(onBack = { dashboardNavController.popBackStack() })
+                    }
+                    composable(DashboardRoute.Search.route) {
+                        GlobalSearchScreen(
+                            onBack = { dashboardNavController.popBackStack() },
+                            onBookClick = { bookId ->
+                                dashboardNavController.navigate(DashboardRoute.BookDetail.create(bookId))
+                            },
+                            onResearchClick = { researchId ->
+                                dashboardNavController.navigate(DashboardRoute.ResearchDetail.create(researchId))
+                            },
+                            onBrowseCatalog = {
+                                dashboardNavController.navigateDashboardRoute(DashboardRoute.BookCatalog.route)
+                            },
+                        )
                     }
                     composable(DashboardRoute.QrLogin.route) {
                         AttendanceScreen()
@@ -630,6 +708,21 @@ fun DashboardScreen(
                     composable(DashboardRoute.Clearance.route) {
                         ClearanceScreen()
                     }
+                    composable(DashboardRoute.Profile.route) {
+                        ProfileScreen()
+                    }
+                    composable(DashboardRoute.MyBooks.route) {
+                        MyBooksScreen()
+                    }
+                    composable(DashboardRoute.FloorPlan.route) {
+                        FloorPlanScreen()
+                    }
+                    composable(
+                        route = DashboardRoute.BookLocation.route,
+                        arguments = listOf(navArgument("titleId") { type = NavType.StringType })
+                    ) { entry ->
+                        FloorPlanScreen(titleId = entry.arguments?.getString("titleId"))
+                    }
                 }
             }
         }
@@ -638,19 +731,22 @@ fun DashboardScreen(
 
 private fun drawerItems(userType: UserType): List<DrawerItem> {
     val items = mutableListOf(
-        DrawerItem(DashboardRoute.Overview.route, "Overview", Lucide.LayoutDashboard, "My library"),
+        DrawerItem(DashboardRoute.Overview.route, "Dashboard", Lucide.LayoutDashboard, "My library"),
         DrawerItem(DashboardRoute.BookCatalog.route, "Book catalog", Lucide.BookOpen),
         DrawerItem(DashboardRoute.BookCart.route, "Book cart", Lucide.ShoppingCart),
         DrawerItem(DashboardRoute.ResearchCatalog.route, "Research & thesis", Lucide.FileText),
         DrawerItem(DashboardRoute.BorrowingHistory.route, "Borrowing history", Lucide.CalendarClock, "My activity"),
-        DrawerItem(DashboardRoute.ReserveBook.route, "Reservations", Lucide.BookMarked)
+        DrawerItem(DashboardRoute.ReserveBook.route, "Reservations", Lucide.BookMarked),
+        DrawerItem(DashboardRoute.MyBooks.route, "My books", Lucide.LibraryBig),
     )
     if (userType == UserType.STUDENT) {
         items += DrawerItem(DashboardRoute.PrintingService.route, "Printing service", Lucide.Printer)
     }
-    items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell, "My account")
+    items += DrawerItem(DashboardRoute.Profile.route, "My profile", Lucide.User, "My account")
+    items += DrawerItem(DashboardRoute.Notifications.route, "Notifications", Lucide.Bell)
     items += DrawerItem(DashboardRoute.Fines.route, "Fines", Lucide.CircleDollarSign)
     items += DrawerItem(DashboardRoute.Clearance.route, "Clearance status", Lucide.BadgeCheck)
+    items += DrawerItem(DashboardRoute.FloorPlan.route, "Library floor plan", Lucide.Map, "Library guide")
     return items
 }
 

@@ -1,5 +1,7 @@
 package com.example.stismartlib.ui.dashboard.catalog
 
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.MapPin
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +40,7 @@ import com.example.stismartlib.ui.components.PortalButtonVariant
 import com.example.stismartlib.ui.components.SectionCard
 import com.example.stismartlib.ui.components.StatusBadge
 import com.example.stismartlib.ui.dashboard.components.BookCoverPlaceholder
+import com.example.stismartlib.ui.feedback.userFacingMessage
 import com.example.stismartlib.ui.theme.PrimaryBlue
 import kotlinx.coroutines.launch
 
@@ -45,7 +48,8 @@ import kotlinx.coroutines.launch
 fun BookDetailScreen(
     bookId: String,
     onBack: () -> Unit,
-    onCartClick: () -> Unit
+    onCartClick: () -> Unit,
+    onViewLocation: (titleId: String) -> Unit = {},
 ) {
     val repository = rememberLibraryRepository()
     val context = LocalContext.current
@@ -88,13 +92,30 @@ fun BookDetailScreen(
                 InfoLine("Year", book.yearPublished.toString())
                 InfoLine("Publisher", book.publisher)
                 InfoLine("Shelf", book.shelfLocation)
+                if (book.callNumber.isNotBlank()) {
+                    InfoLine("Call number", book.callNumber)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(book.description, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
+            }
+        }
+        book.previewBarcode?.let { barcode ->
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                CopyDetailsSection(barcode)
             }
         }
         item {
             Spacer(modifier = Modifier.height(12.dp))
             PortalButton(text = "Generate APA reference", onClick = { showApaCitation = true }, variant = PortalButtonVariant.Secondary, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(8.dp))
+            PortalButton(
+                text = "View on floor plan",
+                onClick = { onViewLocation(book.id) },
+                variant = PortalButtonVariant.Secondary,
+                leadingIcon = Lucide.MapPin,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(modifier = Modifier.height(8.dp))
             PortalButton(
                 text = if (inCart) "Already in cart" else "Add to cart",
@@ -127,9 +148,17 @@ fun BookDetailScreen(
                                 repository.reserveBook(book)
                                 Toast.makeText(context, "Reservation submitted", Toast.LENGTH_SHORT).show()
                             } catch (error: ApiException) {
-                                Toast.makeText(context, error.message, Toast.LENGTH_LONG).show()
-                            } catch (_: Exception) {
-                                Toast.makeText(context, "Unable to reserve this title", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    context,
+                                    userFacingMessage(error, "Unable to reserve this title."),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            } catch (error: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    userFacingMessage(error, "Unable to reserve this title."),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             }
                         }
                     },

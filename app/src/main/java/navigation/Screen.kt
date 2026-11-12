@@ -1,6 +1,7 @@
 package com.example.stismartlib.navigation
 
 import com.example.stismartlib.ui.auth.UserType
+import java.net.URLEncoder
 
 sealed class Screen(val route: String) {
 

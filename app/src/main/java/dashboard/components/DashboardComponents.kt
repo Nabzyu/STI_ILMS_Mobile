@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -233,6 +234,7 @@ fun FeaturedQuickActionCard(
 ) {
     Card(
         modifier = modifier
+            .sizeIn(minHeight = 48.dp)
             .clickable(onClick = item.onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -306,6 +308,7 @@ fun QuickActionTile(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
             .clickable(onClick = item.onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
@@ -454,6 +457,7 @@ fun NotificationListItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .sizeIn(minHeight = 48.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
