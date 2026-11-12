@@ -33,11 +33,12 @@ Back to [index](README.md).
 | Network | Retrofit 2.11 + Gson converter, OkHttp 4.12 + logging interceptor |
 | Async | kotlinx-coroutines-android 1.9 |
 | Storage | androidx.security:security-crypto 1.1.0-alpha06 |
+| Fingerprint unlock | androidx.biometric:biometric 1.1.0 (`BiometricPrompt`; pulls in androidx.fragment 1.2.5) |
 | Camera / scanning | CameraX 1.4 (core, camera2, lifecycle, view), ML Kit barcode-scanning 17.2 — **declared but not used in code yet** |
 
 ## Permissions
 
-`INTERNET`, `CAMERA`. The manifest marks `android.hardware.camera` as **required**, so the Play Store would hide the app from devices without a camera even though no screen uses the camera yet.
+`INTERNET`, `CAMERA`, plus `USE_BIOMETRIC` / `USE_FINGERPRINT` merged in from androidx.biometric. The manifest marks `android.hardware.camera` as **required**, so the Play Store would hide the app from devices without a camera even though no screen uses the camera yet.
 
 ## Tests
 
@@ -48,6 +49,11 @@ Unit tests only (`app/src/test/java/com/example/stismartlib/`):
 - `LoginFlowTest` — parsing `/auth/login` responses: emailed-code challenge vs token, broken payloads.
 - `SessionErrorsTest` — which codes end a session, 401 handling, sign-in error copy.
 - `SessionActivityTrackerTest` — 10-minute idle limit and 30-second ping throttle.
+- `SessionRefreshInterceptorTest` — 30-day key refresh on expired sessions, single flight, retry once.
+- `AppLockTest` — when the fingerprint lock appears (start, 1 minute away, rotation, PIN screen) and when it is offered.
+- `BiometricUnlockTest` — fingerprint/PIN combination per Android version and unlock error messages.
+
+Run with `sh ./gradlew :app:testDebugUnitTest :app:assembleDebug` (`gradlew` is committed without the executable bit).
 
 No instrumented tests exist, though the Espresso / Compose UI test dependencies are declared. `LibraryRepository` itself (network calls, storage) has no tests; there is no MockWebServer or Robolectric in the project.
 

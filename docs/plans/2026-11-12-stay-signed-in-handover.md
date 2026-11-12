@@ -8,7 +8,7 @@ Date: 2026-11-12. Branch: `feat/stay-signed-in` (built on `feat/password-reset`,
 - Refresh key lifetime: **30 days** from sign-in, not extended by use.
 - **One website session and one phone session per account** (a website sign-in must not sign the phone out).
 - `LOGIN_DEVICES_ENABLED` stays off. Wrong-portal sign-in stays as it is (counts as a wrong password).
-- **Fingerprint unlock: wanted (not started).**
+- **Fingerprint unlock: built** (design confirmed 2026-11-12: `androidx.biometric` 1.1.0, ask once after sign-in, lock on launch and after 1 minute away, PIN fallback). Hardware-bound refresh key: **not now** (follow-up).
 - Do not push to the server repo (JohnBazty/stiormoclibrary) without the user's explicit permission. Hand over patches instead.
 
 ## Done in this branch (app)
@@ -27,17 +27,29 @@ Date: 2026-11-12. Branch: `feat/stay-signed-in` (built on `feat/password-reset`,
 
 Verified there: `tsc --noEmit` clean, 430/430 API tests pass, and deliberate bugs in the new logic are caught by the tests. Apply with `git am docs/plans/server-patches/*.patch` in a clone of the server repo. The migration must run before the API deploys (schema readiness now requires the new columns).
 
+## Fingerprint unlock (done in this branch, second session)
+
+- `session/AppLock.kt`: when to lock (start once per process, after ≥ 1 minute in the background, never after a fresh password sign-in); `AppLock.shouldOffer`.
+- `auth/BiometricUnlock.kt`: `BiometricPrompt` glue, authenticator choice per Android version, error messages.
+- `auth/AppLockScreen.kt` + `auth/AppLockGate.kt`: lock screen over the nav graph, auto prompt, "Sign in with password instead" (signs out), "Use fingerprint to unlock?" dialog.
+- `SessionStore.appLockChoice` / `setAppLockChoice` (plain prefs `smartlib_app_lock`, per school ID, survives sign-out). `LibraryRepository`: `isAppLocked`, `appLockOfferPending`, `isAppLockTurnedOn`, `onAppBackground`/`onAppForeground`, `unlockApp`, `setAppLockEnabled`.
+- `MainActivity` is now a `FragmentActivity`. Side menu has a "Fingerprint unlock On/Off" row.
+- Previews: `AppLockScreenPreview`, `…DarkPreview`, `…ErrorPreview` in `ui/preview/ScreenPreviews.kt`.
+- New dependency: `androidx.biometric:biometric:1.1.0` (brings `androidx.fragment` 1.2.5 and `appcompat` 1.2.0; adds `USE_BIOMETRIC`/`USE_FINGERPRINT` permissions via manifest merge).
+
+## Verified (second session)
+
+- Android SDK installed (platform 36, build-tools 36.0.0). `./gradlew :app:testDebugUnitTest :app:assembleDebug` passes: **55/55** JVM tests (37 existing, no fixes needed; 18 new in `AppLockTest`, `BiometricUnlockTest`), debug APK builds. Note: `gradlew` is committed without the executable bit; run it with `sh ./gradlew` or `chmod +x`.
+
 ## Not verified yet
 
-- `./gradlew :app:testDebugUnitTest :app:assembleDebug`. Use the `STI_ILMS_Mobile` cloud environment, which allows `dl.google.com` for the Android SDK.
-- Anything against a real server or device.
+- **The lock screen has not been seen on a screen.** No emulator here (no hardware virtualisation), and Robolectric rendering was blocked (large Maven files redirect to a mirror the network blocks). Render the three previews, or run on a phone/emulator with the `android-visual-verification` skill.
+- **Fingerprint prompt on a real device**: auto prompt on launch and on return after 1 minute; PIN fallback on Android 8–10 (system PIN screen, `onStop`/`onStart` while locked); rotation while the prompt is open; old `androidx.fragment` 1.2.5 with this activity/Compose stack.
+- Anything against a real server.
 
-## Next: fingerprint unlock
+## Next
 
-Suggested shape (confirm with the user before building):
-- `androidx.biometric:biometric` (new dependency, needed for BiometricPrompt).
-- Only when the phone holds a refresh key (Student/Faculty). Ask once after sign-in: "Use fingerprint to unlock?"; store the choice per account.
-- Lock when the app opens or returns after a short time in the background (e.g. 1 minute); show a lock screen with "Unlock with fingerprint" and "Sign in with password instead" (signs out).
-- Allow device PIN as fallback (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`). If no biometrics are enrolled, don't offer it.
-- Optional hardening: bind the refresh key to a Keystore key that requires user authentication.
-- Follow `.claude/skills/sti-design-system`; check the lock screen with `android-visual-verification` if an emulator is available.
+- Check the lock screen and prompt on a device (see "Not verified yet").
+- Optional hardening (deferred): bind the refresh key to a Keystore key that requires user authentication.
+- Optional: hide the app from the Recents preview while fingerprint unlock is on (`FLAG_SECURE` or `setRecentsScreenshotEnabled(false)`).
+- Apply the server patches (above) so students/faculty actually get a refresh key; until then the feature never appears.

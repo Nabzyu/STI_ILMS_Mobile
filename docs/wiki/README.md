@@ -15,7 +15,7 @@ Written from the source on branch `claude/trusting-carson-rryhyc` (Nov 2026). Li
 |---|---|
 | [Architecture](architecture.md) | Layers, packages, how the pieces depend on each other |
 | [Startup and navigation](startup-and-navigation.md) | Cold start, splash, the two nav graphs, routes |
-| [Authentication and session](authentication-and-session.md) | Login with portal fallback, registration, token storage, logout |
+| [Authentication and session](authentication-and-session.md) | Login with portal switch, registration, token storage, 30-day stay signed in, fingerprint unlock, logout |
 | [Networking and API](networking-and-api.md) | Retrofit client, interceptors, envelope unwrapping, endpoint table |
 | [Data layer](data-layer.md) | `LibraryRepository`, domain models, DTO→model mapping, cart rules |
 | [Screens](screens.md) | Every screen, who sees it, what it reads and does |
