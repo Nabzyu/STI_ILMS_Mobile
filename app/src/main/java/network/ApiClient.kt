@@ -1,12 +1,17 @@
 package com.example.stismartlib.network
 
 import com.example.stismartlib.network.dto.ApiEnvelope
+import com.example.stismartlib.network.dto.LoginData
+import com.example.stismartlib.network.dto.RefreshTokenRequest
 import com.example.stismartlib.session.SessionStore
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -57,8 +62,35 @@ object ApiClient {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(authInterceptor)
+            .addInterceptor(SessionRefreshInterceptor(sessionStore, ::requestRefresh, gson))
             .addInterceptor(logging)
             .build()
+    }
+
+    /**
+     * Synchronous `/auth/refresh` used by [SessionRefreshInterceptor]. Returns null when the server
+     * rejects the key; throws IOException when it cannot be reached.
+     */
+    private fun requestRefresh(refreshToken: String): RefreshedTokens? {
+        val body = gson.toJson(RefreshTokenRequest(refreshToken))
+            .toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url(ApiConfig.baseUrl + "api/v1/auth/refresh")
+            .header("Accept", "application/json")
+            .post(body)
+            .build()
+        okHttp.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val type = object : TypeToken<ApiEnvelope<LoginData>>() {}.type
+            val data = try {
+                gson.fromJson<ApiEnvelope<LoginData>>(response.body?.string().orEmpty(), type)?.data
+            } catch (_: JsonSyntaxException) {
+                null
+            }
+            val access = data?.token?.takeIf { it.isNotBlank() } ?: return null
+            val next = data.refreshToken?.takeIf { it.isNotBlank() } ?: return null
+            return RefreshedTokens(access, next)
+        }
     }
 
     private val retrofit: Retrofit by lazy {

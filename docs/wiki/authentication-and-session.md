@@ -72,6 +72,17 @@ The server ends a session after **10 minutes without activity**; only `POST api/
 - **After a restore** the app pings once, because `/auth/me` does not refresh the server's idle window.
 - Unlike the web app, there is no 60-second countdown warning.
 
+## Stay signed in (30 days, Student/Faculty)
+
+Requires the server change in `docs/plans/server-patches/` (migration `037_mobile_sessions.sql`, `/auth/refresh`, `/auth/logout`). Until it is deployed, the server ignores `client` and sends no key, so the app behaves as before.
+
+- Every sign-in sends `client: "mobile"`. The server keeps **one website session and one phone session** per account: a website sign-in no longer signs the phone out, and vice versa. A second phone sign-in replaces the first.
+- Student/Faculty sign-ins get a `refreshToken` valid for **30 days from sign-in** (rotating it does not extend this). It is stored only in the encrypted prefs (`SessionStore.getRefreshToken`). Librarians get none and keep the 10-minute idle sign-out.
+- `network/SessionRefreshInterceptor.kt`: when a request fails with `SESSION_EXPIRED` or `JWT_INVALID`, it calls `/auth/refresh` once (one refresh at a time), saves the new token and key, and retries the request. A rejected key passes the 401 through, so the normal sign-out applies. If the server can't be reached, the request fails as offline and the key is kept.
+- The server rotates the key on every refresh. Reusing a replaced key ends the session (treated as stolen). Password reset, deactivation, role change and semester end also stop it.
+- With a key, the local 10-minute idle rule does not sign out; the next request renews the session. Opening the app offline with a key shows the saved account and renews once online.
+- Sign out calls `/auth/logout` with the key, so it stops working immediately.
+
 ## Restore, expiry and logout
 
 - **Restore:** at launch, `restoreSession()` calls `/auth/me`, then `/auth/activity`. On success it refreshes stored identity. On any `ApiException` it clears everything and returns false; a session-ending code is shown on the login screen.

@@ -1,0 +1,46 @@
+From 72d90ee36f9e25cb319a627a0707f4022c635eab Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 12 Nov 2026 07:27:43 +0000
+Subject: [PATCH 1/2] fix(auth): add session codes to activity 401 responses
+
+---
+ apps/api/src/modules/auth/jwt-auth.routes.ts | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/apps/api/src/modules/auth/jwt-auth.routes.ts b/apps/api/src/modules/auth/jwt-auth.routes.ts
+index e6b789c..d07ce68 100644
+--- a/apps/api/src/modules/auth/jwt-auth.routes.ts
++++ b/apps/api/src/modules/auth/jwt-auth.routes.ts
+@@ -129,6 +129,8 @@ jwtAuthRouter.post('/login', rateLimit({ windowMs: 10 * 60_000, limit: 60, stand
+   } catch (error) { next(error) }
+ })
+ const otpLimiter = rateLimit({ windowMs: 10 * 60_000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false })
++// Also used by the STI ILMS Android app (no Origin/Sec-Fetch headers). Keep LOGIN_DEVICES_ENABLED off,
++// or update the app, before tightening the same-origin check on /login, /login/verify or /login/resend.
+ for (const action of ['verify', 'resend'] as const) jwtAuthRouter.post(`/login/${action}`, otpLimiter, async (request, response, next) => {
+   response.set('Cache-Control', 'no-store')
+   try {
+@@ -136,17 +138,18 @@ for (const action of ['verify', 'resend'] as const) jwtAuthRouter.post(`/login/$
+     sendLogin(request, response, action === 'verify' ? await loginSecurityService.verify(request.body, browserToken(request, request.body?.device_session_id)) : await loginSecurityService.resend(request.body))
+   } catch (error) { next(error) }
+ })
++// Also used by the Android app to keep sessions alive; it signs out on any 401 code below.
+ jwtAuthRouter.post('/activity', authenticateJwt, ensureActiveJwtAccount, async (_request, response, next) => {
+   response.set('Cache-Control', 'no-store')
+   try {
+     const identity = response.locals.authenticatedUser
+-    if (!identity.sessionId) { response.status(401).json({ success: false, message: 'Sign in again to start a renewed session.' }); return }
++    if (!identity.sessionId) { response.status(401).json({ success: false, code: 'SESSION_UPGRADE_REQUIRED', message: 'Sign in again to start a renewed session.' }); return }
+     const timestamp = Date.now()
+     const deadline = loginDevicesEnabled() ? ` AND ${DEVICE_DEADLINE_SQL}` : ''
+     const expiresIn = identity.deviceSession ? deviceAccessLifetime(timestamp, identity.rememberedUntil, timestamp) : undefined
+     if (expiresIn !== undefined && expiresIn < 1) { response.status(401).json({ success: false, code: 'SESSION_EXPIRED', message: 'Sign in again to continue.' }); return }
+     const [result] = await db.execute(`UPDATE library_login_sessions SET last_activity_at=NOW() WHERE session_id=? AND account_id=? AND auth_version=? AND revoked_at IS NULL AND ${DEVICE_IDLE_SQL}${deadline}`, [identity.sessionId, identity.accountId, identity.authVersion])
+-    if (!(result as { affectedRows: number }).affectedRows) { response.status(401).json({ success: false, message: 'Your session expired. Sign in again.' }); return }
++    if (!(result as { affectedRows: number }).affectedRows) { response.status(401).json({ success: false, code: 'SESSION_EXPIRED', message: 'Your session expired. Sign in again.' }); return }
+     const renewed = identity.deviceSession ? { ...identity, idleUntil: timestamp + LOGIN_IDLE_MS } : identity
+     response.json({ success: true, data: { token: signSessionToken(renewed, expiresIn), idleSeconds: 600 } })
+   } catch (error) { next(error) }
+-- 
+2.43.0
+

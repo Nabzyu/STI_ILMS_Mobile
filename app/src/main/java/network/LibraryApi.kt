@@ -12,6 +12,8 @@ import com.example.stismartlib.network.dto.LoginRequest
 import com.example.stismartlib.network.dto.LoginResendData
 import com.example.stismartlib.network.dto.LoginResendRequest
 import com.example.stismartlib.network.dto.LoginVerifyRequest
+import com.example.stismartlib.network.dto.LogoutData
+import com.example.stismartlib.network.dto.RefreshTokenRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
 import com.example.stismartlib.network.dto.PasswordRecoveryChallengeData
@@ -45,6 +47,10 @@ interface LibraryApi {
 
     @POST("api/v1/auth/login/resend")
     suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    /** Ends this phone's session on the server (refresh key in the body; no bearer token needed). */
+    @POST("api/v1/auth/logout")
+    suspend fun logout(@Body body: RefreshTokenRequest): Response<ApiEnvelope<LogoutData>>
 
     /** Keeps the server session alive (10-minute idle limit) and returns a renewed token. */
     @POST("api/v1/auth/activity")

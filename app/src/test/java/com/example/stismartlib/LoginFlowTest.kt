@@ -51,6 +51,18 @@ class LoginFlowTest {
         assertEquals("DESK-001", step.schoolId)
         assertEquals("Desk Staff", step.fullName)
         assertEquals("Staff", step.role)
+        assertEquals(null, step.refreshToken)
+    }
+
+    @Test
+    fun phoneSignInCarriesTheRefreshKey() {
+        val key = "k".repeat(43)
+        val data = parse(
+            """{"data":{"token":"t","refreshToken":"$key","refreshExpiresIn":2592000,
+            "user":{"id":3,"schoolId":"S-1","role":"Student"}}}""",
+        )
+        val step = interpretLoginData(data, "S-1") as LoginStep.Authenticated
+        assertEquals("k".repeat(43), step.refreshToken)
     }
 
     @Test

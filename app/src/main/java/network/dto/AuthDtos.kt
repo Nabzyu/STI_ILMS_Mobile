@@ -21,6 +21,8 @@ data class LoginRequest(
     /** "user" for Student/Faculty, "staff" for Librarian/Admin. */
     val portal: String? = null,
     @SerializedName("login_as") val loginAs: String? = null,
+    /** Tells the server this is the Android app: its session lives alongside the website's. */
+    val client: String = "mobile",
 )
 
 /**
@@ -39,11 +41,24 @@ data class LoginData(
     val resendAfter: Int? = null,
     /** Only sent when the server's device sign-in feature is on; the app cannot complete that flow. */
     val deviceSwitchRequired: Boolean? = null,
+    /** 30-day key that keeps a Student/Faculty phone signed in; absent for staff. */
+    val refreshToken: String? = null,
+    val refreshExpiresIn: Int? = null,
 )
 
 data class LoginVerifyRequest(
     @SerializedName("challenge_id") val challengeId: String,
     val code: String,
+    val client: String = "mobile",
+)
+
+/** Body of `/auth/refresh` and `/auth/logout`. */
+data class RefreshTokenRequest(
+    @SerializedName("refresh_token") val refreshToken: String,
+)
+
+data class LogoutData(
+    val signedOut: Boolean? = null,
 )
 
 data class LoginResendRequest(

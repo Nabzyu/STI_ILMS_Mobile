@@ -99,4 +99,4 @@ The web routes come from `apps/web/src` (student and faculty portals are almost 
 - **Bare 401s from `/auth/activity`:** will carry `SESSION_EXPIRED` (and `SESSION_UPGRADE_REQUIRED` for the no-session-id case). The app works with or without the codes.
 - **Separate code for wrong-portal sign-in:** no, leave as is. The server answers `INVALID_CREDENTIALS` and counts the attempt; the app relies on the remembered portal and the librarian switch.
 - **Library desk staff:** not in the first app release; support is parked on `archive/desk-staff-support`.
-- **Stay signed in on the phone:** to be a server refresh token for students and faculty only (design pending).
+- **Stay signed in on the phone:** 30-day refresh key for students and faculty only, and one website plus one phone session per account. Server change in `docs/plans/server-patches/`, app side on branch `feat/stay-signed-in`. Fingerprint unlock requested next.

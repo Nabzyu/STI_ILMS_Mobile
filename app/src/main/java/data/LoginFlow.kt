@@ -20,6 +20,8 @@ sealed interface LoginStep {
         val schoolId: String,
         val fullName: String,
         val role: String,
+        /** Present for Student/Faculty sign-ins from the app (30-day "stay signed in" key). */
+        val refreshToken: String? = null,
     ) : LoginStep
 }
 
@@ -64,6 +66,7 @@ fun interpretLoginData(data: LoginData, requestedSchoolId: String): LoginStep {
         schoolId = schoolId,
         fullName = user.fullName?.takeIf { it.isNotBlank() } ?: schoolId,
         role = user.role.orEmpty(),
+        refreshToken = data.refreshToken?.takeIf { it.isNotBlank() },
     )
 }
 

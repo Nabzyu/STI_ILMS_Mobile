@@ -31,6 +31,7 @@ import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.PasswordRecoveryRequest
 import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
 import com.example.stismartlib.network.dto.PasswordResetRequest
+import com.example.stismartlib.network.dto.RefreshTokenRequest
 import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.session.SessionActivityTracker
 import com.example.stismartlib.session.SessionStore
@@ -214,6 +215,7 @@ class LibraryRepository(
             schoolId = step.schoolId,
             fullName = step.fullName,
             role = step.role.ifBlank { userType.displayName },
+            refreshToken = step.refreshToken,
         )
         session = LibrarySession(
             userType = userType,
@@ -244,7 +246,8 @@ class LibraryRepository(
     fun onUserInteraction() {
         if (!session.isAuthenticated || !activityTracker.isActive) return
         val now = clock()
-        if (activityTracker.isIdleExpired(now)) {
+        // With a 30-day key the server session is renewed on the next request instead.
+        if (activityTracker.isIdleExpired(now) && !staysSignedIn()) {
             endIdleSession()
             return
         }
@@ -259,8 +262,11 @@ class LibraryRepository(
 
     /** Call when the app returns to the foreground: ends a session idle for 10 minutes or more. */
     fun checkIdleTimeout() {
-        if (session.isAuthenticated && activityTracker.isIdleExpired(clock())) endIdleSession()
+        if (session.isAuthenticated && activityTracker.isIdleExpired(clock()) && !staysSignedIn()) endIdleSession()
     }
+
+    /** Student/Faculty phones hold a 30-day key, so the 10-minute idle limit doesn't sign them out. */
+    private fun staysSignedIn(): Boolean = sessionStore.getRefreshToken() != null
 
     private suspend fun sendActivity() {
         if (!session.isAuthenticated) return
@@ -338,7 +344,8 @@ class LibraryRepository(
             }
             val fullName = me.fullName?.takeIf { it.isNotBlank() } ?: stored.fullName
             sessionStore.save(
-                token = stored.token,
+                // `/auth/me` may have renewed the token through the refresh key; keep the newest one.
+                token = sessionStore.getToken() ?: stored.token,
                 accountId = accountId,
                 schoolId = schoolId,
                 fullName = fullName,
@@ -360,12 +367,37 @@ class LibraryRepository(
             lastError = error.message
             if (error.code in SessionEndingCodes) sessionEndReason = error.code
             false
+        } catch (error: IOException) {
+            // Offline at launch: a phone with a 30-day key opens with its saved identity and
+            // renews the session once a request gets through. Others see the sign-in screen.
+            lastError = error.message
+            if (!staysSignedIn() || UserType.isDeskStaffRole(stored.role)) return@withContext false
+            session = LibrarySession(
+                userType = UserType.fromServerRole(stored.role),
+                userName = stored.fullName,
+                schoolId = stored.schoolId,
+                accountId = stored.accountId,
+                isAuthenticated = true,
+            )
+            activityTracker.start(clock())
+            true
         }
     }
 
     fun logout() {
+        // End the phone's session on the server too, so its 30-day key stops working.
+        val refreshToken = sessionStore.getRefreshToken()
         endLocalSession()
         sessionEndReason = null
+        if (refreshToken != null) {
+            backgroundScope.launch {
+                try {
+                    ApiClient.api.logout(RefreshTokenRequest(refreshToken))
+                } catch (_: IOException) {
+                    // Offline: the key still expires on the server within 30 days.
+                }
+            }
+        }
     }
 
     suspend fun refreshStudentData() = withContext(Dispatchers.IO) {
