@@ -11,7 +11,7 @@ Back to [index](README.md).
 
 ```
 MainActivity ──► AppNavGraph (top level)          navigation/
-                   ├─ LoginScreen / RegisterScreen  auth/
+                   ├─ LoginScreen / ActivateAccountScreen  auth/
                    ├─ StaffHomeScreen               dashboard/staff/
                    └─ DashboardScreen ──► inner NavHost ──► feature screens  dashboard/**
                                 │

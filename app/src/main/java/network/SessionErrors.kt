@@ -16,6 +16,7 @@ fun isAuthHandshakePath(encodedPath: String): Boolean =
         encodedPath.endsWith("/auth/login/verify") ||
         encodedPath.endsWith("/auth/login/resend") ||
         encodedPath.endsWith("/auth/register") ||
+        encodedPath.contains("/auth/roster-registration") ||
         encodedPath.contains("/auth/password-recovery/")
 
 /**

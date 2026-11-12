@@ -1,6 +1,8 @@
 package com.example.stismartlib
 
+import com.example.stismartlib.data.ActivationAvailability
 import com.example.stismartlib.data.LoginStep
+import com.example.stismartlib.data.activationAvailability
 import com.example.stismartlib.data.interpretLoginData
 import com.example.stismartlib.network.ApiException
 import com.example.stismartlib.network.dto.ApiEnvelope
@@ -80,5 +82,13 @@ class LoginFlowTest {
         val data = parse("""{"data":{"deviceSwitchRequired":true,"switchToken":"abc"}}""")
         val error = assertThrows(ApiException::class.java) { interpretLoginData(data, "X01") }
         assertEquals("DEVICE_SWITCH_REQUIRED", error.code)
+    }
+
+    @Test
+    fun activationAvailabilityMatchesTheWebsite() {
+        assertEquals(ActivationAvailability.Open, activationAvailability(enabled = true, open = true))
+        assertEquals(ActivationAvailability.Closed, activationAvailability(enabled = true, open = false))
+        assertEquals(ActivationAvailability.Unavailable, activationAvailability(enabled = false, open = true))
+        assertEquals(ActivationAvailability.Unavailable, activationAvailability(enabled = null, open = null))
     }
 }

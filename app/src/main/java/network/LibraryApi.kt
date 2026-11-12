@@ -21,8 +21,13 @@ import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
 import com.example.stismartlib.network.dto.PasswordResetData
 import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.PrintRequestDto
-import com.example.stismartlib.network.dto.RegisterData
-import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RosterBeginRequest
+import com.example.stismartlib.network.dto.RosterChallengeData
+import com.example.stismartlib.network.dto.RosterCompleteData
+import com.example.stismartlib.network.dto.RosterCompleteRequest
+import com.example.stismartlib.network.dto.RosterGrantData
+import com.example.stismartlib.network.dto.RosterStatusData
+import com.example.stismartlib.network.dto.RosterVerifyRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveResultDto
@@ -59,8 +64,18 @@ interface LibraryApi {
     @POST("api/v1/auth/password-recovery/reset")
     suspend fun passwordReset(@Body body: PasswordResetRequest): Response<ApiEnvelope<PasswordResetData>>
 
-    @POST("api/v1/auth/register")
-    suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>
+    /** Student account activation against the semester roster (replaces the retired `/auth/register`). */
+    @GET("api/v1/auth/roster-registration")
+    suspend fun rosterStatus(): Response<ApiEnvelope<RosterStatusData>>
+
+    @POST("api/v1/auth/roster-registration/begin")
+    suspend fun rosterBegin(@Body body: RosterBeginRequest): Response<ApiEnvelope<RosterChallengeData>>
+
+    @POST("api/v1/auth/roster-registration/verify")
+    suspend fun rosterVerify(@Body body: RosterVerifyRequest): Response<ApiEnvelope<RosterGrantData>>
+
+    @POST("api/v1/auth/roster-registration/complete")
+    suspend fun rosterComplete(@Body body: RosterCompleteRequest): Response<ApiEnvelope<RosterCompleteData>>
 
     @GET("api/v1/auth/me")
     suspend fun me(): Response<ApiEnvelope<MeUser>>

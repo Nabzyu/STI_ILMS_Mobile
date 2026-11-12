@@ -17,7 +17,7 @@ To point at a local server, change the `buildConfigField` for `debug`. `res/xml/
 
 Singleton `object`, built lazily:
 - **OkHttp** with 30 s connect/read/write timeouts.
-- **Auth interceptor:** adds `Accept: application/json` to every request and `Authorization: Bearer <token>` when a token exists — except for paths ending in `/auth/login` or `/auth/register`, where any `Authorization` header is removed.
+- **Auth interceptor:** adds `Accept: application/json` to every request and `Authorization: Bearer <token>` when a token exists — except for sign-in paths (`isAuthHandshakePath`: login, code verify/resend, password recovery, roster registration), where any `Authorization` header is removed.
 - **Logging interceptor** at `BASIC` (method, URL, status, timing — no bodies or headers). It is active in release builds too.
 - **Retrofit** with the Gson converter. Gson uses default field naming, so response DTOs expect **camelCase** keys unless a field has `@SerializedName`; request bodies use explicit `snake_case` names.
 
@@ -40,7 +40,8 @@ All paths are relative to the base URL.
 | Method | Path | Used by | Returns (`data`) |
 |---|---|---|---|
 | POST | `api/v1/auth/login` | login | `LoginData` (token, user) |
-| POST | `api/v1/auth/register` | registration | `RegisterData` |
+| GET | `api/v1/auth/roster-registration` | activation open? | `RosterStatusData` |
+| POST | `api/v1/auth/roster-registration/{begin,verify,complete}` | account activation | `RosterChallengeData` / `RosterGrantData` / `RosterCompleteData` |
 | GET | `api/v1/auth/me` | session restore | `MeUser` |
 | GET | `api/v1/catalog/books?q&page=1&limit=50` | book catalogue | `List<BookCatalogItemDto>` |
 | GET | `api/v1/catalog/books/{titleId}` | *declared, not called* | `BookCatalogItemDto` |

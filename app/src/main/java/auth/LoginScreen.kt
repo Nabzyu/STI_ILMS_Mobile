@@ -85,6 +85,12 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
 
     LaunchedEffect(Unit) {
         repository.consumeSessionEndReason()?.let { notice = sessionEndedMessage(it) }
+        // Back from "Activate account": pre-fill the new account's Student ID.
+        navController.currentBackStackEntry?.savedStateHandle?.remove<String>(ActivatedSchoolIdKey)?.let {
+            schoolId = it
+            staffPortal = false
+            notice = "Your account is active. Sign in with your Student ID and new password."
+        }
     }
     // Pre-select the portal this school ID last signed in with, unless the user picked one.
     LaunchedEffect(schoolId) {
@@ -389,7 +395,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
                 text = buildAnnotatedString {
-                    append("Don't have an account? ")
+                    append("New student? ")
                     withStyle(
                         SpanStyle(
                             fontWeight = FontWeight.Black,
@@ -397,14 +403,14 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                             color = ElmsCyan
                         )
                     ) {
-                        append("Register as Student")
+                        append("Activate your account")
                     }
                 },
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 14.sp,
                 modifier = Modifier
                     .sizeIn(minHeight = 48.dp)
-                    .clickable { navController.navigate(Screen.Register.route) }
+                    .clickable(enabled = !isSubmitting) { navController.navigate(Screen.ActivateAccount.route) }
                     .padding(vertical = 12.dp)
             )
         }
