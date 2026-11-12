@@ -109,7 +109,8 @@ class LibraryRepository(
         cart.isNotEmpty() && cart.all { it.isAvailable }
 
     /**
-     * Sign-in for one server portal: `user` (Student/Faculty) or `staff` (Admin/Librarian/Staff).
+     * Sign-in for one server portal: `user` (Student/Faculty) or `staff` (Admin/Librarian).
+     * Desk staff (`Staff`) also use the staff portal but are not supported in the app yet.
      * The server counts a portal/role mismatch as a wrong password, so the app never retries the
      * other portal on its own; the login screen lets the user pick the staff sign-in instead.
      * Student/Faculty get [LoginOutcome.CodeRequired] and finish with [verifyLoginCode].
@@ -159,11 +160,15 @@ class LibraryRepository(
         sessionStore.preferredLoginPortal(normalizeSchoolId(schoolId))?.let { it == PORTAL_STAFF }
 
     private fun completeSignIn(step: LoginStep.Authenticated, portal: String) {
+        if (UserType.isDeskStaffRole(step.role)) {
+            sessionStore.clear()
+            throw ApiException(DESK_STAFF_MESSAGE, "DESK_STAFF_NOT_SUPPORTED")
+        }
         val userType = UserType.fromServerRole(step.role)
         if (portal == PORTAL_STAFF && !userType.isStaff) {
             sessionStore.clear()
             throw ApiException(
-                "This sign-in is for Librarian and library staff accounts only.",
+                "This sign-in is for Librarian accounts only.",
                 "ADMIN_ROLE_REQUIRED",
             )
         }
@@ -254,6 +259,8 @@ class LibraryRepository(
     private companion object {
         const val PORTAL_USER = "user"
         const val PORTAL_STAFF = "staff"
+        const val DESK_STAFF_MESSAGE =
+            "Library desk staff accounts can't use the app yet. Please use the library website."
     }
 
     suspend fun registerStudent(
@@ -289,6 +296,10 @@ class LibraryRepository(
             val accountId = me.accountId ?: me.id ?: stored.accountId
             val schoolId = me.schoolId ?: stored.schoolId
             val role = me.role ?: stored.role
+            if (UserType.isDeskStaffRole(role)) {
+                endLocalSession()
+                return@withContext false
+            }
             val fullName = me.fullName?.takeIf { it.isNotBlank() } ?: stored.fullName
             sessionStore.save(
                 token = stored.token,

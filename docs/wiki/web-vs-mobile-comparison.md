@@ -17,7 +17,7 @@ The mobile app was written against an older version of the server's `/api/v1` co
 
 ## 1. Blockers — the app cannot get past sign-in
 
-> **Status (branch `claude/fix-sign-in-flow`):** items marked ✅ (B1, B2, B4, B5, M1, M2, M4) are fixed in the app. The rows below still describe the original problem; [Authentication and session](authentication-and-session.md) describes the new behaviour. None of it has been tested against the live server yet. B3, M3 (now handled as a normal sign-out) and M5–M8 are unchanged.
+> **Status (branch `claude/fix-sign-in-flow`):** items marked ✅ (B1, B2, B4, M1, M2, M4) are fixed in the app. B5 (⏸) is deliberately not shipped: desk-staff accounts get a "use the website" message, and the full support is kept on branch `archive/desk-staff-support`. The rows below still describe the original problem; [Authentication and session](authentication-and-session.md) describes the new behaviour. None of it has been tested against the live server yet. B3, M3 (now handled as a normal sign-out) and M5–M8 are unchanged.
 
 | # | Server now | Mobile does | Effect |
 |---|---|---|---|
@@ -25,7 +25,7 @@ The mobile app was written against an older version of the server's `/api/v1` co
 | B2 ✅ | **Sessions expire after 10 minutes without activity.** Every `/api/v1` request checks `library_login_sessions.last_activity_at` (`jwt-auth.middleware.ts` lines 57–65). Only `POST /api/v1/auth/activity` refreshes it, and it returns a renewed token. The web app calls it from `apps/web/src/features/auth/SessionActivity.tsx`. | Never calls `/auth/activity`. | Even with B1 fixed, every request fails with `401 SESSION_EXPIRED` 10 minutes after login. The app doesn't clear its session for that code, so it keeps failing until the user restarts. |
 | B3 | **The old registration endpoint is retired.** `POST /api/v1/auth/register` always returns `410 REGISTRATION_FLOW_REPLACED` (`jwt-auth.routes.ts` line 119). Signup now goes through roster registration: `GET /auth/roster-registration`, then `POST /auth/roster-registration/{begin,verify,complete}`. | `RegisterScreen` posts to `/auth/register`. | Registration always fails. |
 | B4 ✅ | **School IDs are 3–50 letters, digits, `.`, `_` or `-`** (`account-auth.validation.ts` line 7). The combined Librarian/Admin login is `ADMIN-PORTAL-001` (web `README.MD`). | Login and register screens require **exactly 11 digits**. | **The librarian cannot sign in from the app.** The form rejects the ID before sending it. |
-| B5 ✅ | Staff-portal roles are `Admin`, `Librarian` and **`Staff`** (`jwt-auth.service.ts` line 15). | `UserType.fromServerRole("Staff")` → `STUDENT`, and the staff portal then rejects it with `ADMIN_ROLE_REQUIRED`. | Desk staff accounts cannot sign in. |
+| B5 ⏸ | Staff-portal roles are `Admin`, `Librarian` and **`Staff`** (`jwt-auth.service.ts` line 15). | `UserType.fromServerRole("Staff")` → `STUDENT`, and the staff portal then rejects it with `ADMIN_ROLE_REQUIRED`. | Desk staff accounts cannot sign in. |
 
 ## 2. Contract mismatches that cause wrong behaviour
 

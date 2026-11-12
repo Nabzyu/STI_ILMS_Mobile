@@ -25,7 +25,9 @@ fun userFacingMessage(
             "ACCOUNT_DEACTIVATED" ->
                 "Your account is currently deactivated. Please coordinate with the campus librarian."
             "ADMIN_ROLE_REQUIRED" ->
-                "This sign-in is for Librarian and library staff accounts only."
+                "This sign-in is for Librarian accounts only."
+            "DESK_STAFF_NOT_SUPPORTED" ->
+                "Library desk staff accounts can't use the app yet. Please use the library website."
             "LOGIN_EMAIL_MISSING" ->
                 "Your school email is not linked to this account. Please contact the librarian."
             "LOGIN_CHANGED" ->

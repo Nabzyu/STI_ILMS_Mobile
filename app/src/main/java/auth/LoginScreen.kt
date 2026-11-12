@@ -60,7 +60,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Sign-in for every role. Student/Faculty use the `user` portal and then enter an emailed code;
- * Librarian/Staff switch to the staff sign-in (the server's separate `staff` portal).
+ * Librarians switch to the librarian sign-in (the server's separate `staff` portal).
  * [previewChallenge] opens the code step directly, for previews only.
  */
 @Composable
@@ -134,7 +134,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Text(
             text = when {
                 activeChallenge != null -> "CHECK YOUR EMAIL"
-                staffPortal -> "LIBRARY STAFF"
+                staffPortal -> "LIBRARIAN"
                 else -> "WELCOME BACK"
             },
             style = EyebrowStyle,
@@ -144,7 +144,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Text(
             text = when {
                 activeChallenge != null -> "Enter your code"
-                staffPortal -> "Staff sign in"
+                staffPortal -> "Librarian sign in"
                 else -> "Sign in"
             },
             style = MaterialTheme.typography.headlineLarge,
@@ -157,7 +157,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                     "We sent a six-digit code to ${activeChallenge.emailHint}. " +
                         "It expires in ${(activeChallenge.expiresInSeconds / 60).coerceAtLeast(1)} minutes."
                 staffPortal ->
-                    "For librarian and library staff accounts. Use your school ID and password."
+                    "For librarian accounts. Use your school ID and password."
                 else ->
                     "Use your school ID and password. Students and faculty then enter a code sent to their school email."
             },
@@ -237,7 +237,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
             onValueChange = { value ->
                 schoolId = value.filter { it.isLetterOrDigit() || it in "._-" }.take(50)
             },
-            placeholder = if (staffPortal) "Enter your staff school ID" else "Enter your Student or Faculty ID",
+            placeholder = if (staffPortal) "Enter your librarian school ID" else "Enter your Student or Faculty ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
@@ -339,7 +339,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
                 text = buildAnnotatedString {
-                    append(if (staffPortal) "Student or faculty? " else "Librarian or library staff? ")
+                    append(if (staffPortal) "Student or faculty? " else "Librarian? ")
                     withStyle(
                         SpanStyle(
                             fontWeight = FontWeight.Black,
@@ -347,7 +347,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                             color = ElmsCyan
                         )
                     ) {
-                        append(if (staffPortal) "Use student sign in" else "Use staff sign in")
+                        append(if (staffPortal) "Use student sign in" else "Use librarian sign in")
                     }
                 },
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),

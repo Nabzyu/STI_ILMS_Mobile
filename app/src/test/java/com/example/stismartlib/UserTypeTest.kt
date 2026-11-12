@@ -16,11 +16,13 @@ class UserTypeTest {
     }
 
     @Test
-    fun fromServerRoleMapsDeskStaff() {
-        assertEquals(UserType.STAFF, UserType.fromServerRole("Staff"))
-        assertEquals(UserType.STAFF, UserType.fromServerRole(" staff "))
-        assertEquals(UserType.STAFF, UserType.fromServerRole("Library Staff"))
-        assertTrue(UserType.STAFF.isStaff)
+    fun deskStaffAreRecognisedButNotSupported() {
+        assertTrue(UserType.isDeskStaffRole("Staff"))
+        assertTrue(UserType.isDeskStaffRole(" staff "))
+        assertTrue(UserType.isDeskStaffRole("Library Staff"))
+        assertFalse(UserType.isDeskStaffRole("Librarian"))
+        assertFalse(UserType.isDeskStaffRole("Student"))
+        assertFalse(UserType.isDeskStaffRole(null))
     }
 
     @Test
