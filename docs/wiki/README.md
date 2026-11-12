@@ -23,6 +23,7 @@ Written from the source on branch `claude/trusting-carson-rryhyc` (Nov 2026). Li
 | [Error handling](error-handling.md) | `ApiException`, message sanitising, user-facing copy |
 | [Build and testing](build-and-testing.md) | Gradle setup, dependencies, tests, visual verification |
 | [Known gaps](known-gaps.md) | Features that are UI-only, unused dependencies, sharp edges |
+| [Web system vs mobile app](web-vs-mobile-comparison.md) | Where the app's API use has drifted from the StiOrmocLibrary server |
 
 ## Quick facts
 

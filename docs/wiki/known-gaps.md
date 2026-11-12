@@ -5,7 +5,7 @@ tags: [gaps, todo]
 
 # Known gaps
 
-Back to [index](README.md). Things found while reading the code that a new contributor should know. Each one is a fact about the current code, not a decided fix.
+Back to [index](README.md). Things found while reading the code that a new contributor should know. Each one is a fact about the current code, not a decided fix. For mismatches with the server, see [Web system vs mobile app](web-vs-mobile-comparison.md); it supersedes the notes below on print submit, return requests and mark-as-read, and adds login blockers.
 
 ## Features that look done but are local only
 
