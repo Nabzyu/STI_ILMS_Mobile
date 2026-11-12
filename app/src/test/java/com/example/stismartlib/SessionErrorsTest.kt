@@ -52,11 +52,11 @@ class SessionErrorsTest {
     @Test
     fun wrongPasswordKeepsRemainingAttempts() {
         val few = ApiException("Wrong credentials. 2 attempts remaining.", "INVALID_CREDENTIALS")
-        assertEquals("Invalid school ID or password. 2 attempts remaining.", userFacingMessage(few))
+        assertEquals("Invalid Student ID / Employee ID or password. 2 attempts remaining.", userFacingMessage(few))
         val one = ApiException("Wrong credentials. 1 attempts remaining.", "INVALID_CREDENTIALS")
-        assertEquals("Invalid school ID or password. 1 attempt remaining.", userFacingMessage(one))
+        assertEquals("Invalid Student ID / Employee ID or password. 1 attempt remaining.", userFacingMessage(one))
         val many = ApiException("Wrong credentials.", "INVALID_CREDENTIALS")
-        assertEquals("Invalid school ID or password.", userFacingMessage(many))
+        assertEquals("Invalid Student ID / Employee ID or password.", userFacingMessage(many))
     }
 
     @Test

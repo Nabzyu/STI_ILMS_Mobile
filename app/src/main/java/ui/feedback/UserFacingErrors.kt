@@ -17,7 +17,7 @@ fun userFacingMessage(
     return when (error) {
         is ApiException -> when (error.code) {
             "INVALID_CREDENTIALS" ->
-                "Invalid school ID or password." + remainingAttemptsSuffix(error.message)
+                "Invalid Student ID / Employee ID or password." + remainingAttemptsSuffix(error.message)
             "LOGIN_PAUSED" ->
                 pausedMessage(error.message)
                     ?: "Too many wrong attempts. Sign-in is paused for 10 minutes."

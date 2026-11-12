@@ -33,13 +33,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -158,7 +154,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                     "We sent a six-digit code to ${activeChallenge.emailHint}. " +
                         "It expires in ${(activeChallenge.expiresInSeconds / 60).coerceAtLeast(1)} minutes."
                 else ->
-                    "For students and faculty. Use your school ID and password, then enter the code sent to your school email."
+                    "For students and faculty. Use your Student ID or Employee ID and password, then enter the code sent to your school email."
             },
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             fontSize = 14.sp,
@@ -231,12 +227,12 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
             )
         } else {
         PortalField(
-            label = "School ID",
+            label = "Student ID / Employee ID",
             value = schoolId,
             onValueChange = { value ->
                 schoolId = value.filter { it.isLetterOrDigit() || it in "._-" }.take(50)
             },
-            placeholder = "Enter your Student or Faculty ID",
+            placeholder = "Enter your Student ID or Employee ID",
             leadingIcon = Lucide.IdCard,
             error = schoolIdError
         )
@@ -318,7 +314,7 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                             }
                         }
                     } catch (error: ApiException) {
-                        banner = userFacingMessage(error, "Invalid school ID or password.")
+                        banner = userFacingMessage(error, "Invalid Student ID / Employee ID or password.")
                         schoolIdError = error.fieldErrors["school_id"]
                         passwordError = error.fieldErrors["password"]
                     } catch (error: Exception) {
@@ -350,32 +346,13 @@ fun LoginScreen(navController: NavHostController, previewChallenge: LoginChallen
                     .padding(vertical = 12.dp)
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Librarians and library staff: please use the library website.",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        )
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(
-                text = buildAnnotatedString {
-                    append("New student? ")
-                    withStyle(
-                        SpanStyle(
-                            fontWeight = FontWeight.Black,
-                            textDecoration = TextDecoration.Underline,
-                            color = ElmsCyan
-                        )
-                    ) {
-                        append("Activate your account")
-                    }
-                },
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                text = "Activate your account",
+                color = ElmsCyan,
+                fontWeight = FontWeight.Black,
+                textDecoration = TextDecoration.Underline,
                 fontSize = 14.sp,
                 modifier = Modifier
                     .sizeIn(minHeight = 48.dp)
