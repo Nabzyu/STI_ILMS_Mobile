@@ -23,12 +23,42 @@ data class LoginRequest(
     @SerializedName("login_as") val loginAs: String? = null,
 )
 
+/**
+ * Response of `/auth/login` and `/auth/login/verify`. Staff roles get a token straight away;
+ * Student/Faculty get `otpRequired` + `challengeId` and must verify the emailed code first.
+ */
 data class LoginData(
     val token: String? = null,
     val tokenType: String? = null,
     val expiresIn: Int? = null,
     val redirect: String? = null,
     val user: LoginUser? = null,
+    val otpRequired: Boolean? = null,
+    val challengeId: String? = null,
+    val emailHint: String? = null,
+    val resendAfter: Int? = null,
+    /** Only sent when the server's device sign-in feature is on; the app cannot complete that flow. */
+    val deviceSwitchRequired: Boolean? = null,
+)
+
+data class LoginVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class LoginResendRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+)
+
+data class LoginResendData(
+    val message: String? = null,
+    val resendAfter: Int? = null,
+)
+
+/** Response of `/auth/activity`: a renewed token for the same session. */
+data class SessionActivityData(
+    val token: String? = null,
+    val idleSeconds: Int? = null,
 )
 
 data class LoginUser(
@@ -40,27 +70,41 @@ data class LoginUser(
     val role: String? = null,
 )
 
-data class RegisterRequest(
+/** `GET /auth/roster-registration`: whether Student account activation is open this semester. */
+data class RosterStatusData(
+    val enabled: Boolean? = null,
+    val required: Boolean? = null,
+    val open: Boolean? = null,
+)
+
+data class RosterBeginRequest(
     @SerializedName("school_id") val schoolId: String,
-    @SerializedName("first_name") val firstName: String,
-    @SerializedName("last_name") val lastName: String,
-    val email: String,
-    @SerializedName("program_strand") val programStrand: String,
-    @SerializedName("year_grade_level") val yearGradeLevel: String,
+)
+
+/** Always returned, even when the ID isn't on the roster (the server doesn't reveal it). */
+data class RosterChallengeData(
+    val challengeId: String? = null,
+)
+
+data class RosterVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class RosterGrantData(
+    val grant: String? = null,
+)
+
+data class RosterCompleteRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val grant: String,
     val password: String,
     @SerializedName("confirm_password") val confirmPassword: String,
 )
 
-data class RegisterData(
-    val account: RegisterAccount? = null,
-)
-
-data class RegisterAccount(
-    val id: Int? = null,
+data class RosterCompleteData(
+    val status: String? = null,
     val schoolId: String? = null,
-    val role: String? = null,
-    val firstName: String? = null,
-    val lastName: String? = null,
 )
 
 data class MeUser(
@@ -70,4 +114,37 @@ data class MeUser(
     val fullName: String? = null,
     val email: String? = null,
     val role: String? = null,
+)
+
+/** `/auth/password-recovery/request`. `portal: "staff"` (desk staff) is not used by the app yet. */
+data class PasswordRecoveryRequest(
+    val identifier: String,
+    val portal: String? = null,
+)
+
+/** Always returned, whether or not an account matched (the server does not reveal accounts). */
+data class PasswordRecoveryChallengeData(
+    val challengeId: String? = null,
+    val message: String? = null,
+)
+
+data class PasswordRecoveryVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class PasswordRecoveryTokenData(
+    val resetToken: String? = null,
+    val expiresIn: Int? = null,
+)
+
+data class PasswordResetRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    @SerializedName("reset_token") val resetToken: String,
+    val password: String,
+    @SerializedName("confirm_password") val confirmPassword: String,
+)
+
+data class PasswordResetData(
+    val message: String? = null,
 )

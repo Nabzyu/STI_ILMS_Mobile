@@ -23,6 +23,19 @@ class MainActivity : ComponentActivity() {
 
     private var keepSplashVisible by mutableStateOf(true)
     private var startDestination by mutableStateOf<String?>(null)
+    private val repository get() = (application as STIOrmocLibraryApp).libraryRepository
+
+    /** Touches and key presses keep the server session alive (10-minute idle limit). */
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        repository.onUserInteraction()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Returning after 10+ idle minutes: sign out locally instead of failing the next request.
+        repository.checkIdleTimeout()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -30,7 +43,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val repository = (application as STIOrmocLibraryApp).libraryRepository
         lifecycleScope.launch {
             val restored = repository.restoreSession()
             startDestination = when {

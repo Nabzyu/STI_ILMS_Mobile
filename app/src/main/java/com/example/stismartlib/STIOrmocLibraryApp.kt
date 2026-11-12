@@ -17,6 +17,7 @@ class STIOrmocLibraryApp : Application() {
         sessionStore = SessionStore(this)
         ApiClient.initialize(sessionStore)
         libraryRepository = LibraryRepository(sessionStore)
+        ApiClient.onSessionEnded = { code -> libraryRepository.onServerSessionEnded(code) }
     }
 
     companion object {

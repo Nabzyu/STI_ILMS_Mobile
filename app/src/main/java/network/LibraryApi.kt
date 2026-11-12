@@ -9,14 +9,29 @@ import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
 import com.example.stismartlib.network.dto.FineListDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.LoginResendData
+import com.example.stismartlib.network.dto.LoginResendRequest
+import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
+import com.example.stismartlib.network.dto.PasswordRecoveryChallengeData
+import com.example.stismartlib.network.dto.PasswordRecoveryRequest
+import com.example.stismartlib.network.dto.PasswordRecoveryTokenData
+import com.example.stismartlib.network.dto.PasswordRecoveryVerifyRequest
+import com.example.stismartlib.network.dto.PasswordResetData
+import com.example.stismartlib.network.dto.PasswordResetRequest
 import com.example.stismartlib.network.dto.PrintRequestDto
-import com.example.stismartlib.network.dto.RegisterData
-import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.network.dto.RosterBeginRequest
+import com.example.stismartlib.network.dto.RosterChallengeData
+import com.example.stismartlib.network.dto.RosterCompleteData
+import com.example.stismartlib.network.dto.RosterCompleteRequest
+import com.example.stismartlib.network.dto.RosterGrantData
+import com.example.stismartlib.network.dto.RosterStatusData
+import com.example.stismartlib.network.dto.RosterVerifyRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveResultDto
+import com.example.stismartlib.network.dto.SessionActivityData
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
@@ -30,8 +45,37 @@ interface LibraryApi {
     @POST("api/v1/auth/login")
     suspend fun login(@Body body: LoginRequest): Response<ApiEnvelope<LoginData>>
 
-    @POST("api/v1/auth/register")
-    suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>
+    @POST("api/v1/auth/login/verify")
+    suspend fun loginVerify(@Body body: LoginVerifyRequest): Response<ApiEnvelope<LoginData>>
+
+    @POST("api/v1/auth/login/resend")
+    suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    /** Keeps the server session alive (10-minute idle limit) and returns a renewed token. */
+    @POST("api/v1/auth/activity")
+    suspend fun sessionActivity(@Body body: Map<String, String> = emptyMap()): Response<ApiEnvelope<SessionActivityData>>
+
+    @POST("api/v1/auth/password-recovery/request")
+    suspend fun passwordRecoveryRequest(@Body body: PasswordRecoveryRequest): Response<ApiEnvelope<PasswordRecoveryChallengeData>>
+
+    @POST("api/v1/auth/password-recovery/verify")
+    suspend fun passwordRecoveryVerify(@Body body: PasswordRecoveryVerifyRequest): Response<ApiEnvelope<PasswordRecoveryTokenData>>
+
+    @POST("api/v1/auth/password-recovery/reset")
+    suspend fun passwordReset(@Body body: PasswordResetRequest): Response<ApiEnvelope<PasswordResetData>>
+
+    /** Student account activation against the semester roster (replaces the retired `/auth/register`). */
+    @GET("api/v1/auth/roster-registration")
+    suspend fun rosterStatus(): Response<ApiEnvelope<RosterStatusData>>
+
+    @POST("api/v1/auth/roster-registration/begin")
+    suspend fun rosterBegin(@Body body: RosterBeginRequest): Response<ApiEnvelope<RosterChallengeData>>
+
+    @POST("api/v1/auth/roster-registration/verify")
+    suspend fun rosterVerify(@Body body: RosterVerifyRequest): Response<ApiEnvelope<RosterGrantData>>
+
+    @POST("api/v1/auth/roster-registration/complete")
+    suspend fun rosterComplete(@Body body: RosterCompleteRequest): Response<ApiEnvelope<RosterCompleteData>>
 
     @GET("api/v1/auth/me")
     suspend fun me(): Response<ApiEnvelope<MeUser>>

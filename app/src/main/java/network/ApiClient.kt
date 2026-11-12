@@ -19,6 +19,12 @@ object ApiClient {
 
     val api: LibraryApi by lazy { retrofit.create(LibraryApi::class.java) }
 
+    /**
+     * Called (on the request thread) after a session-ending error has cleared stored credentials.
+     * Set once in `STIOrmocLibraryApp.onCreate`, before any request is made.
+     */
+    var onSessionEnded: ((code: String) -> Unit)? = null
+
     fun initialize(store: SessionStore) {
         sessionStore = store
     }
@@ -26,7 +32,7 @@ object ApiClient {
     private val authInterceptor = Interceptor { chain ->
         val original = chain.request()
         val path = original.url.encodedPath
-        val isAuthHandshake = path.endsWith("/auth/login") || path.endsWith("/auth/register")
+        val isAuthHandshake = isAuthHandshakePath(path)
         val token = if (!isAuthHandshake && ::sessionStore.isInitialized) sessionStore.getToken() else null
         val request = if (!token.isNullOrBlank()) {
             original.newBuilder()
@@ -77,22 +83,12 @@ object ApiClient {
                 429 -> "Too many login attempts. Please wait 15 minutes and try again."
                 else -> "The request could not be completed."
             }
-        val code = errorEnvelope?.code
-            ?: body?.code
-            ?: when (response.code()) {
-                429 -> "TOO_MANY_LOGIN_ATTEMPTS"
-                401 -> "INVALID_CREDENTIALS"
-                else -> "REQUEST_FAILED"
-            }
+        val isAuthHandshake = isAuthHandshakePath(response.raw().request.url.encodedPath)
+        val code = resolveErrorCode(errorEnvelope?.code ?: body?.code, response.code(), isAuthHandshake)
         val fieldErrors = errorEnvelope?.details?.errors ?: body?.details?.errors ?: emptyMap()
-        if (::sessionStore.isInitialized && code != "INVALID_CREDENTIALS") {
-            val shouldClear = code in setOf(
-                "ACCOUNT_DEACTIVATED",
-                "ACCOUNT_ACCESS_REVOKED",
-                "JWT_REQUIRED",
-                "JWT_INVALID",
-            )
-            if (shouldClear) sessionStore.clear()
+        if (endsSession(code, isAuthHandshake)) {
+            if (::sessionStore.isInitialized) sessionStore.clear()
+            onSessionEnded?.invoke(code)
         }
         throw ApiException(message, code, fieldErrors, response.code())
     }
