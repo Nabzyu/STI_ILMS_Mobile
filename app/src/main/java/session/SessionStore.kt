@@ -65,6 +65,12 @@ class SessionStore(context: Context) {
             .commit()
     }
 
+    /** Replaces only the token (renewed by `/auth/activity`); no-op when signed out. */
+    fun updateToken(token: String) {
+        if (getToken() == null) return
+        prefs.edit().putString(KEY_TOKEN, token).commit()
+    }
+
     fun clear() {
         prefs.edit().clear().commit()
     }

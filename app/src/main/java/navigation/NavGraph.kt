@@ -1,6 +1,7 @@
 package com.example.stismartlib.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,6 +18,20 @@ import com.example.stismartlib.ui.dashboard.staff.StaffHomeScreen
 fun AppNavGraph(startDestination: String = Screen.Login.route) {
 
     val navController = rememberNavController()
+    val sessionRepository = rememberLibraryRepository()
+    val isAuthenticated = sessionRepository.session.isAuthenticated
+
+    // The session can end outside a screen's control (server code, 10-minute idle limit).
+    // Send the user back to sign-in; the login screen shows the reason.
+    LaunchedEffect(isAuthenticated) {
+        if (isAuthenticated) return@LaunchedEffect
+        val route = navController.currentDestination?.route
+        if (route != null && route != Screen.Login.route && route != Screen.Register.route) {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,

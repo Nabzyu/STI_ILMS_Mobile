@@ -3,6 +3,7 @@ package com.example.stismartlib.ui.preview
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.stismartlib.data.LoginChallenge
 import com.example.stismartlib.ui.auth.LoginScreen
 import com.example.stismartlib.ui.auth.RegisterScreen
 import com.example.stismartlib.ui.auth.UserType
@@ -57,6 +58,29 @@ private fun LoginScreenPreview() {
 private fun LoginScreenDarkPreview() {
     PreviewApp(seedSampleData = false, darkTheme = true) {
         LoginScreen(navController = rememberNavController())
+    }
+}
+
+private val PreviewLoginChallenge = LoginChallenge(
+    challengeId = "00000000-0000-4000-8000-000000000000",
+    emailHint = "ju***@ormoc.sti.edu.ph",
+    expiresInSeconds = 600,
+    resendAfterSeconds = 42,
+)
+
+@Preview(name = "Login code", showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginCodeScreenPreview() {
+    PreviewApp(seedSampleData = false) {
+        LoginScreen(navController = rememberNavController(), previewChallenge = PreviewLoginChallenge)
+    }
+}
+
+@Preview(name = "Login code · Dark", showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginCodeScreenDarkPreview() {
+    PreviewApp(seedSampleData = false, darkTheme = true) {
+        LoginScreen(navController = rememberNavController(), previewChallenge = PreviewLoginChallenge)
     }
 }
 

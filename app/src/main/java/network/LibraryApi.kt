@@ -9,6 +9,9 @@ import com.example.stismartlib.network.dto.BorrowingHistoryDataDto
 import com.example.stismartlib.network.dto.FineListDto
 import com.example.stismartlib.network.dto.LoginData
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.LoginResendData
+import com.example.stismartlib.network.dto.LoginResendRequest
+import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.MeUser
 import com.example.stismartlib.network.dto.NotificationListDto
 import com.example.stismartlib.network.dto.PrintRequestDto
@@ -17,6 +20,7 @@ import com.example.stismartlib.network.dto.RegisterRequest
 import com.example.stismartlib.network.dto.ResearchCatalogItemDto
 import com.example.stismartlib.network.dto.ReservationItemDto
 import com.example.stismartlib.network.dto.ReserveResultDto
+import com.example.stismartlib.network.dto.SessionActivityData
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
@@ -29,6 +33,16 @@ import retrofit2.http.Query
 interface LibraryApi {
     @POST("api/v1/auth/login")
     suspend fun login(@Body body: LoginRequest): Response<ApiEnvelope<LoginData>>
+
+    @POST("api/v1/auth/login/verify")
+    suspend fun loginVerify(@Body body: LoginVerifyRequest): Response<ApiEnvelope<LoginData>>
+
+    @POST("api/v1/auth/login/resend")
+    suspend fun loginResend(@Body body: LoginResendRequest): Response<ApiEnvelope<LoginResendData>>
+
+    /** Keeps the server session alive (10-minute idle limit) and returns a renewed token. */
+    @POST("api/v1/auth/activity")
+    suspend fun sessionActivity(@Body body: Map<String, String> = emptyMap()): Response<ApiEnvelope<SessionActivityData>>
 
     @POST("api/v1/auth/register")
     suspend fun register(@Body body: RegisterRequest): Response<ApiEnvelope<RegisterData>>

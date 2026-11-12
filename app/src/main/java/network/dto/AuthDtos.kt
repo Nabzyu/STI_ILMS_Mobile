@@ -23,12 +23,42 @@ data class LoginRequest(
     @SerializedName("login_as") val loginAs: String? = null,
 )
 
+/**
+ * Response of `/auth/login` and `/auth/login/verify`. Staff roles get a token straight away;
+ * Student/Faculty get `otpRequired` + `challengeId` and must verify the emailed code first.
+ */
 data class LoginData(
     val token: String? = null,
     val tokenType: String? = null,
     val expiresIn: Int? = null,
     val redirect: String? = null,
     val user: LoginUser? = null,
+    val otpRequired: Boolean? = null,
+    val challengeId: String? = null,
+    val emailHint: String? = null,
+    val resendAfter: Int? = null,
+    /** Only sent when the server's device sign-in feature is on; the app cannot complete that flow. */
+    val deviceSwitchRequired: Boolean? = null,
+)
+
+data class LoginVerifyRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+    val code: String,
+)
+
+data class LoginResendRequest(
+    @SerializedName("challenge_id") val challengeId: String,
+)
+
+data class LoginResendData(
+    val message: String? = null,
+    val resendAfter: Int? = null,
+)
+
+/** Response of `/auth/activity`: a renewed token for the same session. */
+data class SessionActivityData(
+    val token: String? = null,
+    val idleSeconds: Int? = null,
 )
 
 data class LoginUser(

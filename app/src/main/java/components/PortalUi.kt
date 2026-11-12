@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -534,6 +535,7 @@ fun PortalField(
     error: String? = null,
     enabled: Boolean = true,
     readOnly: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -597,6 +599,7 @@ fun PortalField(
                     ),
                     cursorBrush = SolidColor(ElmsCyan),
                     visualTransformation = visualTransformation,
+                    keyboardOptions = keyboardOptions,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

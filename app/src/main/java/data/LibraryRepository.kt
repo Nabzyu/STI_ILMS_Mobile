@@ -1,6 +1,7 @@
 package com.example.stismartlib.data
 
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -21,19 +22,42 @@ import com.example.stismartlib.data.models.Research
 import com.example.stismartlib.data.models.Reservation
 import com.example.stismartlib.network.ApiClient
 import com.example.stismartlib.network.ApiException
+import com.example.stismartlib.network.SESSION_IDLE_CODE
+import com.example.stismartlib.network.SessionEndingCodes
 import com.example.stismartlib.network.dto.BorrowSubmitRequest
 import com.example.stismartlib.network.dto.LoginRequest
+import com.example.stismartlib.network.dto.LoginResendRequest
+import com.example.stismartlib.network.dto.LoginVerifyRequest
 import com.example.stismartlib.network.dto.RegisterRequest
+import com.example.stismartlib.session.SessionActivityTracker
 import com.example.stismartlib.session.SessionStore
 import com.example.stismartlib.ui.auth.UserType
+import com.example.stismartlib.ui.auth.normalizeSchoolId
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 class LibraryRepository(
     private val sessionStore: SessionStore,
+    private val clock: () -> Long = { SystemClock.elapsedRealtime() },
 ) {
     var session by mutableStateOf(LibrarySession())
         private set
+
+    /** Why the last session ended without a sign-out (server code or [SESSION_IDLE_CODE]). */
+    var sessionEndReason by mutableStateOf<String?>(null)
+        private set
+
+    private val activityTracker = SessionActivityTracker()
+    private val backgroundScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, _ -> })
+    private var activityJob: Job? = null
 
     var isLoading by mutableStateOf(false)
         private set
@@ -85,85 +109,146 @@ class LibraryRepository(
         cart.isNotEmpty() && cart.all { it.isAvailable }
 
     /**
-     * Single sign-in for Student, Faculty, and Librarian/Admin.
-     * The API keeps separate user/staff portals, so we try the remembered portal first,
-     * then the other only on INVALID_CREDENTIALS (Admin is rejected by the user portal).
+     * Sign-in for one server portal: `user` (Student/Faculty) or `staff` (Admin/Librarian/Staff).
+     * The server counts a portal/role mismatch as a wrong password, so the app never retries the
+     * other portal on its own; the login screen lets the user pick the staff sign-in instead.
+     * Student/Faculty get [LoginOutcome.CodeRequired] and finish with [verifyLoginCode].
      */
-    suspend fun login(schoolId: String, password: String) = withContext(Dispatchers.IO) {
-        lastError = null
-        val normalizedSchoolId = schoolId.trim().uppercase()
-        val preferred = sessionStore.preferredLoginPortal(normalizedSchoolId)
-        val primary = preferred ?: PORTAL_USER
-        val fallback = if (primary == PORTAL_STAFF) PORTAL_USER else PORTAL_STAFF
-        try {
-            authenticatePortal(normalizedSchoolId, password, primary)
-        } catch (error: ApiException) {
-            if (error.code != "INVALID_CREDENTIALS") throw error
-            try {
-                authenticatePortal(normalizedSchoolId, password, fallback)
-            } catch (fallbackError: ApiException) {
-                // Prefer rate-limit / deactivation messages from the second attempt when present.
-                if (fallbackError.code == "TOO_MANY_LOGIN_ATTEMPTS" ||
-                    fallbackError.code == "ACCOUNT_DEACTIVATED"
-                ) {
-                    throw fallbackError
+    suspend fun login(schoolId: String, password: String, staffPortal: Boolean): LoginOutcome =
+        withContext(Dispatchers.IO) {
+            lastError = null
+            val normalizedSchoolId = normalizeSchoolId(schoolId)
+            val portal = if (staffPortal) PORTAL_STAFF else PORTAL_USER
+            // Drop any previous token so login is not sent with a stale Authorization header.
+            endLocalSession()
+            val data = ApiClient.unwrap(
+                ApiClient.api.login(
+                    LoginRequest(schoolId = normalizedSchoolId, password = password, portal = portal),
+                ),
+            )
+            when (val step = interpretLoginData(data, normalizedSchoolId)) {
+                is LoginStep.CodeRequired -> {
+                    sessionStore.rememberLoginPortal(normalizedSchoolId, portal)
+                    LoginOutcome.CodeRequired(step.challenge)
                 }
-                throw error
+                is LoginStep.Authenticated -> {
+                    completeSignIn(step, portal)
+                    LoginOutcome.SignedIn
+                }
             }
+        }
+
+    /** Second step for Student/Faculty: exchange the emailed 6-digit code for a session. */
+    suspend fun verifyLoginCode(schoolId: String, challengeId: String, code: String) = withContext(Dispatchers.IO) {
+        lastError = null
+        val data = ApiClient.unwrap(ApiClient.api.loginVerify(LoginVerifyRequest(challengeId, code.trim())))
+        when (val step = interpretLoginData(data, normalizeSchoolId(schoolId))) {
+            is LoginStep.Authenticated -> completeSignIn(step, PORTAL_USER)
+            is LoginStep.CodeRequired ->
+                throw ApiException("The server returned an incomplete login response.", "INVALID_LOGIN_RESPONSE")
         }
     }
 
-    private suspend fun authenticatePortal(schoolId: String, password: String, portal: String) {
-        require(portal == PORTAL_USER || portal == PORTAL_STAFF) {
-            "Unsupported login portal."
-        }
-        // Drop any previous token so login is not sent with a stale Authorization header.
-        sessionStore.clear()
-        clearLocalData()
-        session = LibrarySession()
+    /** Sends a new code (the previous one stops working). Returns seconds until the next resend. */
+    suspend fun resendLoginCode(challengeId: String): Int = withContext(Dispatchers.IO) {
+        ApiClient.unwrap(ApiClient.api.loginResend(LoginResendRequest(challengeId))).resendAfter ?: 60
+    }
 
-        val normalizedSchoolId = schoolId.trim().uppercase()
-        val response = ApiClient.api.login(
-            LoginRequest(
-                schoolId = normalizedSchoolId,
-                password = password,
-                portal = portal,
-            ),
-        )
-        val data = ApiClient.unwrap(response)
-        val user = data.user ?: throw ApiException("The server returned an incomplete login response.")
-        val token = data.token?.takeIf { it.isNotBlank() }
-            ?: throw ApiException("The server returned an invalid access token.", "INVALID_TOKEN_RESPONSE")
-        val accountId = user.accountId ?: user.id ?: throw ApiException("Missing account id.")
-        val resolvedRole = user.role.orEmpty()
-        val resolvedSchoolId = user.schoolId ?: normalizedSchoolId
-        val resolvedName = user.fullName?.takeIf { it.isNotBlank() } ?: resolvedSchoolId
-        val userType = UserType.fromServerRole(resolvedRole)
+    /** True/false when this school ID last signed in through the staff/user portal; null if unknown. */
+    fun prefersStaffPortal(schoolId: String): Boolean? =
+        sessionStore.preferredLoginPortal(normalizeSchoolId(schoolId))?.let { it == PORTAL_STAFF }
 
+    private fun completeSignIn(step: LoginStep.Authenticated, portal: String) {
+        val userType = UserType.fromServerRole(step.role)
         if (portal == PORTAL_STAFF && !userType.isStaff) {
             sessionStore.clear()
             throw ApiException(
-                "This sign-in is for Librarian / Admin accounts only.",
+                "This sign-in is for Librarian and library staff accounts only.",
                 "ADMIN_ROLE_REQUIRED",
             )
         }
-
-        val roleToStore = if (userType.isStaff) "Admin" else resolvedRole.ifBlank { userType.displayName }
         sessionStore.save(
-            token = token,
-            accountId = accountId,
-            schoolId = resolvedSchoolId,
-            fullName = resolvedName,
-            role = roleToStore,
+            token = step.token,
+            accountId = step.accountId,
+            schoolId = step.schoolId,
+            fullName = step.fullName,
+            role = step.role.ifBlank { userType.displayName },
         )
         session = LibrarySession(
             userType = userType,
-            userName = resolvedName,
-            schoolId = resolvedSchoolId,
-            accountId = accountId,
+            userName = step.fullName,
+            schoolId = step.schoolId,
+            accountId = step.accountId,
             isAuthenticated = true,
         )
-        sessionStore.rememberLoginPortal(resolvedSchoolId, portal)
+        sessionStore.rememberLoginPortal(step.schoolId, portal)
+        sessionEndReason = null
+        activityTracker.start(clock())
+    }
+
+    /** Called by [ApiClient] after a session-ending error code (stored token already cleared). */
+    fun onServerSessionEnded(code: String) {
+        if (!session.isAuthenticated) return
+        endLocalSession()
+        sessionEndReason = code
+    }
+
+    /** Hands the reason the last session ended to the login screen, once. */
+    fun consumeSessionEndReason(): String? = sessionEndReason.also { sessionEndReason = null }
+
+    /**
+     * Any touch or key press counts as activity (like the web app's pointer/key listeners).
+     * Pings `/auth/activity` at most every 30 s, always following the latest interaction.
+     */
+    fun onUserInteraction() {
+        if (!session.isAuthenticated || !activityTracker.isActive) return
+        val now = clock()
+        if (activityTracker.isIdleExpired(now)) {
+            endIdleSession()
+            return
+        }
+        activityTracker.recordInteraction(now)
+        if (activityJob?.isActive == true) return
+        val wait = activityTracker.delayUntilNextPing(now)
+        activityJob = backgroundScope.launch {
+            delay(wait)
+            sendActivity()
+        }
+    }
+
+    /** Call when the app returns to the foreground: ends a session idle for 10 minutes or more. */
+    fun checkIdleTimeout() {
+        if (session.isAuthenticated && activityTracker.isIdleExpired(clock())) endIdleSession()
+    }
+
+    private suspend fun sendActivity() {
+        if (!session.isAuthenticated) return
+        val accountId = session.accountId
+        try {
+            val data = ApiClient.unwrap(ApiClient.api.sessionActivity())
+            if (session.isAuthenticated && session.accountId == accountId) {
+                data.token?.takeIf { it.isNotBlank() }?.let(sessionStore::updateToken)
+                activityTracker.markPinged(clock())
+            }
+        } catch (_: ApiException) {
+            // Session-ending codes are handled through ApiClient.onSessionEnded; others retry on next touch.
+        } catch (_: IOException) {
+            // Offline: the next interaction retries.
+        }
+    }
+
+    private fun endIdleSession() {
+        endLocalSession()
+        sessionEndReason = SESSION_IDLE_CODE
+    }
+
+    private fun endLocalSession() {
+        activityJob?.cancel()
+        activityJob = null
+        activityTracker.stop()
+        sessionStore.clear()
+        clearLocalData()
+        session = LibrarySession()
     }
 
     private companion object {
@@ -219,20 +304,21 @@ class LibraryRepository(
                 accountId = accountId,
                 isAuthenticated = true,
             )
-            true
+            activityTracker.start(clock())
+            // `/auth/me` does not count as activity on the server; renew the idle window now.
+            sendActivity()
+            session.isAuthenticated
         } catch (error: ApiException) {
-            sessionStore.clear()
-            clearLocalData()
-            session = LibrarySession()
+            endLocalSession()
             lastError = error.message
+            if (error.code in SessionEndingCodes) sessionEndReason = error.code
             false
         }
     }
 
     fun logout() {
-        sessionStore.clear()
-        clearLocalData()
-        session = LibrarySession()
+        endLocalSession()
+        sessionEndReason = null
     }
 
     suspend fun refreshStudentData() = withContext(Dispatchers.IO) {
